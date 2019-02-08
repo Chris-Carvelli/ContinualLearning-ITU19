@@ -1,3 +1,7 @@
+"""
+An example of how to use the choice environment
+"""
+
 import gym
 import custom_envs
 
@@ -10,6 +14,9 @@ env = gym.make(env_name)
 # # alternatively envs can be created manually with custom size like this
 # from custom_envs.envs.choice import ChoiceEnv
 # env = ChoiceEnv(0, 5, 5)
+
+
+
 
 # show env
 env.reset()

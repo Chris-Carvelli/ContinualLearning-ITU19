@@ -2,11 +2,18 @@ from gym_minigrid.minigrid import *
 
 class ChoiceEnv(MiniGridEnv):
     """
-    Empty grid environment, no obstacles, sparse reward
+    An empty grid environment, with a blue square (top, left) and a green square (top, right).
+    The goal is either to reach blue or the green square.
     """
 
     def __init__(self, goal_pos, width=3, height=1):
-        self.goal_pos = goal_pos % 2
+        """
+        :param goal_pos: Determines if the goal is set to the blue or green square. Allowed values are 0 and 1
+        :param width: The width of the env
+        :param height: The height of the env
+        """
+        self.goal_pos = goal_pos
+        assert goal_pos >= 0 and goal_pos <= 2
         assert width >= 3
         assert height >= 1
         super().__init__(
