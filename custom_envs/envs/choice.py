@@ -40,7 +40,7 @@ class ChoiceEnv(MiniGridEnv):
 
         # Place the agent in the top-left corner
         self.start_pos = (int(width / 2), height - 2)
-        self.start_dir = 0
+        self.start_dir = 3
 
         color0 = Goal()
         color0.color = IDX_TO_COLOR[1]  # color
