@@ -1,4 +1,6 @@
 from gym_minigrid.minigrid import *
+import random
+
 
 class ChoiceEnv(MiniGridEnv):
     """
@@ -6,22 +8,27 @@ class ChoiceEnv(MiniGridEnv):
     The goal is either to reach blue or the green square.
     """
 
-    def __init__(self, goal_pos, width=3, height=1):
+    def __init__(self, goal_color=0, width=3, height=1, random_positions=False, max_steps=None):
         """
-        :param goal_pos: Determines if the goal is set to the blue or green square. Allowed values are 0 and 1
+        :param goal_color: Determines if the goal is set to the blue or green square. Allowed values are 0 and 1
         :param width: The width of the env
         :param height: The height of the env
+        :param random_positions: if true the squares will have random starting positions
+        :param max_steps: The maximum number of steps that can be taken before the env return done=True
         """
-        self.goal_pos = goal_pos
-        assert goal_pos >= 0 and goal_pos <= 2
-        assert width >= 3
+        self.goal_color = goal_color
+        self.random_positions = random_positions
+        assert 0 <= goal_color <= 2
+        assert width >= 1
         assert height >= 1
+        assert width * height >= 3
+        if max_steps is None:
+            max_steps = 2 * (width + height)
         super().__init__(
             width=width + 2,
             height=height + 2,
-            max_steps=2 * (width + height),
-            # Set this to True for maximum speed
-            see_through_walls=True
+            max_steps=max_steps,
+            see_through_walls=True  # Set this to True for maximum speed
         )
 
     def _gen_grid(self, width, height):
@@ -32,25 +39,34 @@ class ChoiceEnv(MiniGridEnv):
         self.grid.wall_rect(0, 0, width, height)
 
         # Place the agent in the top-left corner
-        self.start_pos = (int(width/2), height - 2)
+        self.start_pos = (int(width / 2), height - 2)
         self.start_dir = 0
 
-        i_left = self.goal_pos
-        i_right = (self.goal_pos + 1) % 2
+        color0 = Goal()
+        color0.color = IDX_TO_COLOR[1]  # color
+        color0.type = IDX_TO_OBJECT[8 - self.goal_color]  # Box or Goal
 
-        left = Goal()
-        left.color = IDX_TO_COLOR[1 + i_left]  # color
-        left.type = IDX_TO_OBJECT[8 - i_left]  # Box or Goal
+        color1 = Goal()
+        color1.color = IDX_TO_COLOR[2]  # color
+        color1.type = IDX_TO_OBJECT[8 - (self.goal_color + 1) % 2]  # Box or Goal
 
-        right = Goal()
-        right.color = IDX_TO_COLOR[1 + i_right]  # color
-        right.type = IDX_TO_OBJECT[8 - i_right]  # Box or Goal
+        if self.random_positions:
+            pos = self.get_random_free_position()
+            self.grid.set(pos[0], pos[1], color0)
+            pos = self.get_random_free_position()
+            self.grid.set(pos[0], pos[1], color1)
+        else:
+            self.grid.set(1, 1, color0)
+            self.grid.set(width - 2, 1, color1)
+        self.mission = str(self.goal_color)
+        # self.mission = "Get to the " + IDX_TO_COLOR[1 + self.goal_pos] + " square"
 
-        # Place a goal square in the bottom-right corner
-        self.grid.set(1, 1, left)
-        self.grid.set(width - 2, 1, right)
-        self.mission = "Get to the goal"
-        self.goal_id = self.goal_pos
+    def get_random_free_position(self):
+        """Returns the coordinates as an integer tuple, of a free tile"""
+        pos = (random.randint(1, self.width - 2), random.randint(1, self.height - 2))
+        while pos == self.start_pos or self.grid.get(pos[0], pos[1]) is not None:
+            pos = (random.randint(1, self.width - 2), random.randint(1, self.height - 2))
+        return pos
 
     def _reward(self):
         """
