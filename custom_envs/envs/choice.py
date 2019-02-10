@@ -1,5 +1,6 @@
 from gym_minigrid.minigrid import *
 import random
+from custom_envs.maze import Maze
 
 
 class ChoiceEnv(MiniGridEnv):
@@ -8,7 +9,8 @@ class ChoiceEnv(MiniGridEnv):
     The goal is either to reach blue or the green square.
     """
 
-    def __init__(self, goal_color=0, width=3, height=1, random_positions=False, max_steps=None):
+    def __init__(self, goal_color=0, width=3, height=1, random_positions=False, max_steps=None, maze_env=False,
+                 see_through_walls=True):
         """
         :param goal_color: Determines if the goal is set to the blue or green square. Allowed values are 0 and 1
         :param width: The width of the env
@@ -17,18 +19,24 @@ class ChoiceEnv(MiniGridEnv):
         :param max_steps: The maximum number of steps that can be taken before the env return done=True
         """
         self.goal_color = goal_color
+        self.maze_env = maze_env
         self.random_positions = random_positions
         assert 0 <= goal_color <= 2
         assert width >= 1
         assert height >= 1
         assert width * height >= 3
+        if maze_env:
+            assert width >= 3 and height >= 3, "Maze env must be at least 3x3"
+            assert width % 2 == 1, "width of a maze env must be uneven"
+            assert height % 2 == 1, "height of a maze env must be uneven"
+            assert random_positions, "maze_env must have random positions"
         if max_steps is None:
             max_steps = 2 * (width + height)
         super().__init__(
             width=width + 2,
             height=height + 2,
             max_steps=max_steps,
-            see_through_walls=True  # Set this to True for maximum speed
+            see_through_walls=see_through_walls  # Set this to True for maximum speed
         )
 
     def _gen_grid(self, width, height):
@@ -41,6 +49,17 @@ class ChoiceEnv(MiniGridEnv):
         # Place the agent in the top-left corner
         self.start_pos = (int(width / 2), height - 2)
         self.start_dir = 3
+
+        if self.maze_env:
+            self.start_pos = (1, height - 2)
+            m = Maze(int((self.width - 1) / 2), int((self.height - 1) / 2))
+            m.randomize()
+            print(m.__repr__())
+            m = m._to_str_matrix()
+            for y, row in enumerate(m):
+                for x, cell in enumerate(row):
+                    if cell == "O" and 0 <= x < self.width and 0 <= y < self.height:
+                        self.grid.set(x, y, Wall())
 
         color0 = Goal()
         color0.color = IDX_TO_COLOR[1]  # color
