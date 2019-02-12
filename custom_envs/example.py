@@ -14,7 +14,7 @@ env = gym.make(env_name)
 # # alternatively envs can be created manually with custom size, random starting position, and a custom number of
 # # maximum steps before done (otherwise max_step = 2 * (width + height).
 # from custom_envs.envs.choice import ChoiceEnv
-# env = ChoiceEnv(1, width=5, height=5, random_positions=True, max_steps=10, maze_env=True)
+# env = ChoiceEnv(1, width=5, height=5, random_positions=True, max_steps=100, maze_env=False, euclid_dist_reward=True)
 
 # show env
 import time
