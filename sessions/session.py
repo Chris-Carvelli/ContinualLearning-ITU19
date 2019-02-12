@@ -26,9 +26,10 @@ def get_input(valid_inputs=("y", "n")):
 
 class Session:
     """A session represents some work that needs to be done and saved, and possibly paused"""
-    repo_dir = Path(os.path.dirname(os.path.abspath(__file__))).parent
-    is_finished = False
-    terminate = False
+    repo_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+    is_finished = False  # True when the session has finished all the work
+    terminate = False   # Used to terminate the current session in a subroutine
+    ignore_uncommited_changes_to_main = True
 
     def __init__(self, worker, name, save_folder=None, repo_dir=None, ignore_file='.ignore'):
         """
@@ -43,6 +44,8 @@ class Session:
         """
         if repo_dir is not None:
             self.repo_dir = repo_dir
+            while ".git" not in os.listdir(self.repo_dir):
+                self.repo_dir = self.repo_dir.parent
         self.worker = worker
         self.name = name
         self.ignore_file = ignore_file
@@ -58,9 +61,14 @@ class Session:
         changed_files = [i.a_path for i in self.repo.index.diff(self.repo.head.commit) if
                          not d.is_excluded(Path(self.repo.working_dir) / i.a_path)]
         untracked_files = [f for f in self.repo.untracked_files if not d.is_excluded(Path(self.repo.working_dir) / f)]
-        if len(changed_files) + len(untracked_files) > 0:
+        dirty_files = changed_files + untracked_files
+        if self.ignore_uncommited_changes_to_main:
+            target = sys.argv[0].replace(Path(self.repo_dir).as_posix() + "/", "")
+            if target in dirty_files:
+                dirty_files.remove(target)
+        if len(dirty_files) > 0:
             print("The following files were untracked or had uncommitted changes:")
-            for f in changed_files + untracked_files:
+            for f in dirty_files:
                 print("- " + f)
             return False
         return True
@@ -95,13 +103,15 @@ class Session:
         """A subroutine to check for user input"""
         m = "input (q) to terminate session after next iteration"
         print(m)
-        res = input().lower()
-        while res != "q" and not self.is_finished:
-            print(m)
-            res = input().lower()
-            time.sleep(0.5)
-        if res == "q":
-            self.terminate = True
+        for line in sys.stdin:
+            if self.is_finished:
+                sys.exit()
+            elif line == "q\n":
+                self.terminate = True
+                print("terminating session...")
+                sys.exit()
+            else:
+                print(m)
 
     def start(self):
         """Starts the session. It will guide the user throug a series of questions about choices for the session
@@ -142,6 +152,7 @@ class Session:
                     return
             else:
                 return
+        shutil.copyfile(Path(sys.argv[0]), Path(self.save_folder) / "script_copy.py")
         self.save_data("session", self.session_data())
         self._run()
 
@@ -150,7 +161,7 @@ class Session:
         Lets the worker (continue) work until interrupted or finished
         """
         t = threading.Thread(target=self._termination_input)
-        # TODO: Fix so that this thread terminates after session is complete
+        # TODO: Fix so that this thread terminates after session is complete without needing to press enter
         t.start()
         while True:
             try:
@@ -164,7 +175,6 @@ class Session:
             except StopIteration:
                 break
         self.is_finished = True
-        print(self.session_data()[2])
+
         self.save_data("session", self.session_data())
         print("Session done")
-
