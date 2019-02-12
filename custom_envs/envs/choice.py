@@ -3,6 +3,11 @@ import random
 from custom_envs.maze import Maze
 
 
+def dist(pos1, pos2):
+    """Returns distance between two points"""
+    return math.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2)
+
+
 class ChoiceEnv(MiniGridEnv):
     """
     An empty grid environment, with a blue square (top, left) and a green square (top, right).
@@ -10,7 +15,7 @@ class ChoiceEnv(MiniGridEnv):
     """
 
     def __init__(self, goal_color=0, width=3, height=1, random_positions=False, max_steps=None, maze_env=False,
-                 see_through_walls=True):
+                 see_through_walls=True, euclid_dist_reward=False):
         """
         :param goal_color: Determines if the goal is set to the blue or green square. Allowed values are 0 and 1
         :param width: The width of the env
@@ -18,6 +23,7 @@ class ChoiceEnv(MiniGridEnv):
         :param random_positions: if true the squares will have random starting positions
         :param max_steps: The maximum number of steps that can be taken before the env return done=True
         """
+        self.euclid_dist_reward = euclid_dist_reward
         self.goal_color = goal_color
         self.maze_env = maze_env
         self.random_positions = random_positions
@@ -38,6 +44,16 @@ class ChoiceEnv(MiniGridEnv):
             max_steps=max_steps,
             see_through_walls=see_through_walls  # Set this to True for maximum speed
         )
+        self.start_dist = dist(self.goal.cur_pos, self.start_pos)
+
+    def step(self, action):
+        pos_before = self.agent_pos
+        obs, reward, done, _ = super().step(action)
+        if self.euclid_dist_reward and action == self.actions.forward and reward <= 0:
+            dist0 = dist(pos_before, self.goal.cur_pos)
+            dist1 = dist(self.agent_pos, self.goal.cur_pos)
+            reward += (dist0 - dist1)/self.start_dist
+        return obs, reward, done, _
 
     def _gen_grid(self, width, height):
         # Create an empty grid
@@ -74,10 +90,18 @@ class ChoiceEnv(MiniGridEnv):
             self.grid.set(pos[0], pos[1], color0)
             pos = self.get_random_free_position()
             self.grid.set(pos[0], pos[1], color1)
+            color1.cur_pos = pos
         else:
             self.grid.set(1, 1, color0)
+            color0.cur_pos = (1, 1)
             self.grid.set(width - 2, 1, color1)
+            color1.cur_pos = (width - 2, 1)
         self.mission = str(self.goal_color)
+        if self.goal_color == 0:
+            self.goal = color0
+        else:
+            self.goal = color1
+        # self.goal_pos =
         # self.mission = "Get to the " + IDX_TO_COLOR[1 + self.goal_pos] + " square"
 
     def get_random_free_position(self):

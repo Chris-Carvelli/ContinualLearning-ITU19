@@ -23,7 +23,8 @@ while True:
     time.sleep(1.0 / fps)
     step = observation, reward, done, info = env.step(env.action_space.sample())
     env.render()
-    if reward > 0:
+    print(reward)
+    if reward > 0 and done:
         print("GOAL with reward: " + str(reward))
         time.sleep(3)
         break
