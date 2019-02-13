@@ -5,14 +5,76 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+from functools import reduce
+
 import gym
 
 import time
+
+from tests.minigrid.utils import random_z_v
+
+# TODO create proper setting file (as .cfg)
+Z_DIM = 32
+Z_VECT_EVOLUTION_PROBABILITY = 0.5
+# TODO compute in HyperNN.__init__()
+Z_NUM = 4
+
+
+class HyperNN(nn.Module):
+    def __init__(self, named_parameters=None):
+        super().__init__()
+
+        # TODO examine shapes of all layers and get max
+        max_size = 32 * 64 * 2 * 2
+
+        # TODO get n layers from len(shapes)
+        self.z_v = random_z_v(Z_DIM, Z_NUM)
+
+        self.l1 = nn.Linear(Z_DIM, 128)
+        self.l2 = nn.Linear(128, 128)
+        self.out = nn.Linear(128, max_size)
+
+        self.add_tensors = {}
+
+        self.init()
+
+    def forward(self, layer_index):
+        x = chunks(self.z_v, Z_DIM)[layer_index]
+
+        # x = torch.from_numpy(x).float()
+        x = F.relu(self.l1(x))
+        x = F.relu(self.l2(x))
+
+        return self.out(x)
+
+    def evolve(self, sigma):
+        p = torch.distributions.normal.Normal(0.5, 0.1).sample().item()
+        if p > Z_VECT_EVOLUTION_PROBABILITY:
+            # evolve z vector
+            self.z_v += torch.distributions.normal.Normal(torch.zeros([Z_DIM * Z_NUM]), sigma).sample()
+        else:
+            # evolve weights
+            params = self.named_parameters()
+            for name, tensor in sorted(params):
+                to_add = self.add_tensors[tensor.size()]
+                to_add.normal_(0.0, sigma)
+                tensor.data.add_(to_add)
+
+    def init(self):
+        for name, tensor in self.named_parameters():
+            if tensor.size() not in self.add_tensors:
+                self.add_tensors[tensor.size()] = torch.Tensor(tensor.size())
+            if 'weight' in name:
+                nn.init.kaiming_normal(tensor)
+            else:
+                tensor.data.zero_()
 
 
 class Model(nn.Module):
     def __init__(self):
         super(Model, self).__init__()
+
+        self.hyperNN = HyperNN()
 
         # Define image embedding
         self.image_conv = nn.Sequential(
@@ -25,16 +87,11 @@ class Model(nn.Module):
             nn.ReLU()
         )
 
-        # self.actor = nn.Sequential(
-        #     nn.Linear(64, 64),
-        #     nn.Tanh(),
-        #     nn.Linear(64, 7)
-        # )
-
         self.out = nn.Linear(64, 4)
 
         self.add_tensors = {}
-        self.init()
+
+        self.update_weights()
 
     def forward(self, x):
         # x = x.reshape([1, 147])
@@ -45,11 +102,8 @@ class Model(nn.Module):
         return self.out(x)
 
     def evolve(self, sigma):
-        params = self.named_parameters()
-        for name, tensor in sorted(params):
-            to_add = self.add_tensors[tensor.size()]
-            to_add.normal_(0.0, sigma)
-            tensor.data.add_(to_add)
+        self.hyperNN.evolve(sigma)
+        self.update_weights()
 
     def init(self):
         for name, tensor in self.named_parameters():
@@ -60,6 +114,22 @@ class Model(nn.Module):
                 tensor.data *= 1 / torch.sqrt(tensor.pow(2).sum(1, keepdim=True))
             else:
                 tensor.data.zero_()
+
+    def update_weights(self):
+        # TODO find better impl
+        z_chunk = 0
+        for i, layer in enumerate(self.image_conv):
+            for name, param in layer.named_parameters():
+                if 'weight' in name:
+                    self.image_conv[i].weight = self.get_weights(z_chunk, layer.weight.shape)
+                    z_chunk += 1
+
+    def get_weights(self, layer_index, layer_shape):
+        w = self.hyperNN(layer_index)
+        w = torch.narrow(w, 0, 0, reduce((lambda x, y: x * y), layer_shape))
+        w = w.view(layer_shape)
+
+        return torch.nn.Parameter(w)
 
 
 def evaluate_model(env_key, model, max_eval, render=False, fps=60):
@@ -101,3 +171,11 @@ def evaluate_model(env_key, model, max_eval, render=False, fps=60):
     if tot_reward > 0:
         print(f'action_freq: {action_freq/n_eval}\treward: {tot_reward}')
     return tot_reward
+
+
+def chunks(l, n):
+    ret = []
+    for i in range(0, len(l), n):
+        ret.append(l[i:i + n])
+
+    return ret

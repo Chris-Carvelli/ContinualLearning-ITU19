@@ -1,4 +1,4 @@
-from tests.ga import GA
+from tests.minigrid.ga import GA
 import gym_minigrid
 
 
@@ -7,9 +7,8 @@ def main():
 
     ga = GA(1000, 'MiniGrid-Empty-Noise-8x8-v0')
 
-    ga.optimize(50, 0.005, 10, elite_trials=10, n_elites=1)
+    ga.optimize(50, 0.005, 20, elite_trials=10, n_elites=1)
 
 
 if __name__ == "__main__":
     main()
-

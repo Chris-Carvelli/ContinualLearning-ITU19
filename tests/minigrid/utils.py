@@ -1,0 +1,38 @@
+import os
+import torch
+import pickle
+import matplotlib.pyplot as plt
+
+
+def random_z_v(z_dim, z_num):
+    # ret = np.random.normal(0.01, 1.0, z_dim * z_num)
+    return torch.distributions.normal.Normal(torch.zeros([z_dim * z_num]), 1.0).sample()
+
+
+def plot(env, experiment):
+    path = os.path.join(
+        os.getcwd(),
+        f'Experiments/{env}/{experiment}/process.pickle'
+    )
+
+    fp = open(path, 'rb')
+    data = []
+
+    try:
+        data.append(pickle.load(fp))
+    except EOFError:
+        fp.close()
+
+    gen = list(range(len(data)))
+    s_med = [d[0] for d in data]
+    s_avg = [d[1] for d in data]
+    s_max = [d[2] for d in data]
+
+    plt.plot(gen, s_med)
+    plt.plot(gen, s_avg)
+    plt.plot(gen, s_max)
+
+    plt.legend()
+
+    plt.show()
+

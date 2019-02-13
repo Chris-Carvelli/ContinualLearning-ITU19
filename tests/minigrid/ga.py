@@ -3,7 +3,7 @@ import random
 import pickle
 import os
 
-from tests.Model import *
+from .Model import *
 
 
 class GA:
@@ -12,19 +12,21 @@ class GA:
         self.env_key = env_key
         self.max_eval = max_eval
 
+        # TODO make local variable, create self.parents
         self.models = [Model() for _ in range(population)]
 
     def get_best_models(self, models=None, trials=1):
         if models is None:
             models = self.models
 
+        # TODO refactor with for loops
         scored_models = list(zip(
             models,
             map(
                 evaluate_model,
-                [self.env_key] * (self.population * trials),
+                [self.env_key] * (len(models) * trials),
                 [y for x in models for y in trials * [x]],
-                [self.max_eval] * (self.population * trials))
+                [self.max_eval] * (len(models) * trials))
             )
         )
 
@@ -53,6 +55,7 @@ class GA:
 
         return median_score, mean_score, max_score, self.models[0]
 
+    # TODO replace with __next__, promote all params to class members
     def optimize(self, n_generation, sigma, truncation, trials=1, elite_trials=1, n_elites=1):
         print('start')
         path = os.path.join(
