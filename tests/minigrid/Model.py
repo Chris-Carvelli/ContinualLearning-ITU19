@@ -142,7 +142,7 @@ def evaluate_model(env_key, model, max_eval, render=False, fps=60):
     tot_reward = 0
     reward = 0
     n_eval = 0
-    # TMP
+    # FIXME culls out and remap actions. Find better way
     action_freq = np.zeros([7])
     while reward == 0 and n_eval < max_eval:
         state = state['image']
@@ -152,7 +152,7 @@ def evaluate_model(env_key, model, max_eval, render=False, fps=60):
         # values = env.step(env.action_space.sample())
         action = np.argmax(values.data.numpy()[:env.action_space.n])
 
-        # TMP remapping toggle action
+        # FIXME remapping toggle action
         if action is 3:
             action = 5
 
