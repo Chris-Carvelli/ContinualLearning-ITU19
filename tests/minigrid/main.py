@@ -7,9 +7,9 @@ import pickle
 def main():
     print('main')
 
-    ga = GA('MiniGrid-Empty-Noise-8x8-v0', 500, 5,
+    ga = GA('MiniGrid-Empty-Noise-8x8-v0', 1000, 5,
             sigma=0.005,
-            truncation=10,
+            truncation=20,
             elite_trials=5,
             n_elites=1)
 
