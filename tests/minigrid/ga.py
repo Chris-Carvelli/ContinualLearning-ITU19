@@ -25,23 +25,29 @@ class GA:
         self.trials = trials
         self.elite_trials = elite_trials
         self.n_elites = n_elites
+        self.models = None   # Wait with instantiation until evolution actually starts
 
         self.scored_parents = None
-        self.models = self.init_models()
-        
-        # strategies TODO create collections of strategies, set up externally (NO INTERNAL DICT< BAD FOR PERFORMANCE)
-        self.termination_strategy = lambda: self.g < self.n_generation
-
-        # algorithm state
         self.g = 0
 
-    def optimize(self):
+        # strategies TODO create collections of strategies, set up externally (NO INTERNAL DICT< BAD FOR PERFORMANCE)
+
+    def termination_strategy(self):
+            return self.g < self.n_generation
+
+        # algorithm state
+
+    def iterate(self):     # Renamed
+        if self.g == 0:
+            self.models = self.init_models()
         if self.termination_strategy():
             ret = self.evolve_iter()
             self.g += 1
-            return ret
+            print(f"median_score={ret[0]}, mean_score={ret[1]}, max_score={ret[2]}")
+            return
         else:
             raise StopIteration()
+
 
     def evolve_iter(self):
         scored_models = self.get_best_models()
@@ -87,12 +93,13 @@ class GA:
             self.models[-1].evolve(self.sigma)
 
     def init_models(self):
+
         if self.scored_parents is None:
             return [Model() for _ in range(self.population)]
         else:
             self.reproduce()
             # TODO horrible, make reproduce return the models. Maintain style all over the place
-            return self.models()
+            return self.models
 
     # serialization
     def __getstate__(self):
@@ -109,5 +116,5 @@ class GA:
     def __setstate__(self, state):
         self.__dict__.update(state)
         # Add baz back since it doesn't exist in the pickle
-        self.models = None
+        self.models = []
         self.reproduce()

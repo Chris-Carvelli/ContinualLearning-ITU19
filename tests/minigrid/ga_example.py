@@ -1,7 +1,6 @@
 import psutil, os
 import gym
 
-from custom_envs import *
 from tests.minigrid.ga import GA
 from sessions.session import Session
 from tests.simulator import simulate
@@ -14,9 +13,9 @@ def main():
     p = psutil.Process(os.getpid())
     p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
 
-    ga = GA('MiniGrid-Empty-Noise-8x8-v0', 1000, 5,
+    ga = GA('MiniGrid-Choice3x1-color0-v0', 100, 2,
             sigma=0.005,
-            truncation=20,
+            truncation=10,
             elite_trials=5,
             n_elites=1)
 
@@ -24,6 +23,14 @@ def main():
     name = f"{ga.env_key}_{ga.population}_{ga.n_generation}_{ga.sigma}_{ga.truncation}_{ga.elite_trials}_{ga.n_elites}"
     session = Session(ga, name)
     session.start()
+
+    ga = session.worker
+
+    env = gym.make(ga.env_key)
+    parents = [p for p, _ in filter(lambda x: x[1] > 0, ga.scored_parents)]
+    model = parents[0]
+    while True:
+        simulate(env, model, fps=4)
 
 
 if __name__ == "__main__":
