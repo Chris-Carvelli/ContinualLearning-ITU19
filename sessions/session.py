@@ -33,7 +33,7 @@ class Session:
 
     def __init__(self, worker, name, save_folder=None, repo_dir=None, ignore_file='.ignore'):
         """
-        :param worker: A object that implements the __next__() and throws a StopIteration when finished.
+        :param worker: A object that implements the work() methods which throws a StopIteration when finished.
         :param name: The name of the session. Unless otherwise specified it will also be the name of the data folder
         :param save_folder: The folder where the data is stored. Default is a folder in the same directory as the
                             main script with same name as the session
@@ -42,10 +42,17 @@ class Session:
         :param ignore_file: A file similar to a .gitignore that allows you to specify certain files which can be
                             modified without affecting the result of the worker
         """
+        # if repo_dir is None:
+        #     files =
+                # files = os.listdir(self.repo_dir)
+        # else:
         if repo_dir is not None:
             self.repo_dir = repo_dir
-            while ".git" not in os.listdir(self.repo_dir):
-                self.repo_dir = self.repo_dir.parent
+        while ".git" not in os.listdir(self.repo_dir):
+            self.repo_dir = self.repo_dir.parent
+
+        self.repo = Repo(self.repo_dir)
+
         self.worker = worker
         self.name = name
         self.ignore_file = ignore_file
@@ -53,7 +60,6 @@ class Session:
         if self.save_folder is None:
             self.save_folder = Path(os.path.dirname(sys.argv[0])) / self.name
         self.save_folder = Path(self.save_folder).with_suffix(".ses")
-        self.repo = Repo(self.repo_dir)
         self.session_data = lambda: (self.worker, self.repo, self.is_finished)
 
     def check_git_status(self):
@@ -133,8 +139,9 @@ class Session:
             print(choices)
             response = get_input(valid_inputs=("r", "l", "q"))
             if response == "l":
-                (iterator, repo, is_finished) = self.load_data("session")
+                (worker, repo, is_finished) = self.load_data("session")
                 if is_finished:
+                    self.worker = worker
                     print("Loaded session is already finished.")
                     return
                 commit = repo.head.commit
@@ -143,7 +150,7 @@ class Session:
                     print(f"Before rerunning script please checkout commit({commit}): {commit.message}")
                     return
                 else:
-                    self.worker = iterator
+                    self.worker = worker
                     self._run()
                     return
             elif response == "r":
@@ -168,7 +175,7 @@ class Session:
         t.start()
         while True:
             try:
-                i = self.worker.__next__()
+                i = self.worker.iterate()
                 if i is not None:
                     print(i)
                 self.save_data("session", self.session_data())
