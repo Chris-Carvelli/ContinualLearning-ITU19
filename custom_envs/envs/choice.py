@@ -120,9 +120,9 @@ class ChoiceEnv(MiniGridEnv):
 
 class ChoiceEnv3x1_0(ChoiceEnv):
     def __init__(self):
-        super().__init__(0, 3, 1)
+        super().__init__(0, 3, 1, max_steps=20)
 
 
 class ChoiceEnv3x1_1(ChoiceEnv):
     def __init__(self):
-        super().__init__(1, 3, 1)
+        super().__init__(1, 3, 1, max_steps=20)
