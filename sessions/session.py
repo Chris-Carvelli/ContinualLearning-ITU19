@@ -11,6 +11,8 @@ from git import Repo
 from pathlib import Path
 
 
+
+
 def get_input(valid_inputs=("y", "n")):
     """
     Queries the user for a terminal input which must be one of the valid inputs specified
@@ -61,6 +63,18 @@ class Session:
             self.save_folder = Path(os.path.dirname(sys.argv[0])) / self.name
         self.save_folder = Path(self.save_folder).with_suffix(".ses")
         self.session_data = lambda: (self.worker, self.repo, self.is_finished)
+
+    def load_results(self):
+        """This method is for loading session results after the session has finished"""
+        (worker, repo, is_finished) = self.load_data("session")
+        commit = repo.head.commit
+        if self.repo.head.commit != commit:
+            print("Warning: Loaded data belongs to a different commit")
+
+        if not is_finished:
+            print("Warning: Loaded data is has not yet finished iterating")
+        return worker
+
 
     def check_git_status(self):
         """Checks if the there are uncommitted changes to the git head that should be committed before session start"""

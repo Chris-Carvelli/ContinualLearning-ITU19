@@ -1,9 +1,10 @@
 import psutil, os
 import gym
 
+from custom_envs import *
 from tests.minigrid.ga import GA
 from sessions.session import Session
-from tests.simulator import simulate
+from tests.minigrid.utils import plot, simulate
 
 
 def main():
@@ -22,9 +23,10 @@ def main():
     # TODO: Find better name (my PC trims the last past of the name away)
     name = f"{ga.env_key}_{ga.population}_{ga.n_generation}_{ga.sigma}_{ga.truncation}_{ga.elite_trials}_{ga.n_elites}"
     session = Session(ga, name)
-    session.start()
 
-    ga = session.worker
+    # session.start()
+    plot(name)
+    ga = session.load_results()
 
     env = gym.make(ga.env_key)
     parents = [p for p, _ in filter(lambda x: x[1] > 0, ga.scored_parents)]

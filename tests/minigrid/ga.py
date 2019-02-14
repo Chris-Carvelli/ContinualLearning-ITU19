@@ -26,6 +26,9 @@ class GA:
         self.elite_trials = elite_trials
         self.n_elites = n_elites
         self.models = None   # Wait with instantiation until evolution actually starts
+        self.med_scores = []
+        self.avg_scores = []
+        self.max_scores = []
 
         self.scored_parents = None
         self.g = 0
@@ -44,6 +47,7 @@ class GA:
             ret = self.evolve_iter()
             self.g += 1
             print(f"median_score={ret[0]}, mean_score={ret[1]}, max_score={ret[2]}")
+
             return
         else:
             raise StopIteration()
@@ -63,6 +67,9 @@ class GA:
         self.models = parents[:self.n_elites]
 
         self.reproduce()
+        self.med_scores.append(median_score)
+        self.avg_scores.append(mean_score)
+        self.max_scores.append(max_score)
 
         return median_score, mean_score, max_score, self.scored_parents
 
