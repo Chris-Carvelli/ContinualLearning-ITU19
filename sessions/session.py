@@ -11,8 +11,6 @@ from git import Repo
 from pathlib import Path
 
 
-
-
 def get_input(valid_inputs=("y", "n")):
     """
     Queries the user for a terminal input which must be one of the valid inputs specified
@@ -30,7 +28,6 @@ class Session:
     """A session represents some work that needs to be done and saved, and possibly paused"""
     repo_dir = Path(os.path.dirname(os.path.abspath(__file__)))
     is_finished = False  # True when the session has finished all the work
-    terminate = False   # Used to terminate the current session in a subroutine
     ignore_uncommited_changes_to_main = True
 
     def __init__(self, worker, name, save_folder=None, repo_dir=None, ignore_file='.ignore'):
@@ -44,10 +41,7 @@ class Session:
         :param ignore_file: A file similar to a .gitignore that allows you to specify certain files which can be
                             modified without affecting the result of the worker
         """
-        # if repo_dir is None:
-        #     files =
-                # files = os.listdir(self.repo_dir)
-        # else:
+        self.terminate = False
         if repo_dir is not None:
             self.repo_dir = repo_dir
         while ".git" not in os.listdir(self.repo_dir):
@@ -60,7 +54,8 @@ class Session:
         self.ignore_file = ignore_file
         self.save_folder = save_folder
         if self.save_folder is None:
-            self.save_folder = Path(os.path.dirname(sys.argv[0])) / self.name
+            self.save_folder = os.path.dirname(sys.argv[0])
+        self.save_folder = Path(self.save_folder) / self.name
         self.save_folder = Path(self.save_folder).with_suffix(".ses")
         self.session_data = lambda: (self.worker, self.repo, self.is_finished)
 
@@ -74,7 +69,6 @@ class Session:
         if not is_finished:
             print("Warning: Loaded data is has not yet finished iterating")
         return worker
-
 
     def check_git_status(self):
         """Checks if the there are uncommitted changes to the git head that should be committed before session start"""
@@ -121,20 +115,6 @@ class Session:
                     return pickle.load(fp)
             else:
                 raise e
-
-    def _termination_input(self):
-        """A subroutine to check for user input"""
-        m = "input (q) to terminate session after next iteration"
-        print(m)
-        for line in sys.stdin:
-            if self.is_finished:
-                sys.exit()
-            elif line == "q\n":
-                self.terminate = True
-                print("terminating session...")
-                sys.exit()
-            else:
-                print(m)
 
     def start(self):
         """Starts the session. It will guide the user throug a series of questions about choices for the session
@@ -184,14 +164,9 @@ class Session:
         """Don't call explicitly. Instead use start()
         Lets the worker (continue) work until interrupted or finished
         """
-        t = threading.Thread(target=self._termination_input)
-        # TODO: Fix so that this thread terminates after session is complete without needing to press enter
-        t.start()
         while True:
             try:
                 i = self.worker.iterate()
-                if i is not None:
-                    print(i)
                 self.save_data("session", self.session_data())
                 if self.terminate:
                     print("Session terminated")

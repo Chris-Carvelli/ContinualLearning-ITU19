@@ -1,7 +1,11 @@
 import os
 import pickle
-import sys
+
+import sys, os
 import time
+import traceback
+import psutil
+
 import torch
 import numpy as np
 
@@ -12,7 +16,6 @@ import seaborn as sns
 import pandas as pd
 from sessions.session import Session
 
-
 sns.set()
 
 
@@ -21,9 +24,14 @@ def random_z_v(z_dim, z_num):
     return torch.distributions.normal.Normal(torch.zeros([z_dim * z_num]), 1.0).sample()
 
 
-def plot(experiment):
-    s = Session(None, experiment)
-    worker = s.load_results()
+def plot(target):
+    if isinstance(target, Session):
+        worker = target.load_results()
+    elif isinstance(target, str):
+        s = Session(None, target)
+        worker = s.load_results()
+    else:
+        worker = target
 
     gen = list(range(len(worker.med_scores)))
     s_med = worker.med_scores
@@ -52,12 +60,38 @@ def simulate(env, model=None, fps=5, env_type="minigrid"):
             else:
                 action = env.action_space.sample()
             step = state, reward, done, info = env.step(action)
-            time.sleep(1/fps)
+            time.sleep(1 / fps)
             env.render()
             sys.stdout.write(f"{reward} ")
             if done:
                 print("\nGOAL with reward: " + str(reward))
-                time.sleep(1/fps)
+                time.sleep(1 / fps)
                 break
     else:
         raise NotImplementedError()
+
+
+def lowpriority():
+    """ Set the priority of the process to below-normal. Ispired by
+    https://stackoverflow.com/questions/1023038/change-process-priority-in-python-cross-platform"""
+
+    import sys
+    try:
+        sys.getwindowsversion()
+    except AttributeError:
+        is_windows = False
+    else:
+        is_windows = True
+
+    try:
+        if is_windows:
+            p = psutil.Process(os.getpid())
+            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+        else:
+            os.nice(1)
+    except Exception as e:
+        print("Failed to save cpy priority to low. Reason:")
+        traceback.print_exc()
+
+
+
