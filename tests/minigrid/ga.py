@@ -1,7 +1,7 @@
 import copy
 import random
 import pickle
-import os
+import os, sys
 from memory_profiler import profile
 import gym
 from .Model import *
@@ -40,9 +40,11 @@ class GA:
         self.avg_scores = []
         self.max_scores = []
 
+        self.models = self.init_models()
+
     def iterate(self):     # Renamed
-        if self.g == 0:
-            self.models = self.init_models()
+        # if self.g == 0:
+        #     self.models = self.init_models()
         if self.termination_strategy():
             ret = self.evolve_iter()
             self.g += 1
@@ -62,6 +64,7 @@ class GA:
 
         print(f'[gen {self.g}] get parents')
         self.scored_parents = self.get_best_models([m for m, _ in scored_models[:self.truncation]])
+        # del scored_models
 
         print(f'[gen {self.g}] reproduce')
         self.reproduce()
@@ -94,17 +97,12 @@ class GA:
 
     # @profile
     def reproduce(self):
-        parents = [p for p, _ in filter(lambda x: x[1] > 0, self.scored_parents)]
-        # TMP clear models (replace with named_parameters update)
-        # for m in self.models:
-        #     del m
-
         # Elitism
-        self.models = parents[:self.n_elites]
-
-        for individual in range(self.population - self.n_elites):
-            self.models.append(copy.deepcopy(random.choice(self.scored_parents)[0]))
-            self.models[-1].evolve(self.sigma)
+        #
+        for model in self.models:
+            if model not in self.scored_parents[:self.n_elites]:
+                model.become_child(random.choice(self.scored_parents)[0])
+                model.evolve(self.sigma)
 
         # TMP profiling
         # TMP_generator = range(self.population - self.n_elites)

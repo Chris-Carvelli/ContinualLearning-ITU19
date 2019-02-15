@@ -3,7 +3,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 from functools import reduce
 
@@ -131,6 +130,13 @@ class Model(nn.Module):
 
         return torch.nn.Parameter(w)
 
+    def become_child(self, parent):
+        params = dict(parent.hyperNN.named_parameters())
+        for name, param in self.hyperNN.named_parameters():
+            if 'weight' in name:
+                # TODO check if possible .data = .data
+                param.data.copy_(params[name])
+
 
 def evaluate_model(env, model, max_eval, render=False, fps=60):
     # env = gym.make(env_key)
@@ -148,7 +154,7 @@ def evaluate_model(env, model, max_eval, render=False, fps=60):
         state = state['image']
 
         # removed some scaffolding, check if something was needed
-        values = model(Variable(torch.Tensor([state])))
+        values = model(torch.Tensor([state]))
         # values = env.step(env.action_space.sample())
         action = np.argmax(values.data.numpy()[:env.action_space.n])
 

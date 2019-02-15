@@ -13,7 +13,7 @@ def main():
     # Sets CPU usage priority to low
     lowpriority()
 
-    ga = GA('MiniGrid-Empty-Noise-8x8-v0', 10, 5,
+    ga = GA('MiniGrid-Empty-Noise-8x8-v0', 100, 5,
             sigma=0.005,
             truncation=20,
             elite_trials=5,
