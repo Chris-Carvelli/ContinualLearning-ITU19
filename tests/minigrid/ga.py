@@ -29,20 +29,28 @@ class GA:
         self.elite_trials = elite_trials
         self.n_elites = n_elites
 
-        self.scored_parents = None
-        self.models = self.init_models()
-        
         # strategies TODO create collections of strategies, set up externally (NO INTERNAL DICT< BAD FOR PERFORMANCE)
         self.termination_strategy = lambda: self.g < self.n_generation
 
         # algorithm state
         self.g = 0
-        self.env = gym.make(self.env_key)
+        self.scored_parents = None
+        self.models = None
+        self.env = gym.make(env_key)
 
-    def optimize(self):
+        # results TMP check if needed
+        self.med_scores = []
+        self.avg_scores = []
+        self.max_scores = []
+
+    def iterate(self):     # Renamed
+        if self.g == 0:
+            self.models = self.init_models()
         if self.termination_strategy():
             ret = self.evolve_iter()
             self.g += 1
+            print(f"median_score={ret[0]}, mean_score={ret[1]}, max_score={ret[2]}")
+
             return ret
         else:
             raise StopIteration()
@@ -60,6 +68,9 @@ class GA:
 
         print(f'[gen {self.g}] reproduce')
         self.reproduce()
+        self.med_scores.append(median_score)
+        self.avg_scores.append(mean_score)
+        self.max_scores.append(max_score)
 
         return median_score, mean_score, max_score, self.scored_parents
 
@@ -95,7 +106,7 @@ class GA:
         self.models = parents[:self.n_elites]
 
         for individual in range(self.population - self.n_elites):
-            self.models.append(copy.deepcopy(random.choice(self.scored_parents))[0])
+            self.models.append(copy.deepcopy(random.choice(self.scored_parents)[0]))
             self.models[-1].evolve(self.sigma)
 
         # TMP profiling
@@ -112,7 +123,7 @@ class GA:
         else:
             self.reproduce()
             # TODO horrible, make reproduce return the models. Maintain style all over the place
-            return self.models()
+            return self.models
 
     # serialization
     def __getstate__(self):
