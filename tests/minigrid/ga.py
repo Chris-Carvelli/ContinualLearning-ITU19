@@ -84,6 +84,10 @@ class GA:
 
     def reproduce(self):
         parents = [p for p, _ in filter(lambda x: x[1] > 0, self.scored_parents)]
+        # TMP clear models (replace with named_parameters update)
+        for m in self.models:
+            del m
+
         # Elitism
         self.models = parents[:self.n_elites]
 
