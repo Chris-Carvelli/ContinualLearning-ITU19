@@ -94,12 +94,17 @@ class GA:
         # Elitism
         self.models = parents[:self.n_elites]
 
-        TMP_generator = range(self.population - self.n_elites)
-        for individual in TMP_generator:
-            random_choice = random.choice(self.scored_parents)
-            cpy = copy.deepcopy(random_choice)[0]
-            self.models.append(cpy)
+        for individual in range(self.population - self.n_elites):
+            self.models.append(copy.deepcopy(random.choice(self.scored_parents))[0])
             self.models[-1].evolve(self.sigma)
+
+        # TMP profiling
+        # TMP_generator = range(self.population - self.n_elites)
+        # for individual in TMP_generator:
+        #     random_choice = random.choice(self.scored_parents)
+        #     cpy = copy.deepcopy(random_choice)[0]
+        #     self.models.append(cpy)
+        #     self.models[-1].evolve(self.sigma)
 
     def init_models(self):
         if not self.scored_parents:
@@ -123,6 +128,6 @@ class GA:
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        # Add baz back since it doesn't exist in the pickle
+
         self.models = None
         self.init_models()
