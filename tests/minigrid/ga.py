@@ -96,14 +96,15 @@ class GA:
 
         return scored_models
 
-    @profile
+    # @profile
     def reproduce(self):
-        # Elitism
-        #
+        elites = [m for m, _ in self.scored_parents[:self.n_elites]]
         for model in self.models:
-            if model not in self.scored_parents[:self.n_elites]:
+            if model not in elites:
                 model.become_child(random.choice(self.scored_parents)[0])
                 model.evolve(self.sigma)
+            # else:
+            #     print('elite')
 
         # TMP profiling
         # TMP_generator = range(self.population - self.n_elites)
