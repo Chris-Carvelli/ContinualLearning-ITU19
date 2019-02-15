@@ -54,7 +54,7 @@ class GA:
         max_score = scored_models[0][1]
 
         print(f'[gen {self.g}] get parents')
-        self.scored_parents = self.get_best_models(scored_models[:self.truncation][0])
+        self.scored_parents = self.get_best_models([m for m, _ in scored_models[:self.truncation]])
 
         print(f'[gen {self.g}] reproduce')
         self.reproduce()
