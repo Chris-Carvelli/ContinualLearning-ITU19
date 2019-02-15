@@ -65,7 +65,7 @@ class HyperNN(nn.Module):
             if tensor.size() not in self.add_tensors:
                 self.add_tensors[tensor.size()] = torch.Tensor(tensor.size())
             if 'weight' in name:
-                nn.init.kaiming_normal(tensor)
+                nn.init.kaiming_normal_(tensor)
             else:
                 tensor.data.zero_()
 

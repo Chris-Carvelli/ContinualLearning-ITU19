@@ -6,6 +6,8 @@ import os
 import gym
 from .Model import *
 
+from memory_profiler import profile
+
 
 class GA:
     def __init__(self, env_key, population, n_generation,
@@ -82,6 +84,7 @@ class GA:
 
         return scored_models
 
+    @profile
     def reproduce(self):
         parents = [p for p, _ in filter(lambda x: x[1] > 0, self.scored_parents)]
         # TMP clear models (replace with named_parameters update)
@@ -91,8 +94,11 @@ class GA:
         # Elitism
         self.models = parents[:self.n_elites]
 
-        for individual in range(self.population - self.n_elites):
-            self.models.append(copy.deepcopy(random.choice(self.scored_parents)[0]))
+        TMP_generator = range(self.population - self.n_elites)
+        for individual in TMP_generator:
+            random_choice = random.choice(self.scored_parents)
+            cpy = copy.deepcopy(random_choice)[0]
+            self.models.append(cpy)
             self.models[-1].evolve(self.sigma)
 
     def init_models(self):
