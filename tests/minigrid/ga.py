@@ -6,6 +6,7 @@ from memory_profiler import profile
 import gym
 from .Model import *
 
+
 class GA:
     def __init__(self, env_key, population, n_generation,
                  max_eval=100,
@@ -95,7 +96,7 @@ class GA:
 
         return scored_models
 
-    # @profile
+    @profile
     def reproduce(self):
         # Elitism
         #

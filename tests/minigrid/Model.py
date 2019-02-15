@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from functools import reduce
 
 import gym
+from memory_profiler import profile
 
 import time
 
@@ -46,6 +47,7 @@ class HyperNN(nn.Module):
 
         return self.out(x)
 
+    # @profile
     def evolve(self, sigma):
         p = torch.distributions.normal.Normal(0.5, 0.1).sample().item()
         if p > Z_VECT_EVOLUTION_PROBABILITY:
@@ -53,11 +55,10 @@ class HyperNN(nn.Module):
             self.z_v += torch.distributions.normal.Normal(torch.zeros([Z_DIM * Z_NUM]), sigma).sample()
         else:
             # evolve weights
-            params = self.named_parameters()
-            for name, tensor in sorted(params):
-                to_add = self.add_tensors[tensor.size()]
-                to_add.normal_(0.0, sigma)
-                tensor.data.add_(to_add)
+            for name, tensor in self.named_parameters():
+                # to_add = self.add_tensors[tensor.size()]
+                # to_add.normal_(0.0, sigma)
+                tensor.data.add_(torch.distributions.normal.Normal(tensor, 0.1).sample())
 
     def init(self):
         for name, tensor in self.named_parameters():
