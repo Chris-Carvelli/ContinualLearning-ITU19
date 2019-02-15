@@ -1,5 +1,6 @@
 import psutil, os
 import gym
+import gym_minigrid
 
 from custom_envs import *
 from tests.minigrid.ga import GA
@@ -13,9 +14,9 @@ def main():
     # Sets CPU usage priority to low
     lowpriority()
 
-    ga = GA('MiniGrid-Empty-Noise-8x8-v0', 10, 5,
+    ga = GA('MiniGrid-Empty-6x6-v0', 50, 10,
             sigma=0.005,
-            truncation=3,
+            truncation=5,
             elite_trials=5,
             n_elites=1)
 

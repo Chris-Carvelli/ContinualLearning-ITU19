@@ -58,7 +58,7 @@ class HyperNN(nn.Module):
             for name, tensor in self.named_parameters():
                 # to_add = self.add_tensors[tensor.size()]
                 # to_add.normal_(0.0, sigma)
-                tensor.data.add_(torch.distributions.normal.Normal(tensor, 0.1).sample())
+                tensor.data.add_(torch.distributions.normal.Normal(torch.zeros(tensor.shape), sigma).sample())
 
     def init(self):
         for name, tensor in self.named_parameters():

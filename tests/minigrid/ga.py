@@ -101,7 +101,11 @@ class GA:
         elites = [m for m, _ in self.scored_parents[:self.n_elites]]
         for model in self.models:
             if model not in elites:
-                model.become_child(random.choice(self.scored_parents)[0])
+                flag = True
+                while flag:
+                    choice = random.choice(self.scored_parents)[0]
+                    flag = choice is model
+                model.become_child(choice)
                 model.evolve(self.sigma)
             # else:
             #     print('elite')
