@@ -4,15 +4,14 @@ import gym
 from custom_envs import *
 from tests.minigrid.ga import GA
 from sessions.session import Session
-from tests.minigrid.utils import plot, simulate
+from tests.minigrid.utils import plot, simulate, lowpriority
 
 
 def main():
     print('main')
 
-    # Sets cpu priority below normal
-    p = psutil.Process(os.getpid())
-    p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+    # Sets CPU usage priority to low
+    lowpriority()
 
     ga = GA('MiniGrid-Empty-Noise-8x8-v0', 10, 5,
             sigma=0.005,
@@ -30,6 +29,7 @@ def main():
             ga.iterate()
         except StopIteration:
             break
+
 
 
 if __name__ == "__main__":
