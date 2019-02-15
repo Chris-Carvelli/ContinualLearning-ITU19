@@ -132,8 +132,8 @@ class Model(nn.Module):
         return torch.nn.Parameter(w)
 
 
-def evaluate_model(env_key, model, max_eval, render=False, fps=60):
-    env = gym.make(env_key)
+def evaluate_model(env, model, max_eval, render=False, fps=60):
+    # env = gym.make(env_key)
     # env = FlatObsWrapper(env)
     state = env.reset()
 
@@ -167,7 +167,7 @@ def evaluate_model(env_key, model, max_eval, render=False, fps=60):
         tot_reward += reward
         n_eval += 1
 
-    env.close()
+    # env.close()
     if tot_reward > 0:
         print(f'action_freq: {action_freq/n_eval}\treward: {tot_reward}')
     return tot_reward

@@ -7,14 +7,14 @@ import pickle
 def main():
     print('main')
 
-    ga = GA('MiniGrid-Empty-Noise-8x8-v0', 1000, 5,
+    ga = GA('MiniGrid-Empty-Noise-8x8-v0', 10, 5,
             sigma=0.005,
-            truncation=20,
-            elite_trials=5,
+            truncation=2,
+            elite_trials=2,
             n_elites=1)
 
-    pickle.dump(ga, open('ga.pickle', 'wb'))
-    fp = open('process.pickle', 'ab')
+    pickle.dump(ga, open('ga.pkl', 'wb'))
+    fp = open('process.pkl', 'ab')
     while True:
         try:
             res = ga.optimize()

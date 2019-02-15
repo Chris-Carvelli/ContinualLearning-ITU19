@@ -3,6 +3,7 @@ import random
 import pickle
 import os
 
+import gym
 from .Model import *
 
 
@@ -34,6 +35,7 @@ class GA:
 
         # algorithm state
         self.g = 0
+        self.env = gym.make(self.env_key)
 
     def optimize(self):
         if self.termination_strategy():
@@ -44,18 +46,17 @@ class GA:
             raise StopIteration()
 
     def evolve_iter(self):
+        print(f'[gen {self.g}] get best models')
         scored_models = self.get_best_models()
-        models = [m for m, _ in scored_models]
         scores = [s for _, s in scored_models]
         median_score = np.median(scores)
         mean_score = np.mean(scores)
         max_score = scored_models[0][1]
 
-        self.scored_parents = self.get_best_models(models[:self.truncation])
-        parents = [p for p, _ in filter(lambda x: x[1] > 0, self.scored_parents)]
-        # Elitism
-        self.models = parents[:self.n_elites]
+        print(f'[gen {self.g}] get parents')
+        self.scored_parents = self.get_best_models(scored_models[:self.truncation][0])
 
+        print(f'[gen {self.g}] reproduce')
         self.reproduce()
 
         return median_score, mean_score, max_score, self.scored_parents
@@ -69,7 +70,7 @@ class GA:
             models,
             map(
                 evaluate_model,
-                [self.env_key] * (len(models) * self.trials),
+                [self.env] * (len(models) * self.trials),
                 [y for x in models for y in self.trials * [x]],
                 [self.max_eval] * (len(models) * self.trials))
             )
@@ -82,12 +83,16 @@ class GA:
         return scored_models
 
     def reproduce(self):
+        parents = [p for p, _ in filter(lambda x: x[1] > 0, self.scored_parents)]
+        # Elitism
+        self.models = parents[:self.n_elites]
+
         for individual in range(self.population - self.n_elites):
             self.models.append(copy.deepcopy(random.choice(self.scored_parents)[0]))
             self.models[-1].evolve(self.sigma)
 
     def init_models(self):
-        if self.scored_parents is None:
+        if not self.scored_parents:
             return [Model() for _ in range(self.population)]
         else:
             self.reproduce()
@@ -110,4 +115,4 @@ class GA:
         self.__dict__.update(state)
         # Add baz back since it doesn't exist in the pickle
         self.models = None
-        self.reproduce()
+        self.init_models()

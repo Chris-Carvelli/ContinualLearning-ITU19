@@ -16,7 +16,8 @@ def random_z_v(z_dim, z_num):
 def plot(env, experiment):
     path = os.path.join(
         os.getcwd(),
-        f'Experiments/{env}/{experiment}/process.pickle'
+        # f'Experiments/{env}/{experiment}/process.pickle'
+        'process.pkl'
     )
 
     fp = open(path, 'rb')
