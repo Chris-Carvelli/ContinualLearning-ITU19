@@ -1,5 +1,6 @@
 from tests.minigrid.ga import GA
 import gym_minigrid
+import custom_envs
 
 import pickle
 

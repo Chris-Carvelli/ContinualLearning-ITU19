@@ -38,18 +38,3 @@ class EmptyEnvNoise6x6(EmptyEnvNoise):
 class EmptyEnvNoise16x16(EmptyEnvNoise):
     def __init__(self):
         super().__init__(size=16)
-
-register(
-    id='MiniGrid-Empty-Noise-6x6-v0',
-    entry_point='gym_minigrid.envs:EmptyEnvNoise6x6'
-)
-
-register(
-    id='MiniGrid-Empty-Noise-8x8-v0',
-    entry_point='gym_minigrid.envs:EmptyEnvNoise'
-)
-
-register(
-    id='MiniGrid-Empty-Noise-16x16-v0',
-    entry_point='gym_minigrid.envs:EmptyEnvNoise16x16'
-)
