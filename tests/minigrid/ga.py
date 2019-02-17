@@ -9,6 +9,7 @@ from .ModelFrostbite import *
 from memory_profiler import profile
 
 
+# TODO get Model as parameter
 class GA:
     def __init__(self, env_key, population, n_generation,
                  max_eval=100,

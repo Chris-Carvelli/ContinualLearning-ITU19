@@ -66,12 +66,12 @@ class HyperNN(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, rng_state, z_v, hyper_mode=False):
+    def __init__(self, rng_state, z_v=None, hyper_mode=False):
         super().__init__()
 
         self.rng_state = rng_state
         self.start_z_v = z_v
-        self.z_v = z_v
+        self.z_v = z_v if z_v is not None else random_z_v()
         self.hyper_mode = hyper_mode
 
         torch.manual_seed(rng_state)

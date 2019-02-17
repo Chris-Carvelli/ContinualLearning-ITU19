@@ -8,7 +8,7 @@ import pickle
 def main():
     print('main')
 
-    ga = GA('MiniGrid-Empty-Noise-16x16-v0', 10, 5,
+    ga = GA('Frostbite-v4', 10, 5,
             sigma=0.005,
             truncation=2,
             elite_trials=2,
