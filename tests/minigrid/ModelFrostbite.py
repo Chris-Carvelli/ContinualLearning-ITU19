@@ -197,9 +197,9 @@ class CompressedModel:
 
 
 def evaluate_model(env, model, max_eval=20000, max_noop=30, render=False):
-    model = uncompress_model(model)
+    # model = uncompress_model(model)
     noops = random.randint(0, max_noop)
-    env = gym.make(env)
+    # env = gym.make(env)
     cur_states = [reset(env)] * 4
     total_reward = 0
     for _ in range(noops):
