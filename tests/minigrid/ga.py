@@ -4,7 +4,7 @@ import pickle
 import os
 
 import gym
-from .Model import *
+from .ModelFrostbite import *
 
 from memory_profiler import profile
 
