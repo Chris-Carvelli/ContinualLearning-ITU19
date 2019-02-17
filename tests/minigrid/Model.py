@@ -71,10 +71,13 @@ class HyperNN(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self):
+    def __init__(self, hyper_mode=True):
         super(Model, self).__init__()
 
-        self.hyperNN = HyperNN()
+        self.hyper_mode = hyper_mode
+
+        if self.hyper_mode:
+            self.hyperNN = HyperNN()
 
         # Define image embedding
         self.image_conv = nn.Sequential(
@@ -91,7 +94,10 @@ class Model(nn.Module):
 
         self.add_tensors = {}
 
-        self.update_weights()
+        if hyper_mode:
+            self.update_weights()
+        else:
+            self.init()
 
     def forward(self, x):
         # x = x.reshape([1, 147])
@@ -102,8 +108,11 @@ class Model(nn.Module):
         return self.out(x)
 
     def evolve(self, sigma):
-        self.hyperNN.evolve(sigma)
-        self.update_weights()
+        if self.hyper_mode:
+            self.hyperNN.evolve(sigma)
+            self.update_weights()
+        else:
+            self._evolve_original(sigma)
 
     def init(self):
         for name, tensor in self.named_parameters():
@@ -130,6 +139,14 @@ class Model(nn.Module):
         w = w.view(layer_shape)
 
         return torch.nn.Parameter(w)
+
+    def _evolve_original(self, sigma):
+        params = self.named_parameters()
+        for name, tensor in sorted(params):
+            to_add = self.add_tensors[tensor.size()]
+            to_add.normal_(0.0, sigma)
+
+            tensor.data.add_(to_add)
 
 
 def evaluate_model(env, model, max_eval, render=False, fps=60):

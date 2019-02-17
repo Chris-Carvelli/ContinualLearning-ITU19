@@ -16,7 +16,8 @@ class GA:
                  truncation=10,
                  trials=1,
                  elite_trials=0,
-                 n_elites=1):
+                 n_elites=1,
+                 hyper_mode=True):
 
         # hyperparams TODO create separate container class to serialize
         self.population = population
@@ -28,6 +29,7 @@ class GA:
         self.trials = trials
         self.elite_trials = elite_trials
         self.n_elites = n_elites
+        self.hyper_mode = hyper_mode
 
         self.scored_parents = None
         self.models = self.init_models()
@@ -84,7 +86,7 @@ class GA:
 
         return scored_models
 
-    @profile
+    # @profile
     def reproduce(self):
         parents = [p for p, _ in filter(lambda x: x[1] > 0, self.scored_parents)]
         # TMP clear models (replace with named_parameters update)
@@ -103,7 +105,7 @@ class GA:
 
     def init_models(self):
         if not self.scored_parents:
-            return [Model() for _ in range(self.population)]
+            return [Model(self.hyper_mode) for _ in range(self.population)]
         else:
             self.reproduce()
             # TODO horrible, make reproduce return the models. Maintain style all over the place
