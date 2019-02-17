@@ -231,7 +231,7 @@ def evaluate_model(env, model, max_eval=20000, max_noop=30, render=False):
             env.render()
 
     env.close()
-    return total_reward, total_frames, action_freq / (n_actions + 1)
+    return total_reward, total_frames
 
 
 def chunks(l, n):

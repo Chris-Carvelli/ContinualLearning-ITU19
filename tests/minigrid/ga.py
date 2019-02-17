@@ -40,6 +40,7 @@ class GA:
 
         # algorithm state
         self.g = 0
+        self.used_frames = 0
         self.env = gym.make(self.env_key)
 
     def optimize(self):
@@ -64,7 +65,7 @@ class GA:
         print(f'[gen {self.g}] reproduce')
         self.reproduce()
 
-        return median_score, mean_score, max_score, self.scored_parents
+        return median_score, mean_score, max_score, self.used_frames, self.scored_parents
 
     def get_best_models(self, models=None):
         if models is None:
@@ -81,7 +82,8 @@ class GA:
             )
         )
 
-        scored_models = [(scored_models[i][0], sum(s for _, s in scored_models[i * self.trials:(i + 1)*self.trials]) / self.trials)
+        self.used_frames += sum(s[1] for _, s in scored_models)
+        scored_models = [(scored_models[i][0], sum(s[0] for _, s in scored_models[i * self.trials:(i + 1)*self.trials]) / self.trials)
                          for i in range(0, len(scored_models), self.trials)]
         scored_models.sort(key=lambda x: x[1], reverse=True)
 

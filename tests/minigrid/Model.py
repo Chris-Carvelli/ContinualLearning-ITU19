@@ -186,7 +186,7 @@ def evaluate_model(env, model, max_eval, render=False, fps=60):
     # env.close()
     if tot_reward > 0:
         print(f'action_freq: {action_freq/n_eval}\treward: {tot_reward}')
-    return tot_reward
+    return tot_reward, n_eval
 
 
 def chunks(l, n):
