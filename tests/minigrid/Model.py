@@ -125,7 +125,6 @@ class Model(nn.Module):
                 tensor.data.zero_()
 
     def update_weights(self):
-        # TODO find better impl
         z_chunk = 0
         for i, layer in enumerate(self.image_conv):
             for name, param in layer.named_parameters():
