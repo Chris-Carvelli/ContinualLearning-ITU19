@@ -4,9 +4,7 @@ import pickle
 import os
 
 import gym
-from .ModelFrostbite import *
-
-from memory_profiler import profile
+from .Model import *
 
 
 # TODO get Model as parameter
@@ -47,10 +45,15 @@ class GA:
         self.evaluations_used = 0
         self.env = gym.make(self.env_key)
 
-    def optimize(self):
+        # results TMP check if needed
+        self.results = []
+
+    def iterate(self):
         if self.termination_strategy():
             ret = self.evolve_iter()
             self.g += 1
+            print(f"median_score={ret[0]}, mean_score={ret[1]}, max_score={ret[2]}")
+
             return ret
         else:
             raise StopIteration()
@@ -69,7 +72,10 @@ class GA:
         print(f'[gen {self.g}] reproduce')
         self.reproduce()
 
-        return median_score, mean_score, max_score, self.evaluations_used, self.scored_parents
+        ret = (median_score, mean_score, max_score, self.evaluations_used, self.scored_parents)
+        self.results.append(ret)
+
+        return ret
 
     def get_best_models(self, models=None):
         if models is None:
@@ -93,18 +99,14 @@ class GA:
 
         return scored_models
 
-    @profile
+    # @profile
     def reproduce(self):
         parents = [p for p, _ in self.scored_parents]
-        # TMP clear models (replace with named_parameters update)
-        for m in self.models:
-            del m
 
         # Elitism
         self.models = parents[:self.n_elites]
 
-        TMP_generator = range(self.population - self.n_elites)
-        for individual in TMP_generator:
+        for individual in range(self.population - self.n_elites):
             random_choice = random.choice(self.scored_parents)
             cpy = copy.deepcopy(random_choice)[0]
             self.models.append(cpy)
@@ -116,7 +118,7 @@ class GA:
         else:
             self.reproduce()
             # TODO horrible, make reproduce return the models. Maintain style all over the place
-            return self.models()
+            return self.models
 
     # serialization
     def __getstate__(self):
@@ -132,6 +134,6 @@ class GA:
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        # Add baz back since it doesn't exist in the pickle
+
         self.models = None
         self.init_models()

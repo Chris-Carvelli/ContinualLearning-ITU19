@@ -1,2 +1,2 @@
 from custom_envs.envs.choice import *
-from .empty_noise import *
+from custom_envs.envs.empty_noise import *

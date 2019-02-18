@@ -1,34 +1,33 @@
-from tests.minigrid.ga import GA
+import psutil, os
 import gym_minigrid
-import custom_envs
+
+from custom_envs import *
+from tests.minigrid.ga import GA
+from sessions.session import Session
+from tests.minigrid.utils import plot, simulate, lowpriority
 
 import pickle
-
 
 def main():
     print('main')
 
+    # Sets CPU usage priority to low
+    lowpriority()
+
     ga = GA('Frostbite-v4', 1000,
             max_evals=6_000_000_000,
+            max_episode_eval=5000,
             sigma=0.002,
             truncation=20,
             elite_trials=30,
             n_elites=1,
             hyper_mode=True)
 
-    pickle.dump(ga, open('ga.pkl', 'wb'))
-    fp = open('process.pkl', 'wb')
-    g = 0
     while True:
         try:
-            res = ga.optimize()
-            print(f'done with generation {g}: {res[:4]}')
-            g += 0
-            pickle.dump(res, fp)
-            pickle.dump(ga, open('ga.pkl', 'wb'))
+            ga.iterate()
         except StopIteration:
             break
-    fp.close()
 
 
 if __name__ == "__main__":

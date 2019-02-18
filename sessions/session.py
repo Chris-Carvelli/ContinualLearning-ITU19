@@ -28,12 +28,11 @@ class Session:
     """A session represents some work that needs to be done and saved, and possibly paused"""
     repo_dir = Path(os.path.dirname(os.path.abspath(__file__)))
     is_finished = False  # True when the session has finished all the work
-    terminate = False   # Used to terminate the current session in a subroutine
     ignore_uncommited_changes_to_main = True
 
     def __init__(self, worker, name, save_folder=None, repo_dir=None, ignore_file='.ignore'):
         """
-        :param worker: A object that implements the __next__() and throws a StopIteration when finished.
+        :param worker: A object that implements the work() methods which throws a StopIteration when finished.
         :param name: The name of the session. Unless otherwise specified it will also be the name of the data folder
         :param save_folder: The folder where the data is stored. Default is a folder in the same directory as the
                             main script with same name as the session
@@ -42,19 +41,34 @@ class Session:
         :param ignore_file: A file similar to a .gitignore that allows you to specify certain files which can be
                             modified without affecting the result of the worker
         """
+        self.terminate = False
         if repo_dir is not None:
             self.repo_dir = repo_dir
-            while ".git" not in os.listdir(self.repo_dir):
-                self.repo_dir = self.repo_dir.parent
+        while ".git" not in os.listdir(self.repo_dir):
+            self.repo_dir = self.repo_dir.parent
+
+        self.repo = Repo(self.repo_dir)
+
         self.worker = worker
         self.name = name
         self.ignore_file = ignore_file
         self.save_folder = save_folder
         if self.save_folder is None:
-            self.save_folder = Path(os.path.dirname(sys.argv[0])) / self.name
+            self.save_folder = os.path.dirname(sys.argv[0])
+        self.save_folder = Path(self.save_folder) / self.name
         self.save_folder = Path(self.save_folder).with_suffix(".ses")
-        self.repo = Repo(self.repo_dir)
         self.session_data = lambda: (self.worker, self.repo, self.is_finished)
+
+    def load_results(self):
+        """This method is for loading session results after the session has finished"""
+        (worker, repo, is_finished) = self.load_data("session")
+        commit = repo.head.commit
+        if self.repo.head.commit != commit:
+            print("Warning: Loaded data belongs to a different commit")
+
+        if not is_finished:
+            print("Warning: Loaded data is has not yet finished iterating")
+        return worker
 
     def check_git_status(self):
         """Checks if the there are uncommitted changes to the git head that should be committed before session start"""
@@ -102,20 +116,6 @@ class Session:
             else:
                 raise e
 
-    def _termination_input(self):
-        """A subroutine to check for user input"""
-        m = "input (q) to terminate session after next iteration"
-        print(m)
-        for line in sys.stdin:
-            if self.is_finished:
-                sys.exit()
-            elif line == "q\n":
-                self.terminate = True
-                print("terminating session...")
-                sys.exit()
-            else:
-                print(m)
-
     def start(self):
         """Starts the session. It will guide the user throug a series of questions about choices for the session
         regarding git status and restarting/overwriting previous sessions"""
@@ -133,8 +133,9 @@ class Session:
             print(choices)
             response = get_input(valid_inputs=("r", "l", "q"))
             if response == "l":
-                (iterator, repo, is_finished) = self.load_data("session")
+                (worker, repo, is_finished) = self.load_data("session")
                 if is_finished:
+                    self.worker = worker
                     print("Loaded session is already finished.")
                     return
                 commit = repo.head.commit
@@ -143,7 +144,7 @@ class Session:
                     print(f"Before rerunning script please checkout commit({commit}): {commit.message}")
                     return
                 else:
-                    self.worker = iterator
+                    self.worker = worker
                     self._run()
                     return
             elif response == "r":
@@ -163,14 +164,9 @@ class Session:
         """Don't call explicitly. Instead use start()
         Lets the worker (continue) work until interrupted or finished
         """
-        t = threading.Thread(target=self._termination_input)
-        # TODO: Fix so that this thread terminates after session is complete without needing to press enter
-        t.start()
         while True:
             try:
-                i = self.worker.__next__()
-                if i is not None:
-                    print(i)
+                i = self.worker.iterate()
                 self.save_data("session", self.session_data())
                 if self.terminate:
                     print("Session terminated")
