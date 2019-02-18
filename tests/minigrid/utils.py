@@ -33,10 +33,10 @@ def plot(target):
     else:
         worker = target
 
-    gen = list(range(len(worker.med_scores)))
-    s_med = worker.med_scores
-    s_avg = worker.avg_scores
-    s_max = worker.max_scores
+    gen = list(range(len(worker.results)))
+    s_med = [r[0] for r in worker.results]
+    s_avg = [r[1] for r in worker.results]
+    s_max = [r[2] for r in worker.results]
 
     plt.plot(gen, s_med, label='med')
     plt.plot(gen, s_avg, label='avg', )

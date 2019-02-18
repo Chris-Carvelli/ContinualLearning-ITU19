@@ -37,8 +37,8 @@ class GA:
         self.models = self.init_models()
         
         # strategies TODO create collections of strategies, set up externally (NO INTERNAL DICT, BAD FOR PERFORMANCE)
-        # self.termination_strategy = lambda: self.g < self.n_generation
-        self.termination_strategy = lambda: self.evaluations_used < self.max_episode_eval
+        self.termination_strategy = lambda: self.g < self.max_generations
+        # self.termination_strategy = lambda: self.evaluations_used < self.max_episode_eval
 
         # algorithm state
         self.g = 0

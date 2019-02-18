@@ -5,7 +5,7 @@ from tests.minigrid.ga import GA
 import pickle
 
 if __name__ == "__main__":
-    plot('MiniGrid-Empty-Noise-8x8-v0', '10_50_0.005_2')
+    plot('test_session')
     # ga = pickle.load(open('ga.pkl', 'rb'))
 # import pickle
 #

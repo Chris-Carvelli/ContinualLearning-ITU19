@@ -14,20 +14,18 @@ def main():
     # Sets CPU usage priority to low
     lowpriority()
 
-    ga = GA('Frostbite-v4', 1000,
-            max_evals=6_000_000_000,
-            max_episode_eval=5000,
-            sigma=0.002,
-            truncation=20,
-            elite_trials=30,
+    ga = GA('MiniGrid-Empty-Noise-8x8-v0', 100,
+            max_generations=20,
+            max_episode_eval=100,
+            sigma=0.005,
+            truncation=7,
+            elite_trials=5,
             n_elites=1,
             hyper_mode=True)
 
-    while True:
-        try:
-            ga.iterate()
-        except StopIteration:
-            break
+    session = Session(ga, 'test_session')
+
+    session.start()  # After running once this can be commented out
 
 
 if __name__ == "__main__":
