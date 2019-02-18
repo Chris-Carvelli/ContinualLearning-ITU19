@@ -11,8 +11,10 @@ from memory_profiler import profile
 
 # TODO get Model as parameter
 class GA:
-    def __init__(self, env_key, population, n_generation,
-                 max_eval=100,
+    def __init__(self, env_key, population,
+                 max_generations=20,
+                 max_evals=1000,
+                 max_episode_eval=100,
                  sigma=0.05,
                  truncation=10,
                  trials=1,
@@ -23,8 +25,9 @@ class GA:
         # hyperparams TODO create separate container class to serialize
         self.population = population
         self.env_key = env_key
-        self.max_eval = max_eval
-        self.n_generation = n_generation
+        self.max_episode_eval = max_episode_eval
+        self.max_evals = max_evals
+        self.max_generations = max_generations
         self.sigma = sigma
         self.truncation = truncation
         self.trials = trials
@@ -35,12 +38,13 @@ class GA:
         self.scored_parents = None
         self.models = self.init_models()
         
-        # strategies TODO create collections of strategies, set up externally (NO INTERNAL DICT< BAD FOR PERFORMANCE)
-        self.termination_strategy = lambda: self.g < self.n_generation
+        # strategies TODO create collections of strategies, set up externally (NO INTERNAL DICT, BAD FOR PERFORMANCE)
+        # self.termination_strategy = lambda: self.g < self.n_generation
+        self.termination_strategy = lambda: self.evaluations_used < self.max_episode_eval
 
         # algorithm state
         self.g = 0
-        self.used_frames = 0
+        self.evaluations_used = 0
         self.env = gym.make(self.env_key)
 
     def optimize(self):
@@ -65,7 +69,7 @@ class GA:
         print(f'[gen {self.g}] reproduce')
         self.reproduce()
 
-        return median_score, mean_score, max_score, self.used_frames, self.scored_parents
+        return median_score, mean_score, max_score, self.evaluations_used, self.scored_parents
 
     def get_best_models(self, models=None):
         if models is None:
@@ -78,11 +82,11 @@ class GA:
                 evaluate_model,
                 [self.env] * (len(models) * self.trials),
                 [y for x in models for y in self.trials * [x]],
-                [self.max_eval] * (len(models) * self.trials))
+                [self.max_episode_eval] * (len(models) * self.trials))
             )
         )
 
-        self.used_frames += sum(s[1] for _, s in scored_models)
+        self.evaluations_used += sum(s[1] for _, s in scored_models)
         scored_models = [(scored_models[i][0], sum(s[0] for _, s in scored_models[i * self.trials:(i + 1)*self.trials]) / self.trials)
                          for i in range(0, len(scored_models), self.trials)]
         scored_models.sort(key=lambda x: x[1], reverse=True)
