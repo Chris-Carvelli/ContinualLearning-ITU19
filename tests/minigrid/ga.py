@@ -93,7 +93,7 @@ class GA:
 
         return scored_models
 
-    # @profile
+    @profile
     def reproduce(self):
         parents = [p for p, _ in self.scored_parents]
         # TMP clear models (replace with named_parameters update)
