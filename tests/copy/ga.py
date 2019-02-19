@@ -6,9 +6,14 @@ import os
 import gym
 # from .Model import *
 from models.ntm import CopyNTM, evaluate_model
-
+import numpy as np
 
 Model = CopyNTM
+
+
+def set_model(model):
+    Model = model
+
 
 # TODO get Model as parameter
 class GA:
@@ -38,7 +43,7 @@ class GA:
 
         self.scored_parents = None
         self.models = self.init_models()
-        
+
         # strategies TODO create collections of strategies, set up externally (NO INTERNAL DICT, BAD FOR PERFORMANCE)
         self.termination_strategy = lambda: self.g < self.max_generations
         # self.termination_strategy = lambda: self.evaluations_used < self.max_episode_eval
@@ -92,11 +97,12 @@ class GA:
                 [self.env] * (len(models) * self.trials),
                 [y for x in models for y in self.trials * [x]],
                 [self.max_episode_eval] * (len(models) * self.trials))
-            )
+        )
         )
 
         self.evaluations_used += sum(s[1] for _, s in scored_models)
-        scored_models = [(scored_models[i][0], sum(s[0] for _, s in scored_models[i * self.trials:(i + 1)*self.trials]) / self.trials)
+        scored_models = [(scored_models[i][0],
+                          sum(s[0] for _, s in scored_models[i * self.trials:(i + 1) * self.trials]) / self.trials)
                          for i in range(0, len(scored_models), self.trials)]
         scored_models.sort(key=lambda x: x[1], reverse=True)
 
