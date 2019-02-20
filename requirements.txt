@@ -7,3 +7,4 @@ seaborn
 click==6.7
 gitpython==2.1.11
 globster
+psutil

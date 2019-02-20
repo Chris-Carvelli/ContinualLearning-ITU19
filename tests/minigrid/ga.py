@@ -15,6 +15,8 @@ class GA:
                  elite_trials=0,
                  n_elites=1):
 
+        # hyperparams DOING
+        self.hyperparams = {}
         # hyperparams TODO create separate container class to serialize
         self.population = population
         self.env_key = env_key
