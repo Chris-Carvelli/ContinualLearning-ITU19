@@ -140,5 +140,6 @@ class GA:
     def __setstate__(self, state):
         self.__dict__.update(state)
 
+        self.termination_strategy = lambda: self.g < self.max_generations
         self.models = None
         self.init_models()

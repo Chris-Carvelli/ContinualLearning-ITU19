@@ -135,17 +135,16 @@ class Session:
             if self.ignore_warnings:
                 print("Loading session")
                 response = "l"
-                print(f"The save folder already exists (Ignored). (Path: {self.save_folder})")
             else:
                 choices = "Choose one:\n- Restart session and overwrite data folder (r)\n- Load folder (l)\n- Exit (q)"
                 print(choices)
                 response = get_input(valid_inputs=("r", "l", "q"))
             if response == "l":
                 (worker, repo, is_finished) = self.load_data("session")
-                if is_finished:
-                    self.worker = worker
-                    print("Loaded session is already finished.")
-                    return
+                # if is_finished:
+                #     self.worker = worker
+                #     print("Loaded session is already finished.")
+                #     return
                 commit = repo.head.commit
                 if self.repo.head.commit != commit:
                     print("The loaded session belonged to a different commit and cannot be loaded")
@@ -165,7 +164,6 @@ class Session:
             else:
                 return
         shutil.copyfile(Path(sys.argv[0]), Path(self.save_folder) / "script_copy.py")
-        self.save_data("session", self.session_data())
         self._run()
 
     def _run(self):
@@ -182,6 +180,5 @@ class Session:
             except StopIteration:
                 break
         self.is_finished = True
-
         self.save_data("session", self.session_data())
         print("Session done")

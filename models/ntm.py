@@ -6,21 +6,20 @@ from torch import nn
 from collections import defaultdict
 import numpy as np
 
+
 class NTM(nn.Module):
     """A Neural Turing Machine"""
 
-    def __init__(self, network, memory_unit_size=4, max_memory=10, initial_read_vector=None, history=False):
+    def __init__(self, network, memory_unit_size=4, max_memory=10, history=False):
         super(NTM, self).__init__()
         self.jump_threshold = 0.5
         self.max_memory = max_memory
         self.memory_unit_size = memory_unit_size
         self.head_pos = 0
-        self.memory = torch.zeros(self.max_memory, self.memory_unit_size)
-        self.memory.requires_grad = False
-        self.previous_read = initial_read_vector
-        if initial_read_vector is None:
-            self.previous_read = torch.zeros(self.memory_unit_size)
-            self.previous_read.requires_grad = False
+        self.memory = None
+        self.previous_read = None
+        self.reset_memory()
+
         # self.previous_read = np.array(self.previous_read)
         self.network = network
         if history:
@@ -28,6 +27,13 @@ class NTM(nn.Module):
         else:
             self.history = None
 
+    def reset_memory(self):
+        """Deletes all memory of the model and sets previous_read/initial_read_vector"""
+        self.head_pos = 0
+        self.memory = torch.zeros(self.max_memory, self.memory_unit_size)
+        self.memory.requires_grad = False
+        self.previous_read = torch.zeros(self.memory_unit_size)
+        self.previous_read.requires_grad = False
 
     def _content_jump(self, target):
         """Shift the head position to the memory address most similar to the target vector"""
@@ -64,7 +70,7 @@ class NTM(nn.Module):
 
     def _read(self):
         """Returns the memory vector at the current head position"""
-        return self.memory[self.head_pos]
+        return torch.tensor(self.memory[self.head_pos].detach().numpy())
 
     def update_head(self, v):
         """
@@ -92,15 +98,11 @@ class NTM(nn.Module):
     def forward(self, x):
         assert len(x.size()) > 1 and x.size()[0], "Only a single sample can be forwarded at once"
         x = x.double()
-        # print(x, self.previous_read.unsqueeze(0).double())
         x_joined = torch.cat((x.float(), self.previous_read.unsqueeze(0)), 1)
-        # x_joined = torch.cat((x.float(), torch.randn(1, self.memory_unit_size)), 1)
-        # print(x_joined)
         out = self.network(x_joined).squeeze(0)
         y = out[:-self.update_size()]
         v = out[-self.update_size():]
         self.previous_read = self.update_head(v)
-        print(self.previous_read)
         if self.history is not None:
             self.history["in"].append(x.squeeze())
             self.history["out"].append(y.detach())
@@ -176,7 +178,6 @@ class CopyNTM(NTM):
         """Transform observation from copy evn to a format ready to input into this model"""
         return torch.tensor(obs, dtype=torch.float64).unsqueeze(0)
 
-
     def evolve(self, sigma):
         params = self.named_parameters()
         for name, tensor in sorted(params):
@@ -194,22 +195,24 @@ class CopyNTM(NTM):
                 tensor.data.zero_()
 
 
-def evaluate_model(env, model, max_eval, render=False, fps=60):
-    obs = env.reset()
-    n_eval = 0
+def evaluate_model(env, model, max_eval, render=False, fps=60, n=5):
     tot_reward = 0
-    done = False
-    while not done and n_eval < max_eval:
-        y = model(model.obs_to_input(obs))
-        action = model.get_action(y, env)
-        obs, reward, done, _ = env.step(action)
-        if render:
-            env.render('human')
-            print(f'action={action}, reward={reward:.2f}')
-            time.sleep(1/fps)
-        tot_reward += reward
-        n_eval += 1
-    return tot_reward, n_eval
+    for i in range(n):
+        obs = env.reset()
+        model.reset_memory()
+        n_eval = 0
+        done = False
+        while not done and n_eval < max_eval:
+            y = model(model.obs_to_input(obs))
+            action = model.get_action(y, env)
+            obs, reward, done, _ = env.step(action)
+            if render:
+                env.render('human')
+                print(f'action={action}, reward={reward:.2f}')
+                time.sleep(1 / fps)
+            tot_reward += reward
+            n_eval += 1
+    return tot_reward / float(n), n_eval
 
 
 def ntm_tests():
@@ -254,7 +257,8 @@ if __name__ == '__main__':
     net = CopyNTM(8)
     net.history = defaultdict(list)
     for i in range(10):
+        # print(net.memory)
         net(torch.rand(net.in_size).unsqueeze(0))
 
-    pprint(dict(net.history))
+    # pprint(dict(net.history))
     net.plot_history()
