@@ -70,7 +70,6 @@ class ChoiceEnv(MiniGridEnv):
             self.start_pos = (1, height - 2)
             m = Maze(int((self.width - 1) / 2), int((self.height - 1) / 2))
             m.randomize()
-            print(m.__repr__())
             m = m._to_str_matrix()
             for y, row in enumerate(m):
                 for x, cell in enumerate(row):
@@ -120,9 +119,9 @@ class ChoiceEnv(MiniGridEnv):
 
 class ChoiceEnv3x1_0(ChoiceEnv):
     def __init__(self):
-        super().__init__(0, 3, 1)
+        super().__init__(0, 3, 1, max_steps=20)
 
 
 class ChoiceEnv3x1_1(ChoiceEnv):
     def __init__(self):
-        super().__init__(1, 3, 1)
+        super().__init__(1, 3, 1, max_steps=20)

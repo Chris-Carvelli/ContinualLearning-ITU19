@@ -27,6 +27,5 @@ class MyExperiment:
         return sum(self.current)
 
 
-repo_dir = Path(os.path.dirname(os.path.abspath(__file__)))
-S = Session(MyExperiment(), "TestSession", repo_dir=repo_dir)
+S = Session(MyExperiment(), "TestSession")
 S.start()

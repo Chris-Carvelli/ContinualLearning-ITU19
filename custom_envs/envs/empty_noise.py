@@ -1,5 +1,4 @@
 from gym_minigrid.minigrid import *
-from gym_minigrid.register import register
 from random import random
 
 class EmptyEnvNoise(MiniGridEnv):
@@ -10,7 +9,7 @@ class EmptyEnvNoise(MiniGridEnv):
     def __init__(self, size=8):
         super().__init__(
             grid_size=size,
-            max_steps=4*size*size,
+            max_steps=4 * size * size,
             # Set this to True for maximum speed
             see_through_walls=True
         )
@@ -31,25 +30,12 @@ class EmptyEnvNoise(MiniGridEnv):
 
         self.mission = "get to the green goal square"
 
+
 class EmptyEnvNoise6x6(EmptyEnvNoise):
     def __init__(self):
         super().__init__(size=6)
 
+
 class EmptyEnvNoise16x16(EmptyEnvNoise):
     def __init__(self):
         super().__init__(size=16)
-
-register(
-    id='MiniGrid-Empty-Noise-6x6-v0',
-    entry_point='gym_minigrid.envs:EmptyEnvNoise6x6'
-)
-
-register(
-    id='MiniGrid-Empty-Noise-8x8-v0',
-    entry_point='gym_minigrid.envs:EmptyEnvNoise'
-)
-
-register(
-    id='MiniGrid-Empty-Noise-16x16-v0',
-    entry_point='gym_minigrid.envs:EmptyEnvNoise16x16'
-)

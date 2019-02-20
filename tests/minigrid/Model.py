@@ -65,16 +65,19 @@ class HyperNN(nn.Module):
             if tensor.size() not in self.add_tensors:
                 self.add_tensors[tensor.size()] = torch.Tensor(tensor.size())
             if 'weight' in name:
-                nn.init.kaiming_normal(tensor)
+                nn.init.kaiming_normal_(tensor)
             else:
                 tensor.data.zero_()
 
 
 class Model(nn.Module):
-    def __init__(self):
+    def __init__(self, hyper_mode=True):
         super(Model, self).__init__()
 
-        self.hyperNN = HyperNN()
+        self.hyper_mode = hyper_mode
+
+        if self.hyper_mode:
+            self.hyperNN = HyperNN()
 
         # Define image embedding
         self.image_conv = nn.Sequential(
@@ -91,7 +94,10 @@ class Model(nn.Module):
 
         self.add_tensors = {}
 
-        self.update_weights()
+        if hyper_mode:
+            self.update_weights()
+        else:
+            self.init()
 
     def forward(self, x):
         # x = x.reshape([1, 147])
@@ -102,8 +108,11 @@ class Model(nn.Module):
         return self.out(x)
 
     def evolve(self, sigma):
-        self.hyperNN.evolve(sigma)
-        self.update_weights()
+        if self.hyper_mode:
+            self.hyperNN.evolve(sigma)
+            self.update_weights()
+        else:
+            self._evolve_original(sigma)
 
     def init(self):
         for name, tensor in self.named_parameters():
@@ -116,7 +125,6 @@ class Model(nn.Module):
                 tensor.data.zero_()
 
     def update_weights(self):
-        # TODO find better impl
         z_chunk = 0
         for i, layer in enumerate(self.image_conv):
             for name, param in layer.named_parameters():
@@ -131,9 +139,17 @@ class Model(nn.Module):
 
         return torch.nn.Parameter(w)
 
+    def _evolve_original(self, sigma):
+        params = self.named_parameters()
+        for name, tensor in sorted(params):
+            to_add = self.add_tensors[tensor.size()]
+            to_add.normal_(0.0, sigma)
 
-def evaluate_model(env_key, model, max_eval, render=False, fps=60):
-    env = gym.make(env_key)
+            tensor.data.add_(to_add)
+
+
+def evaluate_model(env, model, max_eval, render=False, fps=60):
+    # env = gym.make(env_key)
     # env = FlatObsWrapper(env)
     state = env.reset()
 
@@ -167,10 +183,10 @@ def evaluate_model(env_key, model, max_eval, render=False, fps=60):
         tot_reward += reward
         n_eval += 1
 
-    env.close()
+    # env.close()
     if tot_reward > 0:
         print(f'action_freq: {action_freq/n_eval}\treward: {tot_reward}')
-    return tot_reward
+    return tot_reward, n_eval
 
 
 def chunks(l, n):

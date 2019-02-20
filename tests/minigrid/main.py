@@ -1,28 +1,31 @@
-from tests.minigrid.ga import GA
+import psutil, os
 import gym_minigrid
 
-import pickle
+from custom_envs import *
+from tests.minigrid.ga import GA
+from sessions.session import Session
+from tests.minigrid.utils import plot, simulate, lowpriority
 
+import pickle
 
 def main():
     print('main')
 
-    ga = GA('MiniGrid-Empty-Noise-8x8-v0', 1000, 5,
-            sigma=0.005,
-            truncation=20,
-            elite_trials=5,
-            n_elites=1)
+    # Sets CPU usage priority to low
+    lowpriority()
 
-    pickle.dump(ga, open('ga.pickle', 'wb'))
-    fp = open('process.pickle', 'ab')
-    while True:
-        try:
-            res = ga.optimize()
-            print(f'done with generation{res[0]}')
-            pickle.dump(res, fp)
-        except StopIteration:
-            break
-    fp.close()
+    ga = GA('MiniGrid-Empty-Noise-8x8-v0', 100,
+            max_generations=20,
+            max_episode_eval=100,
+            sigma=0.005,
+            truncation=7,
+            elite_trials=5,
+            n_elites=1,
+            hyper_mode=True)
+
+    session = Session(ga, 'test_session')
+
+    session.start()  # After running once this can be commented out
 
 
 if __name__ == "__main__":
