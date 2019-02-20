@@ -1,0 +1,18 @@
+[HyperParameters]
+population = 100
+max_generations = 20
+max_evals = 1000
+max_episode_eval = 100
+sigma = 0.05
+truncation = 10
+trials = 1
+elite_trials = 0
+n_elites = 1
+hyper_mode = True
+
+[EnvironmentSettings]
+env_key = 'MiniGrid-Choice3x1-color0-v0'
+
+[Strategies]
+elite_selection = 'elites'
+termination = 'all_generations'

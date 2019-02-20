@@ -6,6 +6,21 @@ import os
 import gym
 from .Model import *
 
+from configparser import ConfigParser
+
+termination_strategies = \
+    {
+        'all_generations': lambda self: self.g < self.max_generations,
+    }
+
+# TODO Make elite strategies dict and parent selection strategies dict
+elite_strategies =\
+    {
+    }
+parent_selection_strategies =\
+    {
+    }
+
 
 # TODO get Model as parameter
 class GA:
@@ -20,9 +35,6 @@ class GA:
                  n_elites=1,
                  hyper_mode=True):
 
-        # hyperparams DOING
-        self.hyperparams = {}
-        # hyperparams TODO create separate container class to serialize
         self.population = population
         self.env_key = env_key
         self.max_episode_eval = max_episode_eval
@@ -37,8 +49,38 @@ class GA:
 
         self.scored_parents = None
         self.models = self.init_models()
-        
-        # strategies TODO create collections of strategies, set up externally (NO INTERNAL DICT, BAD FOR PERFORMANCE)
+
+        self.termination_strategy = lambda: self.g < self.max_generations
+        # self.termination_strategy = lambda: self.evaluations_used < self.max_episode_eval
+
+        # algorithm state
+        self.g = 0
+        self.evaluations_used = 0
+        self.env = gym.make(self.env_key)
+
+        # results TMP check if needed
+        self.results = []
+
+    def __init__(self, config_file_path):
+        config = ConfigParser()
+        config.read(config_file_path)
+        self.population = int(config["HyperParameters"]["population"])
+        self.max_episode_eval = int(config["HyperParameters"]["max_episode_eval"])
+        self.max_evals = int(config["HyperParameters"]["max_evals"])
+        self.max_generations = int(config["HyperParameters"]["max_generations"])
+        self.sigma = int(config["HyperParameters"]["sigma"])
+        self.truncation = int(config["HyperParameters"]["truncation"])
+        self.trials = int(config["HyperParameters"]["trials"])
+        self.elite_trials = int(config["HyperParameters"]["elite_trials"])
+        self.n_elites = int(config["HyperParameters"]["n_elites"])
+        self.hyper_mode = bool(config["HyperParameters"]["hyper_mode"])
+
+        self.env_key = config["EnvironmentSettings"]["env_key"]
+
+        self.scored_parents = None
+        self.models = self.init_models()
+
+        #TODO Make strategies to be read from the config file
         self.termination_strategy = lambda: self.g < self.max_generations
         # self.termination_strategy = lambda: self.evaluations_used < self.max_episode_eval
 
