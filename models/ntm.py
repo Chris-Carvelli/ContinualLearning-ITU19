@@ -126,12 +126,12 @@ class NTM(nn.Module):
         reads = torch.transpose(torch.stack(self.history["reads"], 0), 1, 0).detach()
 
         f, subplots = plt.subplots(3, 2, figsize=(4, 8))
-        subplots[0][0].imshow(inputs, vmin=0, vmax=1)
-        subplots[1][0].imshow(adds, vmin=0, vmax=1)
-        subplots[2][0].imshow(loc, vmin=0, vmax=1)
-        subplots[0][1].imshow(outputs, vmin=0, vmax=1)
-        subplots[1][1].imshow(reads, vmin=0, vmax=1)
-        subplots[2][1].imshow(loc, vmin=0, vmax=1)
+        subplots[0][0].imshow(inputs, vmin=0, vmax=1, cmap="gray")
+        subplots[1][0].imshow(adds, vmin=0, vmax=1, cmap="gray")
+        subplots[2][0].imshow(loc, vmin=0, vmax=1, cmap="gray")
+        subplots[0][1].imshow(outputs, vmin=0, vmax=1, cmap="gray")
+        subplots[1][1].imshow(reads, vmin=0, vmax=1, cmap="gray")
+        subplots[2][1].imshow(loc, vmin=0, vmax=1, cmap="gray")
         subplots[0][0].set_title('inputs')
         subplots[1][0].set_title('adds')
         subplots[2][0].set_title('loc')
@@ -151,8 +151,8 @@ class CopyNTM(NTM):
         super().__init__(None, copy_size + 2, max_memory=max_memory)
         self.in_size = copy_size + 2
         self.out_size = copy_size
-        hidden_size_1 = self.out_size * 2
-        hidden_size_2 = self.out_size * 2
+        hidden_size_1 = copy_size * 32
+        hidden_size_2 = copy_size * 32
 
         self.network = nn.Sequential(
             nn.Linear(self.in_size + self.memory_unit_size, hidden_size_1),

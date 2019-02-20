@@ -40,8 +40,9 @@ class Copy(gym.Env):
             return np.zeros(self.height + 2), reward, done, dict()
         obs = self.obs[self.i]
         if self.length + 2 <= self.i < 2 * self.length + 2:
-            # print(action, self.obs[self.i][2:])
-            reward = np.sum(0.5 - np.abs(action - self.obs[self.i -(self.length + 2)][2:])) / (self.height * self.length)
+            match = np.sum(1 - np.abs(action - self.obs[self.i - (self.length + 2)][2:])) / self.height
+            if match >= 0.25:
+                reward = (match - 0.25) / (0.75 * self.length)
         return obs, reward, done, dict()
 
     def reset(self):
@@ -71,21 +72,17 @@ if __name__ == '__main__':
     # print(c)
     s = c.reset()
 
-    # inputs = np.concatenate((c.obs[c.length + 1:], c.obs[:c.length + 1]), 0)
-    # print(inputs.transpose())
-    # for i, d in enumerate(inputs):
-    #     step = c.step(d[2:])
-    #     print(i, d[2:], step[0:3])
+    inputs = np.concatenate((c.obs[c.length + 1:], c.obs[:c.length + 1]), 0)
+    print(inputs.transpose())
+    for i, d in enumerate(inputs):
+        step = c.step(d[2:])
+        print(i, d[2:], step[0:3])
 
     net = CopyNTM(copy_size, max_memory=copy_size + 2)
     net.history = defaultdict(list)
-    res = evaluate_model(c, net, 100000)
+    res = evaluate_model(c, net, 100000, n=1)
     print(res)
     net.plot_history()
-
-
-
-
 
     #
     # print(inputs.transpose())

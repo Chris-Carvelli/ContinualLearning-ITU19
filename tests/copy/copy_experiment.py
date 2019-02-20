@@ -22,7 +22,7 @@ def main():
     env_key = f"Copy-{copy_size}x{length}-v0"
 
 
-    ga = GA(env_key, 1000, max_generations=100,
+    ga = GA(env_key, 500, max_generations=100,
             sigma=0.005,
             truncation=10,
             elite_trials=5,
@@ -35,18 +35,13 @@ def main():
     session = Session(ga, name)
 
     session.start()
-    # session.worker.g = 0
-    # ga = session.worker
-    # session.worker.max_generations += 10
-    # session.worker.termination_strategy = lambda: ga.g < ga.max_generations
-    # session.start()
 
     ga = session.load_results()
     plot(ga)
     champ = ga.results[-1][-1][0][0]
     champ.history = defaultdict(list)
     res = evaluate_model(ga.env, champ, 100000, n=1)
-
+    print(res)
     champ.plot_history()
     # env = gym.make(ga.env_key)
     # parents = [p for p, _ in filter(lambda x: x[1] > 0, ga.scored_parents)]
