@@ -30,7 +30,7 @@ class Session:
     is_finished = False  # True when the session has finished all the work
     ignore_uncommited_changes_to_main = True
 
-    def __init__(self, worker, name, save_folder=None, repo_dir=None, ignore_file='.ignore'):
+    def __init__(self, worker, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True):
         """
         :param worker: A object that implements the work() methods which throws a StopIteration when finished.
         :param name: The name of the session. Unless otherwise specified it will also be the name of the data folder
@@ -41,6 +41,7 @@ class Session:
         :param ignore_file: A file similar to a .gitignore that allows you to specify certain files which can be
                             modified without affecting the result of the worker
         """
+        self.ignore_warnings = ignore_warnings
         self.terminate = False
         if repo_dir is not None:
             self.repo_dir = repo_dir
@@ -78,7 +79,6 @@ class Session:
                          not d.is_excluded(Path(self.repo.working_dir) / i.a_path)]
         untracked_files = [f for f in self.repo.untracked_files if not d.is_excluded(Path(self.repo.working_dir) / f)]
         dirty_files = changed_files + untracked_files
-        print(dirty_files)
         if self.ignore_uncommited_changes_to_main:
             target = sys.argv[0].replace(Path(self.repo_dir).as_posix() + "/", "")
             if target in dirty_files:
@@ -121,17 +121,25 @@ class Session:
         regarding git status and restarting/overwriting previous sessions"""
         status = self.check_git_status()
         if not status:
-            print("Git status is not clean. Would you still like to continue with the session? (y/n)")
-            response = get_input(valid_inputs=("y", "n"))
-            if response == "n":
-                return
+            if self.ignore_warnings:
+                print("Git status is not clean (Ignored)")
+            else:
+                print("Git status is not clean. Would you still like to continue with the session? (y/n)")
+                response = get_input(valid_inputs=("y", "n"))
+                if response == "n":
+                    return
         if not os.path.exists(self.save_folder):
             os.makedirs(self.save_folder)
         else:
             print(f"The save folder already exists. (Path: {self.save_folder})")
-            choices = "Choose one:\n- Restart session and overwrite data folder (r)\n- Load folder (l)\n- Exit (q)"
-            print(choices)
-            response = get_input(valid_inputs=("r", "l", "q"))
+            if self.ignore_warnings:
+                print("Loading session")
+                response = "l"
+                print(f"The save folder already exists (Ignored). (Path: {self.save_folder})")
+            else:
+                choices = "Choose one:\n- Restart session and overwrite data folder (r)\n- Load folder (l)\n- Exit (q)"
+                print(choices)
+                response = get_input(valid_inputs=("r", "l", "q"))
             if response == "l":
                 (worker, repo, is_finished) = self.load_data("session")
                 if is_finished:

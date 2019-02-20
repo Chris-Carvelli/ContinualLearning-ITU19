@@ -9,6 +9,9 @@ from .Model import *
 
 # TODO get Model as parameter
 class GA:
+    Model = Model
+    evaluate_model = evaluate_model
+
     def __init__(self, env_key, population,
                  max_generations=20,
                  max_evals=1000,
@@ -34,7 +37,7 @@ class GA:
         self.hyper_mode = hyper_mode
 
         self.scored_parents = None
-        self.models = self.init_models()
+        self.models = None
         
         # strategies TODO create collections of strategies, set up externally (NO INTERNAL DICT, BAD FOR PERFORMANCE)
         self.termination_strategy = lambda: self.g < self.max_generations
@@ -49,6 +52,8 @@ class GA:
         self.results = []
 
     def iterate(self):
+        if self.g == 0:
+            self.models = self.init_models()
         if self.termination_strategy():
             ret = self.evolve_iter()
             self.g += 1
@@ -85,7 +90,7 @@ class GA:
         scored_models = list(zip(
             models,
             map(
-                evaluate_model,
+                self.evaluate_model,
                 [self.env] * (len(models) * self.trials),
                 [y for x in models for y in self.trials * [x]],
                 [self.max_episode_eval] * (len(models) * self.trials))
@@ -114,7 +119,7 @@ class GA:
 
     def init_models(self):
         if not self.scored_parents:
-            return [Model(self.hyper_mode) for _ in range(self.population)]
+            return [self.Model(self.hyper_mode) for _ in range(self.population)]
         else:
             self.reproduce()
             # TODO horrible, make reproduce return the models. Maintain style all over the place
