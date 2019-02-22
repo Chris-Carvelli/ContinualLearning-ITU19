@@ -100,6 +100,7 @@ class NTM(nn.Module):
         x = x.double()
         x_joined = torch.cat((x.float(), self.previous_read.unsqueeze(0)), 1)
         out = self.network(x_joined).squeeze(0)
+        print(out)
         y = out[:-self.update_size()]
         v = out[-self.update_size():]
         self.previous_read = self.update_head(v)
@@ -151,15 +152,12 @@ class CopyNTM(NTM):
         super().__init__(None, copy_size + 2, max_memory=max_memory)
         self.in_size = copy_size + 2
         self.out_size = copy_size
-        hidden_size_1 = copy_size * 32
-        hidden_size_2 = copy_size * 32
+        hidden_size_1 = 100
 
         self.network = nn.Sequential(
             nn.Linear(self.in_size + self.memory_unit_size, hidden_size_1),
-            nn.ReLU(),
-            nn.Linear(hidden_size_1, hidden_size_2),
-            nn.ReLU(),
-            nn.Linear(hidden_size_2, self.out_size + self.update_size()),
+            nn.Sigmoid(),
+            nn.Linear(hidden_size_1, self.out_size + self.update_size()),
             nn.Sigmoid(),
         )
         self.add_tensors = {}
@@ -190,12 +188,12 @@ class CopyNTM(NTM):
             if tensor.size() not in self.add_tensors:
                 self.add_tensors[tensor.size()] = torch.Tensor(tensor.size())
             if 'weight' in name:
-                nn.init.kaiming_normal_(tensor)
+                nn.init.xavier_normal_(tensor)
             else:
                 tensor.data.zero_()
 
 
-def evaluate_model(env, model, max_eval, render=False, fps=60, n=5):
+def evaluate_model(env, model, max_eval, render=False, fps=60, n=50):
     tot_reward = 0
     for i in range(n):
         obs = env.reset()

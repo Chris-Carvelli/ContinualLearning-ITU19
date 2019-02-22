@@ -56,8 +56,7 @@ class Session:
         self.save_folder = save_folder
         if self.save_folder is None:
             self.save_folder = os.path.dirname(sys.argv[0])
-        self.save_folder = Path(self.save_folder) / self.name
-        self.save_folder = Path(self.save_folder).with_suffix(".ses")
+        self.save_folder = Path(self.save_folder) / (self.name + ".ses")
         self.session_data = lambda: (self.worker, self.repo, self.is_finished)
 
     def load_results(self):
