@@ -57,7 +57,9 @@ class Session:
         if self.save_folder is None:
             self.save_folder = os.path.dirname(sys.argv[0])
         self.save_folder = Path(self.save_folder) / (self.name + ".ses")
-        self.session_data = lambda: (self.worker, self.repo, self.is_finished)
+
+    def _session_data(self):
+        return self.worker, self.repo, self.is_finished
 
     def load_results(self):
         """This method is for loading session results after the session has finished"""
@@ -162,7 +164,7 @@ class Session:
                     return
             else:
                 return
-        self.save_data("session", self.session_data())
+        self.save_data("session", self._session_data())
         shutil.copyfile(Path(sys.argv[0]), Path(self.save_folder) / "script_copy.py")
         self._run()
 
@@ -173,12 +175,35 @@ class Session:
         while True:
             try:
                 i = self.worker.iterate()
-                self.save_data("session", self.session_data())
+                self.save_data("session", self._session_data())
                 if self.terminate:
                     print("Session terminated")
                     return
             except StopIteration:
                 break
         self.is_finished = True
-        self.save_data("session", self.session_data())
+        self.save_data("session", self._session_data())
         print("Session done")
+
+
+class MultiSession(Session):
+    """Works like a session except it accepts a list of workers and executes them sequentially"""
+
+    def __init__(self, workers, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True):
+        self.workers = workers
+        self.current_worker = 0
+        super().__init__(None, name, save_folder=save_folder, repo_dir=repo_dir, ignore_file=ignore_file,
+                         ignore_warnings=ignore_warnings)
+        self.worker = self
+
+    def iterate(self):
+        while self.current_worker < len(self.workers):
+            try:
+                self.workers[self.current_worker].iterate()
+            except StopIteration:
+                print(f"Finished worker ({self.current_worker})")
+                self.current_worker += 1
+            except Exception as e:
+                print(f"Error in worker ({self.current_worker})")
+                traceback.print_exc()
+        raise StopIteration()
