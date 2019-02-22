@@ -68,7 +68,7 @@ class GA:
         self.max_episode_eval = int(config["HyperParameters"]["max_episode_eval"])
         self.max_evals = int(config["HyperParameters"]["max_evals"])
         self.max_generations = int(config["HyperParameters"]["max_generations"])
-        self.sigma = int(config["HyperParameters"]["sigma"])
+        self.sigma = float(config["HyperParameters"]["sigma"])
         self.truncation = int(config["HyperParameters"]["truncation"])
         self.trials = int(config["HyperParameters"]["trials"])
         self.elite_trials = int(config["HyperParameters"]["elite_trials"])
@@ -76,6 +76,8 @@ class GA:
         self.hyper_mode = bool(config["HyperParameters"]["hyper_mode"])
 
         self.env_key = config["EnvironmentSettings"]["env_key"]
+
+        print(self.env_key)
 
         self.scored_parents = None
         self.models = self.init_models()

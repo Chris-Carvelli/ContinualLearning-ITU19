@@ -11,8 +11,8 @@ n_elites = 1
 hyper_mode = True
 
 [EnvironmentSettings]
-env_key = 'MiniGrid-Choice3x1-color0-v0'
+env_key = MiniGrid-Empty-Noise-8x8-v0
 
 [Strategies]
-elite_selection = 'elites'
-termination = 'all_generations'
+elite_selection = elites
+termination = all_generations
