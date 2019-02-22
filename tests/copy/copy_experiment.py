@@ -39,7 +39,6 @@ def main():
     session.start()
 
     ga = session.load_results()
-    print(ga.sigma)
     plot(ga)
     champ = ga.results[-1][-1][0][0]
     for x in range(5):

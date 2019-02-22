@@ -162,6 +162,7 @@ class Session:
                     return
             else:
                 return
+        self.save_data("session", self.session_data())
         shutil.copyfile(Path(sys.argv[0]), Path(self.save_folder) / "script_copy.py")
         self._run()
 
