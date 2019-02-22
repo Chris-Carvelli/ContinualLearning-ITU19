@@ -12,11 +12,11 @@ class Experiment:
     def iterate(self):
         runs = 0
         while runs < self.number_of_runs:
-            #TODO talk with rasmus about this, when will session end, does it freeze the thread, how is it being logged
-            S = Session(self.ga, "Experiment: "+str(runs))
+            #TODO talk with rasmus about this, when will session end, does it freeze the thread, how is it being logged also combining outputs
+            S = Session(self.ga, "Experiment"+str(runs))
             S.start()
             runs = runs + 1
             #TODO Reset GA
 
-first_experiment = Session(Experiment('config_files/config_one', 5), "Experiment: ")
+first_experiment = Session(Experiment('config_files/config_one', 5), "Experiment")
 first_experiment.start()
