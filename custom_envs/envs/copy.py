@@ -1,3 +1,5 @@
+import sys
+
 import numpy
 import time
 
@@ -62,6 +64,26 @@ class Copy(gym.Env):
     def seed(self, seed=None):
         np.random.seed(seed)
 
+class PerfectModel:
+    def __init__(self, env):
+        self.env=env
+        self.i = -1
+        self.inputs = np.concatenate((self.env.obs[self.env.length + 1:], self.env.obs[:self.env.length + 1]), 0)
+
+    def __call__(self, *args, **kwargs):
+        self.i += 1
+        return self.inputs[self.i % len(self.inputs)][2:]
+
+    def obs_to_input(self, obs):
+        return obs
+
+    def get_action(self, y, env):
+        return y
+
+    def reset_memory(self):
+        self.__init__(self.env)
+
+
 
 if __name__ == '__main__':
     copy_size = 4
@@ -72,17 +94,19 @@ if __name__ == '__main__':
     # print(c)
     s = c.reset()
 
-    inputs = np.concatenate((c.obs[c.length + 1:], c.obs[:c.length + 1]), 0)
-    print(inputs.transpose())
-    for i, d in enumerate(inputs):
-        step = c.step(d[2:])
-        print(i, d[2:], step[0:3])
+    # inputs = np.concatenate((c.obs[c.length + 1:], c.obs[:c.length + 1]), 0)
+    # print(inputs.transpose())
+    # for i, d in enumerate(inputs):
+    #     step = c.step(d[2:])
+    #     print(i, d[2:], step[0:3])
+
 
     net = CopyNTM(copy_size, max_memory=copy_size + 2)
     net.history = defaultdict(list)
+    net = PerfectModel(c)
     res = evaluate_model(c, net, 100000, n=1)
     print(res)
-    net.plot_history()
+    # net.plot_history()
 
     #
     # print(inputs.transpose())
