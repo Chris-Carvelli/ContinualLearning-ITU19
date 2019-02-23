@@ -42,7 +42,8 @@ class Copy(gym.Env):
             return np.zeros(self.height + 2), reward, done, dict()
         obs = self.obs[self.i]
         if self.length + 2 <= self.i < 2 * self.length + 2:
-            match = np.sum(1 - np.abs(action - self.obs[self.i - (self.length + 2)][2:])) / self.height
+            match = np.sum(1 - (action - self.obs[self.i - (self.length + 2)][2:])**2) / self.height
+            print(match, action, self.obs[self.i - (self.length + 2)][2:])
             if match >= 0.25:
                 reward = (match - 0.25) / (0.75 * self.length)
         return obs, reward, done, dict()
@@ -80,7 +81,7 @@ class PerfectModel:
     def get_action(self, y, env):
         return y
 
-    def reset_memory(self):
+    def reset(self):
         self.__init__(self.env)
 
 
@@ -101,9 +102,9 @@ if __name__ == '__main__':
     #     print(i, d[2:], step[0:3])
 
 
-    net = CopyNTM(copy_size, max_memory=copy_size + 2)
+    net = CopyNTM(copy_size)
     net.history = defaultdict(list)
-    net = PerfectModel(c)
+    # net = PerfectModel(c)
     res = evaluate_model(c, net, 100000, n=1)
     print(res)
     # net.plot_history()

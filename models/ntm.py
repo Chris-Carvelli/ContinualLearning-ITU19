@@ -81,25 +81,14 @@ class NTM(nn.Module):
                 [shift-right, shift_left, shift-stay, content-jump, w] + [jump target] + [write vector]
         :return: A loaded vector from memory
         """
-        # v = torch.tensor([float(x) for x in range(5+ 2 * self.memory_unit_size)])
-        # print(v)
-        # print(v[:5])
-        # print(v[5:5 + self.memory_unit_size])
-        # print(v[5 + self.memory_unit_size:])
-        # print("-------------")
         shift = torch.argmax(v[0:3])
         jump = v[3]
         w = v[4]
-        last_pos = self.head_pos
         if jump > self.jump_threshold:
-            # print("JUMP")
             self._content_jump(v[5:5 + self.memory_unit_size])
-            print(f"Jump from {last_pos} to {self.head_pos}")
         elif 0 <= shift < 2:
             self._shift((int(shift) == 0))
         ret = self._read()
-
-        # print(f"move from  {last_pos} to {self.head_pos}")
         self._write(v[5 + self.memory_unit_size:], w)
         return ret
 
@@ -114,10 +103,7 @@ class NTM(nn.Module):
         out = self.network(x_joined).squeeze(0)
         y = out[:-self.update_size()]
         v = out[-self.update_size():]
-
-        last_pos = self.head_pos
         self.previous_read = self.update_head(v)
-        # print(f"Total move from  {last_pos} to {self.head_pos}")
         if self.history is not None:
             self.history["in"].append(x.squeeze())
             self.history["out"].append(y.detach())
@@ -207,7 +193,7 @@ class CopyNTM(NTM):
                 tensor.data.zero_()
 
 
-def evaluate_model(env, model, max_eval, render=False, fps=60, n=50):
+def evaluate_model(env, model, max_eval, render=False, fps=60, n=10):
     tot_reward = 0
     for i in range(n):
         obs = env.reset()
@@ -271,7 +257,7 @@ def ntm_tests():
     assert ntm.memory[1][1] == .4
 
 
-ntm_tests()
+# ntm_tests()
 
 if __name__ == '__main__':
     net = CopyNTM(8)
