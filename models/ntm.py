@@ -86,11 +86,11 @@ class NTM(nn.Module):
         w = v[4]
         if jump > self.jump_threshold:
             self._content_jump(v[5:5 + self.memory_unit_size])
-        elif 0 <= shift < 2:
+        if 0 <= shift < 2:
             self._shift((int(shift) == 0))
-        ret = self._read()
+        self.previous_read = self._read()
         self._write(v[5 + self.memory_unit_size:], w)
-        return ret
+        return self.previous_read
 
     def update_size(self):
         """Returns the size required for the update_head(v) method to """
@@ -103,7 +103,7 @@ class NTM(nn.Module):
         out = self.network(x_joined).squeeze(0)
         y = out[:-self.update_size()]
         v = out[-self.update_size():]
-        self.previous_read = self.update_head(v)
+        self.update_head(v)
         if self.history is not None:
             self.history["in"].append(x.squeeze())
             self.history["out"].append(y.detach())
@@ -149,7 +149,7 @@ class NTM(nn.Module):
 
 class CopyNTM(NTM):
     def __init__(self, copy_size, max_memory=10):
-        super().__init__(None, copy_size + 2, max_memory=max_memory)
+        super().__init__(None, copy_size * 3, max_memory=max_memory)
         self.in_size = copy_size + 2
         self.out_size = copy_size
         hidden_size_1 = 100
@@ -198,6 +198,7 @@ def evaluate_model(env, model, max_eval, render=False, fps=60, n=10):
     for i in range(n):
         obs = env.reset()
         model.reset()
+
         n_eval = 0
         done = False
         while not done and n_eval < max_eval:
@@ -215,7 +216,6 @@ def evaluate_model(env, model, max_eval, render=False, fps=60, n=10):
 
 def ntm_tests():
     """Runs unit test for the NTM class"""
-    # TODO: Fix tests. Does not work after chages to ntm.update_head
     ntm = NTM(None, 2)
     ntm.history = defaultdict(list)
     ntm.memory = torch.zeros(1, ntm.memory_unit_size)
@@ -261,11 +261,18 @@ def ntm_tests():
 
 if __name__ == '__main__':
     net = CopyNTM(8)
+    x = torch.randn(net.in_size).unsqueeze(0)
+    a = net(x)
+    net.evolve(0.1)
+    b = net(x)
+    print(a)
+    print(b)
+    print(a - b)
     # net = CopyNTM(12)
     net.history = defaultdict(list)
-    for i in range(15):
-        # print(net.memory)
-        net(torch.rand(net.in_size).unsqueeze(0))
+    # for i in range(15):
+    #     # print(net.memory)
+    #     net(torch.rand(net.in_size).unsqueeze(0))
 
     # pprint(dict(net.history))
-    net.plot_history()
+    # net.plot_history()

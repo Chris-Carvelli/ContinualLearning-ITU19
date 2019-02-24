@@ -43,7 +43,7 @@ class Copy(gym.Env):
         obs = self.obs[self.i]
         if self.length + 2 <= self.i < 2 * self.length + 2:
             match = np.sum(1 - (action - self.obs[self.i - (self.length + 2)][2:])**2) / self.height
-            print(match, action, self.obs[self.i - (self.length + 2)][2:])
+            # print(match, action, self.obs[self.i - (self.length + 2)][2:])
             if match >= 0.25:
                 reward = (match - 0.25) / (0.75 * self.length)
         return obs, reward, done, dict()
