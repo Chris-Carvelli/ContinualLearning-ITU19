@@ -5,21 +5,14 @@ the experiments can be re-run with the same settings/code as they the data was g
 import os
 from pathlib import Path
 
-from sessions.session import Session
-
-
-def my_experiment():
-    yield "Starting experiment"
-    for x in range(10):
-        yield x
-
+from sessions.session import *
 
 class MyExperiment:
     def __init__(self):
         self.current = []
         self.count = 0
 
-    def __next__(self):
+    def iterate(self):
         if self.count >= 10:
             raise StopIteration()
         self.current += [x for x in range(1000)]
@@ -29,3 +22,10 @@ class MyExperiment:
 
 S = Session(MyExperiment(), "TestSession")
 S.start()
+
+# Example of MultiSession
+ms = MultiSession([MyExperiment(), MyExperiment(), MyExperiment()], "TestSessions")
+ms.start()
+
+experiments = ms.workers
+
