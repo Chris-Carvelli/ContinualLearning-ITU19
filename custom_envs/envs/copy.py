@@ -51,8 +51,8 @@ class Copy(gym.Env):
             if match > min_match:
                 reward = (match - min_match) / ((1 - min_match) * self.length)
             # print(match, action, target)
-        done = self.i >= len(self.obs) - 1
         self.i += 1
+        done = self.i >= len(self.obs)
         return obs, reward, done, dict()
 
     def reset(self):
@@ -60,7 +60,7 @@ class Copy(gym.Env):
         extra = np.zeros((self.length, 2))
         self.obs = np.concatenate((extra, bits), 1)
         self.obs = np.concatenate(
-            (np.zeros((1, self.height + 2)), self.obs, np.zeros((self.length + 2, self.height + 2))), 0)
+            (np.zeros((1, self.height + 2)), self.obs, np.zeros((self.length + 1, self.height + 2))), 0)
         self.obs[0][0] = 1
         self.obs[self.length + 1][1] = 1
         self.i = 1
@@ -90,12 +90,13 @@ class RandomCopy(Copy):
 class PerfectModel:
     def __init__(self, env):
         self.env = env
-        self.i = -1
-        self.outputs = np.concatenate((self.env.obs[self.env.length + 2:], self.env.obs[1:self.env.length + 2]), 0)
+        self.i = 0
+        self.outputs = None
+        self.reset()
 
     def __call__(self, *args, **kwargs):
         self.i += 1
-        return self.outputs[self.i % len(self.outputs)][2:]
+        return self.outputs[self.i][2:]
 
     def obs_to_input(self, obs):
         return obs
@@ -104,15 +105,21 @@ class PerfectModel:
         return y
 
     def reset(self):
-        self.__init__(self.env)
+        self.i = -1
+        start = np.zeros((self.env.length + 2, self.env.height + 2))
+        # print(start.shape)
+        # print(self.env.obs[1:self.env.length + 1].shape)
+        self.outputs = np.concatenate((start, self.env.obs[1:self.env.length + 1]), 0)
+        return self()
 
 
 class ImperfectModel:
-    def __init__(self, env):
+    def __init__(self, env, val=0.0):
         self.env = env
+        self.val=val
 
     def __call__(self, *args, **kwargs):
-        return np.zeros(self.env.height) + 0
+        return np.zeros(self.env.height) + self.val
 
     def obs_to_input(self, obs):
         return obs
@@ -122,6 +129,7 @@ class ImperfectModel:
 
     def reset(self):
         self.__init__(self.env)
+        return self()
 
 
 def test_randomness():
@@ -146,11 +154,11 @@ if __name__ == '__main__':
 
     #
     copy_size = 2
-    length = 2
+    length = 4
     # c = Copy(copy_size, 4)
 
-    # c = gym.make(f"Copy-{copy_size}x{length}-v0")
-    c = gym.make(f"CopyRnd-{copy_size}-v0")
+    c = gym.make(f"Copy-{copy_size}x{length}-v0")
+    # c = gym.make(f"CopyRnd-{copy_size}-v0")
     c.reset()
     # print(c)
     # s = c.reset()
@@ -161,15 +169,16 @@ if __name__ == '__main__':
     #     step = c.step(d[2:])
     #     print(i, d[2:], step[0:3])
 
-    # net = CopyNTM(copy_size, 22)
+    net = CopyNTM(copy_size, 22)
     # net.history = defaultdict(list)
-    net = PerfectModel(c)
-    # net = ImperfectModel(c)
+    # net = PerfectModel(c)
+    #
+    # net = ImperfectModel(c, val=0.5)
     s = 0
-    n = 50
+    n = 1000
     for x in range(n):
         res = evaluate_model(c, net, 100000, n=1)
-        print(res)
+        # print(res)
         s += res[0]
     print(s / n)
     # print(net.inputs)
@@ -181,3 +190,8 @@ if __name__ == '__main__':
     # for i in range(2 * n):
     #     step = c.step(c.obs[i % n][2:])
     #     print(i, c.obs[i % n][2:], step[0:3])
+
+    # print(c.obs)
+    # print(net.reset())
+    # for i in range(length * 2 + 1):
+    #     print(net(0))

@@ -3,14 +3,14 @@ from collections import defaultdict
 import psutil, os
 import gym
 
-from tests.copy.copy_experiment import MyModel
+from tests.copy_task.copy_experiment import MyModel
 from models.ntm import CopyNTM, evaluate_model
 from tests.minigrid.utils import *
 
-copy_size = 1
+copy_size = 4
 length = 12
-population = 300
-sigma = 0.05
+population = 500
+sigma = 0.005
 n_elites = 10
 
 # copy_size = 8
@@ -21,7 +21,7 @@ n_elites = 10
 
 # env_key = f"Copy-{copy_size}x{length}-v0"
 env_key = f"CopyRnd-{copy_size}-v0"
-name = f"{env_key}_10_{population}_{sigma}_{n_elites}"
+name = f"{env_key}_01_{population}_{sigma}_{n_elites}"
 session = Session(None, name)
 ga = session.load_results()
 plot(ga)
