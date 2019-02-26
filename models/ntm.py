@@ -1,3 +1,4 @@
+import math
 import time
 from pprint import pprint
 
@@ -10,54 +11,67 @@ import numpy as np
 class NTM(nn.Module):
     """A Neural Turing Machine"""
 
-    def __init__(self, network, memory_unit_size=4, max_memory=10, history=False):
+    def __init__(self, network, memory_unit_size=4, max_memory=10, history=False, overwrite_mode=True):
         super(NTM, self).__init__()
         self.jump_threshold = 0.5
+        self.min_similarity_to_jump = 0.5
+        self.shift_length = 1
+        self.overwrite_mode = overwrite_mode    # If True memory writes will overwrite. Otherwise interpolate
         self.max_memory = max_memory
         self.memory_unit_size = memory_unit_size
         self.head_pos = 0
         self.memory = None
         self.previous_read = None
-        self.reset_memory()
-
-        # self.previous_read = np.array(self.previous_read)
         self.network = network
         if history:
             self.history = defaultdict(list)
         else:
             self.history = None
+        self.reset()
 
-    def reset_memory(self):
+    def reset(self):
         """Deletes all memory of the model and sets previous_read/initial_read_vector"""
         self.head_pos = 0
         self.memory = torch.zeros(self.max_memory, self.memory_unit_size)
         self.memory.requires_grad = False
         self.previous_read = torch.zeros(self.memory_unit_size)
         self.previous_read.requires_grad = False
+        if self.history is not None:
+            self.history = defaultdict(list)
 
     def _content_jump(self, target):
         """Shift the head position to the memory address most similar to the target vector"""
-        self.head_pos = int(torch.argmin(torch.sqrt(torch.sum((self.memory - target) ** 2, 1))).item())
+        # print(self.memory)
+        # print(target)
+        similarities = torch.sqrt(torch.sum(1 - (self.memory - target) ** 2, 1))/self.memory_unit_size
+        # print(similarities)
+        pos = int(torch.argmax(similarities).item())
+        if similarities[pos] > self.min_similarity_to_jump:
+            self.head_pos = pos
+        else:
+            self.head_pos = 0
 
-    def _shift(self, right=True):
+    def _shift(self, s):
         """
-        Shift the head position one step to the left or right.
+        Shift the head position one step to the left or right a number of times determined by self.shift_length.
         If the shift causes the head position to go outside bounds of the memory it will a empty new memory unit will
         be created
-        :param right: If False the shift will be towards the left
         """
         start_pos = self.head_pos
-        if right:
-            if self.head_pos == len(self.memory) - 1 and len(self.memory) < self.max_memory:
-                self.memory = torch.cat((self.memory, torch.zeros(1, self.memory_unit_size)), 0)
-                self.head_pos += 1
+        # Uniform int value from [-shift_length, shift_length]
+        shifts = int(s * 3 * self.shift_length - 0.000000001) - int(3 * self.shift_length / 2)
+        for s in range(abs(shifts)):
+            if s > 0:
+                if self.head_pos == len(self.memory) - 1 and len(self.memory) < self.max_memory:
+                    self.memory = torch.cat((self.memory, torch.zeros(1, self.memory_unit_size)), 0)
+                    self.head_pos += 1
+                else:
+                    self.head_pos = (self.head_pos + 1) % self.max_memory
             else:
-                self.head_pos = (self.head_pos + 1) % self.max_memory
-        else:
-            if self.head_pos == 0 and len(self.memory) < self.max_memory:
-                self.memory = torch.cat((torch.zeros(1, self.memory_unit_size), self.memory), 0)
-            else:
-                self.head_pos = (self.head_pos - 1) % self.max_memory
+                if self.head_pos == 0 and len(self.memory) < self.max_memory:
+                    self.memory = torch.cat((torch.zeros(1, self.memory_unit_size), self.memory), 0)
+                else:
+                    self.head_pos = (self.head_pos - 1) % self.max_memory
         return start_pos - self.head_pos
 
     def _write(self, v, w):
@@ -66,7 +80,16 @@ class NTM(nn.Module):
         :param v: A vector of memory unit size
         :param w: The interpolation weight. allowed values are [0-1]. 1 completely overwrites memory
         """
-        self.memory[self.head_pos] = torch.tensor(((1 - w) * self.memory[self.head_pos] + v * w).detach().numpy())
+
+        if self.overwrite_mode:
+            if w > 0.5:
+                self.memory[self.head_pos] = torch.tensor(v.detach().numpy())
+                if self.history is not None:
+                    self.history["adds"].append(self._read())
+        else:
+            if self.history is not None:
+                self.history["adds"].append(torch.tensor((w *(v - self.memory[self.head_pos]).detach().numpy())))
+            self.memory[self.head_pos] = torch.tensor(((1 - w) * self.memory[self.head_pos] + v * w).detach().numpy())
 
     def _read(self):
         """Returns the memory vector at the current head position"""
@@ -76,24 +99,25 @@ class NTM(nn.Module):
         """
         Should be called once after each forward call in any implementation of NTM to update head position and load
         memory vector
-        :param v: A vector of size: 5 + 2*[memory unit size] in the format
-                [shift-right, shift_left, shift-stay, content-jump] + [jump target] + [
+        :param v: A vector of size: 3 + [memory unit size] in the format
+                [shift-value, jump-value, interpolation weight] + write/jump-vector
         :return: A loaded vector from memory
         """
-        shift = torch.argmax(v[0:2])
-        jump = v[3]
-        w = v[4]
+        shift = v[0]
+        jump = v[1]
+        w = v[2]
+        m = v[3:3 + self.memory_unit_size]  # A memory-unit sized vector
+        self._write(m, w)
         if jump > self.jump_threshold:
-            self._content_jump(v[5:5 + self.memory_unit_size])
-        if 0 <= shift < 2:
-            self._shift((int(shift) == 0))
-        ret = self._read()
-        self._write(v[5 + self.memory_unit_size:], w)
-        return ret
+            p = self.head_pos
+            self._content_jump(m)
+        self._shift(shift)
+        self.previous_read = self._read()
+        return
 
     def update_size(self):
         """Returns the size required for the update_head(v) method to """
-        return 2 * self.memory_unit_size + 5
+        return 3 + self.memory_unit_size
 
     def forward(self, x):
         assert len(x.size()) > 1 and x.size()[0], "Only a single sample can be forwarded at once"
@@ -102,13 +126,13 @@ class NTM(nn.Module):
         out = self.network(x_joined).squeeze(0)
         y = out[:-self.update_size()]
         v = out[-self.update_size():]
-        self.previous_read = self.update_head(v)
+        self.update_head(v)
         if self.history is not None:
             self.history["in"].append(x.squeeze())
             self.history["out"].append(y.detach())
             self.history["head_pos"].append(self.head_pos)
             self.history["reads"].append(self.previous_read)
-            self.history["adds"].append(self._read() - self.previous_read)
+            self.history["adds"].append(self._read())
         return y
 
     def plot_history(self):
@@ -143,12 +167,16 @@ class NTM(nn.Module):
                 p.axes.get_xaxis().set_visible(False)
                 p.axes.get_yaxis().set_visible(False)
         plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
+
+        rect = f.patch.set_facecolor('lightsteelblue')
         plt.show()
 
 
 class CopyNTM(NTM):
-    def __init__(self, copy_size, max_memory=10):
-        super().__init__(None, copy_size + 2, max_memory=max_memory)
+    def __init__(self, copy_size, max_memory=10, memory_unit_size=None):
+        if memory_unit_size is None:
+            memory_unit_size = copy_size + 2
+        super().__init__(None, memory_unit_size, max_memory=max_memory)
         self.in_size = copy_size + 2
         self.out_size = copy_size
         hidden_size_1 = 100
@@ -196,7 +224,14 @@ def evaluate_model(env, model, max_eval, render=False, fps=60, n=50):
     tot_reward = 0
     for i in range(n):
         obs = env.reset()
-        model.reset_memory()
+        model.reset()
+        # print(np.concatenate((env.obs[:env.length + 1] == -1, env.obs[:env.length + 1]), 0))
+        # print(model.memory)
+        # d = torch.tensor(list(reversed(list(env.obs[1:env.length + 1][:,2:]))))
+
+        # model.memory[:env.length,:env.height] = d
+        # print(model.memory)
+
         n_eval = 0
         done = False
         while not done and n_eval < max_eval:
@@ -211,11 +246,12 @@ def evaluate_model(env, model, max_eval, render=False, fps=60, n=50):
             n_eval += 1
     return tot_reward / float(n), n_eval
 
-
+# TODO Fix after changes to ntm
 def ntm_tests():
     """Runs unit test for the NTM class"""
-    # TODO: Fix tests. Does not work after chages to ntm.update_head
-    ntm = NTM(2)
+    ntm = NTM(None, 2)
+    ntm.history = defaultdict(list)
+    ntm.memory = torch.zeros(1, ntm.memory_unit_size)
     assert len(ntm.memory) == 1
     ntm._shift(False)
     ntm._shift(True)
@@ -229,33 +265,63 @@ def ntm_tests():
     ntm.memory[2] = torch.zeros(ntm.memory_unit_size) + 2
     ntm._content_jump(torch.zeros(ntm.memory_unit_size))
     assert ntm.head_pos == 0
-    l = ntm.update_head(torch.tensor([0, 0, 0, 0, 0, 0], dtype=torch.float32))  # Do nothing
+    l = ntm.update_head(torch.tensor([0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.float32))  # Do nothing
     assert torch.sum((l - ntm.memory[ntm.head_pos])).item() == 0
     assert ntm.head_pos == 0
-    l = ntm.update_head(torch.tensor([1, 0, 0, 0, 0, 0], dtype=torch.float32))  # Shift right
+    l = ntm.update_head(torch.tensor([1, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.float32))  # Shift right
     assert ntm.head_pos == 1
     assert torch.sum((l - ntm.memory[ntm.head_pos])).item() == 0
-    l = ntm.update_head(torch.tensor([1, 0, 0, 0, 0, 0], dtype=torch.float32))  # Shift right
+    l = ntm.update_head(torch.tensor([1, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.float32))  # Shift right
     assert ntm.head_pos == 2
-    l = ntm.update_head(torch.tensor([0, 0, 0, 1, 0, 0], dtype=torch.float32))  # Content jump to [0,0]
+    l = ntm.update_head(torch.tensor([0, 0, 0, 1, 0, 0, 0, 0, 0], dtype=torch.float32))  # Content jump to [0,0]
     assert ntm.head_pos == 0
-    l = ntm.update_head(torch.tensor([0, 1, 0, 0, 0, 0], dtype=torch.float32))  # shift left
+    l = ntm.update_head(torch.tensor([0, 1, 0, 0, 0, 0, 0, 0, 0], dtype=torch.float32))  # shift left
     assert ntm.head_pos == 0
-    assert len(ntm.memory) == 5
+    assert len(ntm.memory) == 4, f"len(ntm.memory) = {len(ntm.memory)}"
     ntm._write(torch.tensor([-1.0, 1.0]), 0.2)
     assert ntm.memory[0][0] == -0.2
     assert ntm.memory[0][1] == 0.2
     ntm.head_pos = 5
-    l = ntm.update_head(torch.tensor([0, 0, 0, 1, -0.3, 0.1], dtype=torch.float32))  # Content jump to [0,0]
-    assert ntm.head_pos == 0
+    l = ntm.update_head(torch.tensor([0, 0, 0, 1, 0, -0.3, 0.1, 0, 0], dtype=torch.float32))  # Content jump to [0,0]
+    assert ntm.head_pos == 0,  f"len(ntm.head_pos) = {ntm.head_pos}"
+    l = ntm.update_head(torch.tensor([1, 0, 0, 0, .5, 0, 0, 1, .8], dtype=torch.float32))  # shift & write [1, .8]*.5
+    assert ntm.head_pos == 1
+    assert ntm.memory[1][0] == 0.5
+    assert ntm.memory[1][1] == .4
 
+
+# ntm_tests()
 
 if __name__ == '__main__':
-    net = CopyNTM(8)
+    # from custom_envs.envs import Copy
+    #
+    # shift = 1
+    #
+    # shift_length = 1
+    # d = defaultdict(int)
+    # for s in np.arange(0, 1.00001, 0.02):
+    #     v = int(s * 3*shift_length - 0.000000001) - int(3*shift_length / 2)
+    #     # v = int(np.round(s * (2.0 * shift_length) -  (2 * shift_length)/2.0))
+    #     d[v] += 1
+    #
+    #     print(f"{s:.2f}", v)
+    # pprint(dict(d))
+
+
+    net = CopyNTM(3, 6)
+    # x = torch.randn(net.in_size).unsqueeze(0)
+    # a = net(x)
+    # net.evolve(0.1)
+    # b = net(x)
+    # print(a)
+    # print(b)
+    # print(a - b)
+    # net = CopyNTM(12)
     net.history = defaultdict(list)
-    for i in range(10):
+    for i in range(15):
         # print(net.memory)
-        net(torch.rand(net.in_size).unsqueeze(0))
+        net(torch.randn(net.in_size).unsqueeze(0))
+
 
     # pprint(dict(net.history))
     net.plot_history()

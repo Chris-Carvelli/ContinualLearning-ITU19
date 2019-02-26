@@ -64,8 +64,8 @@ class Session:
     def load_results(self):
         """This method is for loading session results after the session has finished"""
         (worker, repo, is_finished) = self.load_data("session")
-        commit = repo.head.commit
-        if self.repo.head.commit != commit:
+        commit = repo.index.commit
+        if self.repo.index.commit != commit:
             print("Warning: Loaded data belongs to a different commit")
 
         if not is_finished:
