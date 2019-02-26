@@ -80,10 +80,15 @@ class NTM(nn.Module):
         :param v: A vector of memory unit size
         :param w: The interpolation weight. allowed values are [0-1]. 1 completely overwrites memory
         """
+
         if self.overwrite_mode:
             if w > 0.5:
                 self.memory[self.head_pos] = torch.tensor(v.detach().numpy())
+                if self.history is not None:
+                    self.history["adds"].append(self._read())
         else:
+            if self.history is not None:
+                self.history["adds"].append(torch.tensor((w *(v - self.memory[self.head_pos]).detach().numpy())))
             self.memory[self.head_pos] = torch.tensor(((1 - w) * self.memory[self.head_pos] + v * w).detach().numpy())
 
     def _read(self):
@@ -106,7 +111,6 @@ class NTM(nn.Module):
         if jump > self.jump_threshold:
             p = self.head_pos
             self._content_jump(m)
-            print(f"Content jump from {p} to {self.head_pos}")
         self._shift(shift)
         self.previous_read = self._read()
         return
@@ -128,7 +132,7 @@ class NTM(nn.Module):
             self.history["out"].append(y.detach())
             self.history["head_pos"].append(self.head_pos)
             self.history["reads"].append(self.previous_read)
-            self.history["adds"].append(self._read() - self.previous_read)
+            self.history["adds"].append(self._read())
         return y
 
     def plot_history(self):

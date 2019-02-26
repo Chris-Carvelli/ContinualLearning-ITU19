@@ -42,10 +42,11 @@ class Copy(gym.Env):
             return np.zeros(self.height + 2), reward, done, dict()
         obs = self.obs[self.i]
         if self.length + 2 <= self.i < 2 * self.length + 2:
-            p = 1.5
+            p = 1
             match = np.sum(1 - np.abs((action - self.obs[self.i - (self.length + 2)][2:])) ** p) / self.height
             # print(match, action, self.obs[self.i - (self.length + 2)][2:])
-            min_match = 1 - .5**p
+            # min_match = 1 - .5**p
+            min_match = 0.25
             if match > min_match:
                 reward = (match - min_match) / ((1 - min_match) * self.length)
         return obs, reward, done, dict()
@@ -71,7 +72,7 @@ class Copy(gym.Env):
 class RandomCopy(Copy):
     """Creates a copy env of varying length whenever reset is called"""
 
-    def __init__(self, height=3, min_length=2, max_length=20):
+    def __init__(self, height=3, min_length=1, max_length=12):
         self.max_length = max_length
         self.min_length = min_length
         super().__init__(height=height, length=-1)
