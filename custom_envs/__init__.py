@@ -32,3 +32,8 @@ for copy_size in (1, 2, 4, 6, 8, 10):
             entry_point='custom_envs.envs:Copy',
             kwargs=dict(height=copy_size, length=length)
         )
+    register(
+        id=f"CopyRnd-{copy_size}-v0",
+        entry_point='custom_envs.envs:RandomCopy',
+        kwargs=dict(height=copy_size)
+    )

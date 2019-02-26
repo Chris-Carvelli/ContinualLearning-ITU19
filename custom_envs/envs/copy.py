@@ -42,10 +42,12 @@ class Copy(gym.Env):
             return np.zeros(self.height + 2), reward, done, dict()
         obs = self.obs[self.i]
         if self.length + 2 <= self.i < 2 * self.length + 2:
-            match = np.sum(1 - (action - self.obs[self.i - (self.length + 2)][2:])**2) / self.height
+            p = 1.5
+            match = np.sum(1 - np.abs((action - self.obs[self.i - (self.length + 2)][2:])) ** p) / self.height
             # print(match, action, self.obs[self.i - (self.length + 2)][2:])
-            if match >= 0.25:
-                reward = (match - 0.25) / (0.75 * self.length)
+            min_match = 1 - .5**p
+            if match > min_match:
+                reward = (match - min_match) / ((1 - min_match) * self.length)
         return obs, reward, done, dict()
 
     def reset(self):
@@ -65,9 +67,23 @@ class Copy(gym.Env):
     def seed(self, seed=None):
         np.random.seed(seed)
 
+
+class RandomCopy(Copy):
+    """Creates a copy env of varying length whenever reset is called"""
+
+    def __init__(self, height=3, min_length=2, max_length=20):
+        self.max_length = max_length
+        self.min_length = min_length
+        super().__init__(height=height, length=-1)
+
+    def reset(self):
+        self.length = int(np.random.randint(self.min_length, self.max_length + 1))
+        return super().reset()
+
+
 class PerfectModel:
     def __init__(self, env):
-        self.env=env
+        self.env = env
         self.i = -1
         self.inputs = np.concatenate((self.env.obs[self.env.length + 1:], self.env.obs[:self.env.length + 1]), 0)
 
@@ -85,33 +101,43 @@ class PerfectModel:
         self.__init__(self.env)
 
 
-
 if __name__ == '__main__':
-    copy_size = 4
-    length = 4
-    # c = Copy(copy_size, 4)
-
-    c = gym.make(f"Copy-{copy_size}x{length}-v0")
-    # print(c)
-    s = c.reset()
-
-    # inputs = np.concatenate((c.obs[c.length + 1:], c.obs[:c.length + 1]), 0)
-    # print(inputs.transpose())
-    # for i, d in enumerate(inputs):
-    #     step = c.step(d[2:])
-    #     print(i, d[2:], step[0:3])
-
-
-    net = CopyNTM(copy_size)
-    net.history = defaultdict(list)
-    # net = PerfectModel(c)
-    res = evaluate_model(c, net, 100000, n=1)
-    print(res)
-    # net.plot_history()
+    target = np.array([1,0,1,0,1])
+    action = np.array([0,0,0,0,0])
+    action = np.zeros(len(target)) + 0.5
+    # action[0:1] = [1]
+    print(action)
+    # print(np.abs(target - action)** 3.1)
+    match = np.sum(1 - np.abs(action - target)**2) / len(action)
+    print(match)
 
     #
-    # print(inputs.transpose())
-    # n = int(len(c.obs) / 2) + 1
-    # for i in range(2 * n):
-    #     step = c.step(c.obs[i % n][2:])
-    #     print(i, c.obs[i % n][2:], step[0:3])
+    # copy_size = 4
+    # length = 4
+    # # c = Copy(copy_size, 4)
+    #
+    # # c = gym.make(f"Copy-{copy_size}x{length}-v0")
+    # c = gym.make(f"CopyRnd-{copy_size}-v0")
+    # c.reset()
+    # # print(c)
+    # # s = c.reset()
+    #
+    # # inputs = np.concatenate((c.obs[c.length + 1:], c.obs[:c.length + 1]), 0)
+    # # print(inputs.transpose())
+    # # for i, d in enumerate(inputs):
+    # #     step = c.step(d[2:])
+    # #     print(i, d[2:], step[0:3])
+    #
+    # net = CopyNTM(copy_size, 22)
+    # net.history = defaultdict(list)
+    # # net = PerfectModel(c)
+    # res = evaluate_model(c, net, 100000, n=1)
+    # print(res)
+    # net.plot_history()
+    #
+    # #
+    # # print(inputs.transpose())
+    # # n = int(len(c.obs) / 2) + 1
+    # # for i in range(2 * n):
+    # #     step = c.step(c.obs[i % n][2:])
+    # #     print(i, c.obs[i % n][2:], step[0:3])

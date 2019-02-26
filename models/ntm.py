@@ -12,7 +12,7 @@ class NTM(nn.Module):
 
     def __init__(self, network, memory_unit_size=4, max_memory=10, history=False):
         super(NTM, self).__init__()
-        self.jump_threshold = 0.4
+        self.jump_threshold = 0.5
         self.max_memory = max_memory
         self.memory_unit_size = memory_unit_size
         self.head_pos = 0
@@ -193,11 +193,17 @@ class CopyNTM(NTM):
                 tensor.data.zero_()
 
 
-def evaluate_model(env, model, max_eval, render=False, fps=60, n=10):
+def evaluate_model(env, model, max_eval, render=False, fps=60, n=50):
     tot_reward = 0
     for i in range(n):
         obs = env.reset()
         model.reset()
+        # print(np.concatenate((env.obs[:env.length + 1] == -1, env.obs[:env.length + 1]), 0))
+        # print(model.memory)
+        # d = torch.tensor(list(reversed(list(env.obs[1:env.length + 1][:,2:]))))
+
+        # model.memory[:env.length,:env.height] = d
+        # print(model.memory)
 
         n_eval = 0
         done = False
@@ -260,19 +266,22 @@ def ntm_tests():
 # ntm_tests()
 
 if __name__ == '__main__':
-    net = CopyNTM(8)
-    x = torch.randn(net.in_size).unsqueeze(0)
-    a = net(x)
-    net.evolve(0.1)
-    b = net(x)
-    print(a)
-    print(b)
-    print(a - b)
+    # from custom_envs.envs import Copy
+
+    net = CopyNTM(3)
+    # x = torch.randn(net.in_size).unsqueeze(0)
+    # a = net(x)
+    # net.evolve(0.1)
+    # b = net(x)
+    # print(a)
+    # print(b)
+    # print(a - b)
     # net = CopyNTM(12)
     net.history = defaultdict(list)
-    # for i in range(15):
-    #     # print(net.memory)
-    #     net(torch.rand(net.in_size).unsqueeze(0))
+    for i in range(15):
+        # print(net.memory)
+        net(torch.rand(net.in_size).unsqueeze(0))
+
 
     # pprint(dict(net.history))
-    # net.plot_history()
+    net.plot_history()

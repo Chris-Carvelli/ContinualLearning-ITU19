@@ -9,8 +9,8 @@ from sessions.session import Session
 from tests.minigrid.ga import GA
 from tests.minigrid.utils import *
 
-copy_size = 2
-length = 4
+copy_size = 8
+length = 12
 
 
 class MyModel(CopyNTM):
@@ -22,18 +22,18 @@ def main():
     # Sets CPU usage priority to low
 
     lowpriority()
-    env_key = f"Copy-{copy_size}x{length}-v0"
+    # env_key = f"Copy-{copy_size}x{length}-v0"
+    env_key = f"CopyRnd-{copy_size}-v0"
 
-    ga = GA(env_key, 500, max_generations=300,
+    ga = GA(env_key, 1000, max_generations=500,
             sigma=0.010,
             truncation=10,
             elite_trials=5,
-            n_elites=5)
+            n_elites=10)
     ga.Model = MyModel
     ga.evaluate_model = evaluate_model
 
-    # TODO: Find better name (my PC trims the last past of the name away)
-    name = f"{env_key}_05_{ga.population}_{ga.sigma}_{ga.n_elites}"
+    name = f"{env_key}_09_{ga.population}_{ga.sigma}_{ga.n_elites}"
     session = Session(ga, name)
 
     session.start()
