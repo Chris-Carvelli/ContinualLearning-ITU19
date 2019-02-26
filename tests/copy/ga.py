@@ -4,29 +4,19 @@ import pickle
 import os
 
 import gym
-from .Model import *
+# from .Model import *
+from models.ntm import CopyNTM, evaluate_model
+import numpy as np
 
-from configparser import ConfigParser
+Model = CopyNTM
 
-termination_strategies = \
-    {
-        'all_generations': lambda self: self.g < self.max_generations,
-    }
 
-# TODO Make elite strategies dict and parent selection strategies dict
-elite_strategies =\
-    {
-    }
-parent_selection_strategies =\
-    {
-    }
+def set_model(model):
+    Model = model
 
 
 # TODO get Model as parameter
 class GA:
-    Model = Model
-    evaluate_model = evaluate_model
-
     def __init__(self, env_key, population,
                  max_generations=20,
                  max_evals=1000,
@@ -38,6 +28,7 @@ class GA:
                  n_elites=1,
                  hyper_mode=True):
 
+        # hyperparams TODO create separate container class to serialize
         self.population = population
         self.env_key = env_key
         self.max_episode_eval = max_episode_eval
@@ -51,41 +42,9 @@ class GA:
         self.hyper_mode = hyper_mode
 
         self.scored_parents = None
-        self.models = None
-
-        self.termination_strategy = lambda: self.g < self.max_generations
-        # self.termination_strategy = lambda: self.evaluations_used < self.max_episode_eval
-
-        # algorithm state
-        self.g = 0
-        self.evaluations_used = 0
-        self.env = gym.make(self.env_key)
-
-        # results TMP check if needed
-        self.results = []
-
-    def __init__(self, config_file_path):
-        config = ConfigParser()
-        config.read(config_file_path)
-        self.population = int(config["HyperParameters"]["population"])
-        self.max_episode_eval = int(config["HyperParameters"]["max_episode_eval"])
-        self.max_evals = int(config["HyperParameters"]["max_evals"])
-        self.max_generations = int(config["HyperParameters"]["max_generations"])
-        self.sigma = float(config["HyperParameters"]["sigma"])
-        self.truncation = int(config["HyperParameters"]["truncation"])
-        self.trials = int(config["HyperParameters"]["trials"])
-        self.elite_trials = int(config["HyperParameters"]["elite_trials"])
-        self.n_elites = int(config["HyperParameters"]["n_elites"])
-        self.hyper_mode = bool(config["HyperParameters"]["hyper_mode"])
-
-        self.env_key = config["EnvironmentSettings"]["env_key"]
-
-        print(self.env_key)
-
-        self.scored_parents = None
         self.models = self.init_models()
 
-        #TODO Make strategies to be read from the config file
+        # strategies TODO create collections of strategies, set up externally (NO INTERNAL DICT, BAD FOR PERFORMANCE)
         self.termination_strategy = lambda: self.g < self.max_generations
         # self.termination_strategy = lambda: self.evaluations_used < self.max_episode_eval
 
@@ -98,8 +57,6 @@ class GA:
         self.results = []
 
     def iterate(self):
-        if self.g == 0:
-            self.models = self.init_models()
         if self.termination_strategy():
             ret = self.evolve_iter()
             self.g += 1
@@ -136,15 +93,16 @@ class GA:
         scored_models = list(zip(
             models,
             map(
-                self.evaluate_model,
+                evaluate_model,
                 [self.env] * (len(models) * self.trials),
                 [y for x in models for y in self.trials * [x]],
                 [self.max_episode_eval] * (len(models) * self.trials))
-            )
+        )
         )
 
         self.evaluations_used += sum(s[1] for _, s in scored_models)
-        scored_models = [(scored_models[i][0], sum(s[0] for _, s in scored_models[i * self.trials:(i + 1)*self.trials]) / self.trials)
+        scored_models = [(scored_models[i][0],
+                          sum(s[0] for _, s in scored_models[i * self.trials:(i + 1) * self.trials]) / self.trials)
                          for i in range(0, len(scored_models), self.trials)]
         scored_models.sort(key=lambda x: x[1], reverse=True)
 
@@ -165,7 +123,7 @@ class GA:
 
     def init_models(self):
         if not self.scored_parents:
-            return [self.Model(self.hyper_mode) for _ in range(self.population)]
+            return [Model(self.hyper_mode) for _ in range(self.population)]
         else:
             self.reproduce()
             # TODO horrible, make reproduce return the models. Maintain style all over the place
@@ -186,6 +144,5 @@ class GA:
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-        self.termination_strategy = lambda: self.g < self.max_generations
         self.models = None
         self.init_models()
