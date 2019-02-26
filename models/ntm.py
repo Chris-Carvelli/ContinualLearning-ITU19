@@ -167,12 +167,16 @@ class NTM(nn.Module):
                 p.axes.get_xaxis().set_visible(False)
                 p.axes.get_yaxis().set_visible(False)
         plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
+
+        rect = f.patch.set_facecolor('lightsteelblue')
         plt.show()
 
 
 class CopyNTM(NTM):
-    def __init__(self, copy_size, max_memory=10):
-        super().__init__(None, copy_size * 3, max_memory=max_memory)
+    def __init__(self, copy_size, max_memory=10, memory_unit_size=None):
+        if memory_unit_size is None:
+            memory_unit_size = copy_size + 2
+        super().__init__(None, memory_unit_size, max_memory=max_memory)
         self.in_size = copy_size + 2
         self.out_size = copy_size
         hidden_size_1 = 100
