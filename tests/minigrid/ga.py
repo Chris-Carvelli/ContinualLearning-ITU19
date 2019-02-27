@@ -4,18 +4,21 @@ import pickle
 import os
 
 import gym
+import gym_minigrid
+
 from .Model import *
 
 from configparser import ConfigParser
 
 termination_strategies = \
     {
-        'all_generations': lambda self: self.g < self.max_generations,
+        'all_generations': lambda ga_instance: ga_instance.g < ga_instance.max_generations,
     }
 
 # TODO Make elite strategies dict and parent selection strategies dict
 elite_strategies =\
     {
+
     }
 parent_selection_strategies =\
     {
@@ -54,7 +57,6 @@ class GA:
         self.models = None
 
         self.termination_strategy = lambda: self.g < self.max_generations
-        # self.termination_strategy = lambda: self.evaluations_used < self.max_episode_eval
 
         # algorithm state
         self.g = 0
@@ -67,6 +69,7 @@ class GA:
     def __init__(self, config_file_path):
         config = ConfigParser()
         config.read(config_file_path)
+        self.config_file = config
         self.population = int(config["HyperParameters"]["population"])
         self.max_episode_eval = int(config["HyperParameters"]["max_episode_eval"])
         self.max_evals = int(config["HyperParameters"]["max_evals"])
@@ -78,16 +81,16 @@ class GA:
         self.n_elites = int(config["HyperParameters"]["n_elites"])
         self.hyper_mode = bool(config["HyperParameters"]["hyper_mode"])
 
-        self.env_key = config["EnvironmentSettings"]["env_key"]
+        self.env_key = str(config["EnvironmentSettings"]["env_key"])
 
         print(self.env_key)
 
         self.scored_parents = None
         self.models = self.init_models()
 
-        #TODO Make strategies to be read from the config file
-        self.termination_strategy = lambda: self.g < self.max_generations
-        # self.termination_strategy = lambda: self.evaluations_used < self.max_episode_eval
+        self.termination_strategy_name = config["Strategies"]["termination"]
+        # TODO Make Other strategies to be modular
+
 
         # algorithm state
         self.g = 0
@@ -100,7 +103,7 @@ class GA:
     def iterate(self):
         if self.g == 0:
             self.models = self.init_models()
-        if self.termination_strategy():
+        if termination_strategies[self.termination_strategy_name](self):
             ret = self.evolve_iter()
             self.g += 1
             print(f"median_score={ret[0]}, mean_score={ret[1]}, max_score={ret[2]}")
@@ -177,15 +180,15 @@ class GA:
         del state['models']
 
         # TMP find better way (subObject could be ok but heavy syntax and additional ref)
-        for k in self.__dict__.keys():
-            if '_strategy' in k:
-                state.pop(k)
+        # for k in self.__dict__.keys():
+        #   if '_strategy' in k:
+        #        state.pop(k)
 
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-        self.termination_strategy = lambda: self.g < self.max_generations
+        self.termination_strategy = termination_strategies[self.termination_strategy_name]
         self.models = None
         self.init_models()
