@@ -9,7 +9,7 @@ import torch
 
 from models.ntm import CopyNTM, evaluate_model
 from collections import defaultdict
-from custom_envs import *
+
 
 
 class Copy(gym.Env):

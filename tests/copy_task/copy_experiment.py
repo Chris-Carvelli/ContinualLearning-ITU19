@@ -3,13 +3,13 @@ from collections import defaultdict
 import psutil, os
 import gym
 
+
 from custom_envs import *
 from models.ntm import CopyNTM, evaluate_model
 from sessions.session import Session
-from tests.minigrid.ga import GA
-from tests.minigrid.utils import *
+from tests.minigrid.utils import lowpriority
 
-copy_size = 1
+copy_size = 4
 length = 12
 
 
@@ -19,14 +19,16 @@ class MyModel(CopyNTM):
 
 
 def main():
+    from tests.copy_task.ga import GA
+
     # Sets CPU usage priority to low
     lowpriority()
 
-    # env_key = f"Copy-{copy_size}x{length}-v0"
-    env_key = f"CopyRnd-{copy_size}-v0"
+    env_key = f"Copy-{copy_size}x{length}-v0"
+    # env_key = f"CopyRnd-{copy_size}-v0"
 
     ga = GA(env_key, 200, max_generations=5000,
-            sigma=0.005,
+            sigma=0.01,
             truncation=10,
             elite_trials=5,
             n_elites=5)

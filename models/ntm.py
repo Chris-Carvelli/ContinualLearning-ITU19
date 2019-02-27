@@ -1,4 +1,5 @@
 import math
+import sys
 import time
 from pprint import pprint
 
@@ -43,13 +44,22 @@ class NTM(nn.Module):
         """Shift the head position to the memory address most similar to the target vector"""
         # print(self.memory)
         # print(target)
-        similarities = torch.sqrt(torch.sum(1 - (self.memory - target) ** 2, 1))/self.memory_unit_size
-        # print(similarities)
+        head = self.head_pos
+        similarities = 1 - torch.sqrt(torch.sum((self.memory - target) ** 2, 1)) / self.memory_unit_size
+        # print(self.memory - target)
+
+        # print(similarities.data)
         pos = int(torch.argmax(similarities).item())
         if similarities[pos] > self.min_similarity_to_jump:
             self.head_pos = pos
         else:
             self.head_pos = 0
+        # if head != self.head_pos:
+        #     print(f"content jump from {head} to {self.head_pos}. sim = {similarities[pos]:.3f}. Target = {target}")4
+        if head != self.head_pos:
+            return 1
+        return 0.5
+
 
     def _shift(self, s):
         """
@@ -59,9 +69,9 @@ class NTM(nn.Module):
         """
         start_pos = self.head_pos
         # Uniform int value from [-shift_length, shift_length]
-        shifts = int(s * 3 * self.shift_length - 0.000000001) - int(3 * self.shift_length / 2)
-        for s in range(abs(shifts)):
-            if s > 0:
+        shift = int(s * 3 * self.shift_length - 0.000000001) - int(3 * self.shift_length / 2)
+        for s in range(abs(shift)):
+            if shift > 0:
                 if self.head_pos == len(self.memory) - 1 and len(self.memory) < self.max_memory:
                     self.memory = torch.cat((self.memory, torch.zeros(1, self.memory_unit_size)), 0)
                     self.head_pos += 1
@@ -72,7 +82,7 @@ class NTM(nn.Module):
                     self.memory = torch.cat((torch.zeros(1, self.memory_unit_size), self.memory), 0)
                 else:
                     self.head_pos = (self.head_pos - 1) % self.max_memory
-        return start_pos - self.head_pos
+        return np.sign(shift)
 
     def _write(self, v, w):
         """
@@ -103,16 +113,20 @@ class NTM(nn.Module):
         :return: A loaded vector from memory
         """
         shift = v[0]
-        jump = v[1]
+        j = v[1]
         w = v[2]
         m = v[3:3 + self.memory_unit_size]  # A memory-unit sized vector
         self._write(m, w)
-        if jump > self.jump_threshold:
+        jump = 0
+        if j > self.jump_threshold:
             p = self.head_pos
-            self._content_jump(m)
-        self._shift(shift)
+            jump = self._content_jump(m)
+        shift = self._shift(shift)
         self.previous_read = self._read()
-        return
+        if self.history is not None:
+            self.history["jumps"].append(jump)
+            self.history["shifts"].append(shift)
+
 
     def update_size(self):
         """Returns the size required for the update_head(v) method to """
@@ -149,20 +163,26 @@ class NTM(nn.Module):
         outputs = torch.transpose(torch.stack(self.history["out"], 0), 1, 0).detach()
         adds = torch.transpose(torch.stack(self.history["adds"], 0), 1, 0).detach()
         reads = torch.transpose(torch.stack(self.history["reads"], 0), 1, 0).detach()
+        jumps = [[x for x in self.history["jumps"]]]
+        shifts = [[x for x in self.history["shifts"]]]
 
-        f, subplots = plt.subplots(3, 2, figsize=(4, 8))
+        f, subplots = plt.subplots(4, 2, figsize=(4, 8))
         subplots[0][0].imshow(inputs, vmin=0, vmax=1, cmap="gray")
         subplots[1][0].imshow(adds, vmin=0, vmax=1, cmap="gray")
         subplots[2][0].imshow(loc, vmin=0, vmax=1, cmap="gray")
+        subplots[3][0].imshow(jumps, vmin=0, vmax=1, cmap="bone")
         subplots[0][1].imshow(outputs, vmin=0, vmax=1, cmap="gray")
         subplots[1][1].imshow(reads, vmin=0, vmax=1, cmap="gray")
         subplots[2][1].imshow(loc, vmin=0, vmax=1, cmap="gray")
+        subplots[3][1].imshow(shifts, vmin=-1.5, vmax=1.5, cmap="twilight")
         subplots[0][0].set_title('inputs')
         subplots[1][0].set_title('adds')
         subplots[2][0].set_title('loc')
+        subplots[3][0].set_title('jumps')
         subplots[0][1].set_title('outputs')
         subplots[1][1].set_title('reads')
         subplots[2][1].set_title('loc')
+        subplots[3][1].set_title('shifts')
         for row in subplots:
             for p in row:
                 p.axes.get_xaxis().set_visible(False)
@@ -295,7 +315,36 @@ def ntm_tests():
 
 if __name__ == '__main__':
     from custom_envs.envs import Copy
+
+    # self = NTM(None)
+    # self.memory = torch.tensor([[0.4108, 0.1441, 0.2924, 0.2870, 0.3854, 0.2893],
+    #     [0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000],
+    #     [0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000],
+    #     [0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000],
+    #     [0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000],
+    #     [0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000]])
+    # target = torch.tensor([0.4108, 0.1441, 0.2924, 0.2870, 0.3854, 0.2893])
+    # self.memory_unit_size = 6
     #
+    # print(self.memory)
+    # print(target)
+    # print(1 - (self.memory - target)**2)
+    # print(torch.sum(1 - (self.memory - target) ** 2, 1) / self.memory_unit_size)
+    # similarities = 1 - torch.sqrt(torch.sum((self.memory - target) ** 2, 1))/ self.memory_unit_size
+    # print(similarities)
+    # pos = int(torch.argmax(similarities).item())
+    # print(pos)
+    # print(similarities[pos])
+    # # print(self.memory)
+    # # print(target)
+    # # head = self.head_pos
+    # # similarities = torch.sqrt(torch.sum(1 - (self.memory - target) ** 2, 1)) / self.memory_unit_size
+    # # print(self.memory - target)
+    #
+    # # print(similarities)
+    # sys.exit()
+
+
     # shift = 1
     #
     # shift_length = 1
@@ -309,7 +358,7 @@ if __name__ == '__main__':
     # pprint(dict(d))
 
     copy_size = 4
-    env = Copy(copy_size, 10)
+    env = Copy(copy_size, 6)
     net = CopyNTM(copy_size, 6)
     # x = torch.randn(net.in_size).unsqueeze(0)
     # a = net(x)
@@ -321,10 +370,11 @@ if __name__ == '__main__':
     # net = CopyNTM(12)
     net.history = defaultdict(list)
 
-    evaluate_model(env,net, 1000, True, n=1)
+    rend = False
+    evaluate_model(env,net, 1000, rend, n=1)
     net.plot_history()
     net.evolve(0.1)
-    evaluate_model(env,net, 1000, True, n=1)
+    evaluate_model(env,net, 1000, rend, n=1)
 
     # for i in range(15):
     #     # print(net.memory)
