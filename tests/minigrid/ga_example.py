@@ -13,13 +13,13 @@ def main():
 
     ga = GA('MiniGrid-Choice3x1-color0-v0', 100, 2,
             sigma=0.005,
-            max_eval=100,
+            max_evals=100,
             truncation=10,
             elite_trials=5,
             n_elites=1)
 
     # TODO: Find better name (my PC trims the last past of the name away)
-    name = f"{ga.env_key}_{ga.population}_{ga.n_generation}_{ga.sigma}_{ga.truncation}_{ga.elite_trials}_{ga.n_elites}"
+    name = f"{ga.env_key}_{ga.population}_{ga.max_generations}_{ga.sigma}_{ga.truncation}_{ga.elite_trials}_{ga.n_elites}"
     session = Session(ga, name)
 
     session.start()     # After running once this can be commented out
