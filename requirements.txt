@@ -9,3 +9,7 @@ gitpython==2.1.11
 globster==0.1.0
 psutil==5.5.0
 memory-profiler
+dill
+mkl
+redis
+rq

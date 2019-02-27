@@ -80,15 +80,14 @@ class NTM(nn.Module):
         :param v: A vector of memory unit size
         :param w: The interpolation weight. allowed values are [0-1]. 1 completely overwrites memory
         """
-
         if self.overwrite_mode:
             if w > 0.5:
                 self.memory[self.head_pos] = torch.tensor(v.detach().numpy())
                 if self.history is not None:
-                    self.history["adds"].append(self._read())
+                    self.history["adds"][-1] = self._read()
         else:
             if self.history is not None:
-                self.history["adds"].append(torch.tensor((w *(v - self.memory[self.head_pos]).detach().numpy())))
+                self.history["adds"][-1] = torch.tensor((w *(v - self.memory[self.head_pos]).detach().numpy()))
             self.memory[self.head_pos] = torch.tensor(((1 - w) * self.memory[self.head_pos] + v * w).detach().numpy())
 
     def _read(self):
@@ -126,13 +125,15 @@ class NTM(nn.Module):
         out = self.network(x_joined).squeeze(0)
         y = out[:-self.update_size()]
         v = out[-self.update_size():]
+        if self.history is not None:
+            self.history["adds"].append(torch.zeros(self.memory_unit_size))
         self.update_head(v)
         if self.history is not None:
             self.history["in"].append(x.squeeze())
             self.history["out"].append(y.detach())
             self.history["head_pos"].append(self.head_pos)
             self.history["reads"].append(self.previous_read)
-            self.history["adds"].append(self._read())
+            # self.history["adds"].append(self._read())
         return y
 
     def plot_history(self):
@@ -293,7 +294,7 @@ def ntm_tests():
 # ntm_tests()
 
 if __name__ == '__main__':
-    # from custom_envs.envs import Copy
+    from custom_envs.envs import Copy
     #
     # shift = 1
     #
@@ -307,8 +308,9 @@ if __name__ == '__main__':
     #     print(f"{s:.2f}", v)
     # pprint(dict(d))
 
-
-    net = CopyNTM(3, 6)
+    copy_size = 4
+    env = Copy(copy_size, 10)
+    net = CopyNTM(copy_size, 6)
     # x = torch.randn(net.in_size).unsqueeze(0)
     # a = net(x)
     # net.evolve(0.1)
@@ -318,10 +320,20 @@ if __name__ == '__main__':
     # print(a - b)
     # net = CopyNTM(12)
     net.history = defaultdict(list)
-    for i in range(15):
-        # print(net.memory)
-        net(torch.randn(net.in_size).unsqueeze(0))
+
+    evaluate_model(env,net, 1000, True, n=1)
+    net.plot_history()
+    net.evolve(0.1)
+    evaluate_model(env,net, 1000, True, n=1)
+
+    # for i in range(15):
+    #     # print(net.memory)
+    #     # x = torch.randint(0, 2, (1, net.in_size))
+    #     x = torch.randn((1, net.in_size))
+    #     # print(x)
+    #     net(x)
 
 
     # pprint(dict(net.history))
     net.plot_history()
+    print(net.memory)

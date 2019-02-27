@@ -25,15 +25,15 @@ def main():
     # env_key = f"Copy-{copy_size}x{length}-v0"
     env_key = f"CopyRnd-{copy_size}-v0"
 
-    ga = GA(env_key, 500, max_generations=5000,
+    ga = GA(env_key, 200, max_generations=5000,
             sigma=0.005,
             truncation=10,
             elite_trials=5,
-            n_elites=10)
+            n_elites=5)
     ga.Model = MyModel
     ga.evaluate_model = evaluate_model
 
-    name = f"{env_key}_01_{ga.population}_{ga.sigma}_{ga.n_elites}"
+    name = f"{env_key}_03_{ga.population}_{ga.sigma}_{ga.n_elites}"
     session = Session(ga, name)
 
     session.start()

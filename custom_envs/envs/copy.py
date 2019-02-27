@@ -21,7 +21,7 @@ class Copy(gym.Env):
     action_space = None
     observation_space = None
 
-    def __init__(self, height=3, length=3):
+    def __init__(self, height=3, length=3, reward_precopy_bits=False):
         self.action_space = gym.spaces.box.Box(0, 1, [height], dtype=np.float32)
         self.observation_space = gym.spaces.box.Box(0, 1, [height + 2], dtype=np.float32)
         super().__init__()
@@ -30,6 +30,7 @@ class Copy(gym.Env):
         self.obs = None
         self.targets = None
         self.actions = None
+        self.reward_precopy_bits = reward_precopy_bits  # if True rewards will be given for all target columns
         self.i = 0
         self.reset()
 
@@ -51,12 +52,17 @@ class Copy(gym.Env):
         return obs, reward, done, dict()
 
     def _reward(self, action, target):
+        if not self.reward_precopy_bits and target[0] == 0.5:
+            return 0
         p = 1
         match = np.sum(1 - np.abs(action - target) ** p) / self.height
         # min_match = 1 - .5**p
         min_match = 0.25
+        length = self.length
+        if self.reward_precopy_bits:
+            length = len(self.obs)
         if match > min_match:
-            return (match - min_match) / ((1 - min_match) * len(self.obs))
+            return (match - min_match) / ((1 - min_match) * length)
         return 0
 
     def reset(self):
@@ -191,10 +197,10 @@ if __name__ == '__main__':
     #     step = c.step(d[2:])
     #     print(i, d[2:], step[0:3])
 
-    net = CopyNTM(copy_size, 22)
-    net.history = defaultdict(list)
-    # net = PerfectModel(c)
+    net = PerfectModel(c)
     # net = ImperfectModel(c, v=1.0)
+    # net = CopyNTM(copy_size, 22)
+    net.history = defaultdict(list)
     evaluate_model(c, net, 100000, n=1, render=True)
 
     # s = 0
@@ -205,7 +211,8 @@ if __name__ == '__main__':
     #     s += res[0]
     # print(s / n)
     # print(net.inputs)
-    net.plot_history()
+    if hasattr(net, "plot_history"):
+        net.plot_history()
 
     #
     # print(inputs.transpose())
