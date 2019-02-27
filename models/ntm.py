@@ -12,7 +12,7 @@ class NTM(nn.Module):
     """A Neural Turing Machine"""
 
     def __init__(self, network, memory_unit_size=4, max_memory=10, history=False, overwrite_mode=True):
-        super(NTM, self).__init__()
+        super().__init__()
         self.jump_threshold = 0.5
         self.min_similarity_to_jump = 0.5
         self.shift_length = 1
@@ -240,7 +240,7 @@ def evaluate_model(env, model, max_eval, render=False, fps=60, n=50):
             obs, reward, done, _ = env.step(action)
             if render:
                 env.render('human')
-                print(f'action={action}, reward={reward:.2f}')
+                # print(f'action={action}, reward={reward:.2f}')
                 time.sleep(1 / fps)
             tot_reward += reward
             n_eval += 1

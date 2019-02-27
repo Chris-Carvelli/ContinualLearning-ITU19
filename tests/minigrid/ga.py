@@ -27,9 +27,6 @@ parent_selection_strategies =\
 
 # TODO get Model as parameter
 class GA:
-    Model = Model
-    evaluate_model = evaluate_model
-
     def __init__(self, env_key, population,
                  max_generations=20,
                  max_evals=1000,
@@ -54,7 +51,7 @@ class GA:
         self.hyper_mode = hyper_mode
 
         self.scored_parents = None
-        self.models = None
+        self.models = self.init_models()
 
         self.termination_strategy = lambda: self.g < self.max_generations
 
@@ -101,8 +98,6 @@ class GA:
         self.results = []
 
     def iterate(self):
-        if self.g == 0:
-            self.models = self.init_models()
         if termination_strategies[self.termination_strategy_name](self):
             ret = self.evolve_iter()
             self.g += 1
@@ -139,15 +134,16 @@ class GA:
         scored_models = list(zip(
             models,
             map(
-                self.evaluate_model,
+                evaluate_model,
                 [self.env] * (len(models) * self.trials),
                 [y for x in models for y in self.trials * [x]],
                 [self.max_episode_eval] * (len(models) * self.trials))
-            )
+        )
         )
 
         self.evaluations_used += sum(s[1] for _, s in scored_models)
-        scored_models = [(scored_models[i][0], sum(s[0] for _, s in scored_models[i * self.trials:(i + 1)*self.trials]) / self.trials)
+        scored_models = [(scored_models[i][0],
+                          sum(s[0] for _, s in scored_models[i * self.trials:(i + 1) * self.trials]) / self.trials)
                          for i in range(0, len(scored_models), self.trials)]
         scored_models.sort(key=lambda x: x[1], reverse=True)
 
@@ -168,7 +164,7 @@ class GA:
 
     def init_models(self):
         if not self.scored_parents:
-            return [self.Model(self.hyper_mode) for _ in range(self.population)]
+            return [Model(self.hyper_mode) for _ in range(self.population)]
         else:
             self.reproduce()
             # TODO horrible, make reproduce return the models. Maintain style all over the place
