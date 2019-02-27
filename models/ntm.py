@@ -12,7 +12,7 @@ class NTM(nn.Module):
     """A Neural Turing Machine"""
 
     def __init__(self, network, memory_unit_size=4, max_memory=10, history=False, overwrite_mode=True):
-        super(NTM, self).__init__()
+        super().__init__()
         self.jump_threshold = 0.5
         self.min_similarity_to_jump = 0.5
         self.shift_length = 1

@@ -39,9 +39,12 @@ class Copy(gym.Env):
         self.actions.append(np.copy(action))
         reward = 0
         done = self.i >= len(self.obs) - 1
+        if done:
+            obs = np.zeros(self.height + 2) - 1
+        else:
+            obs = self.obs[self.i + 1]
         if self.i >= len(self.targets):
-            return np.zeros(self.height + 2) - 1, reward, done, dict()
-        obs = self.obs[self.i]
+            return obs, reward, done, dict()
         target = self.targets[self.i]
         reward = self._reward(action, target)
         self.i += 1
@@ -67,7 +70,6 @@ class Copy(gym.Env):
         self.targets = np.concatenate((np.zeros((self.length + 2, self.height)) + .5, bits), 0)
         self.actions = []
         self.i = 0
-
         return self.obs[0]
 
     def render(self, mode='human'):
@@ -189,21 +191,21 @@ if __name__ == '__main__':
     #     step = c.step(d[2:])
     #     print(i, d[2:], step[0:3])
 
-    # net = CopyNTM(copy_size, 22)
-    # net.history = defaultdict(list)
+    net = CopyNTM(copy_size, 22)
+    net.history = defaultdict(list)
     # net = PerfectModel(c)
-    net = ImperfectModel(c, v=1.0)
+    # net = ImperfectModel(c, v=1.0)
     evaluate_model(c, net, 100000, n=1, render=True)
 
-    s = 0
-    n = 1000
-    for x in range(n):
-        res = evaluate_model(c, net, 100000, n=1)
-        # print(res)
-        s += res[0]
-    print(s / n)
+    # s = 0
+    # n = 1000
+    # for x in range(n):
+    #     res = evaluate_model(c, net, 100000, n=1)
+    #     # print(res)
+    #     s += res[0]
+    # print(s / n)
     # print(net.inputs)
-    # net.plot_history()
+    net.plot_history()
 
     #
     # print(inputs.transpose())
