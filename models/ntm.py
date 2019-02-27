@@ -240,7 +240,7 @@ def evaluate_model(env, model, max_eval, render=False, fps=60, n=50):
             obs, reward, done, _ = env.step(action)
             if render:
                 env.render('human')
-                print(f'action={action}, reward={reward:.2f}')
+                # print(f'action={action}, reward={reward:.2f}')
                 time.sleep(1 / fps)
             tot_reward += reward
             n_eval += 1
