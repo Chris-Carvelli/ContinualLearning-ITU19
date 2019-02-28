@@ -227,9 +227,6 @@ class CopyNTM(NTM):
         self.network = nn.Sequential(
             nn.Linear(self.in_size + self.memory_unit_size, hidden_size),
             nn.Sigmoid(),
-            # nn.Linear(hidden_size, hidden_size),
-            # nn.Sigmoid(),
-            # nn.Linear(hidden_size, self.out_size + self.update_size()),
             nn.Linear(hidden_size, self.out_size + self.update_size()),
             nn.Sigmoid(),
         )
@@ -262,23 +259,22 @@ class CopyNTM(NTM):
                 self.add_tensors[tensor.size()] = torch.Tensor(tensor.size())
             if 'weight' in name:
                 # nn.init.xavier_normal_(tensor)
-                nn.init.normal(tensor)
+                nn.init.normal_(tensor)
             else:
                 tensor.data.zero_()
 
 
-def evaluate_model(env, model, max_eval, render=False, fps=60, n=50):
+
+def evaluate_model(env, model, max_eval, render=False, fps=60, n=50, use_seed=True):
     tot_reward = 0
+    if use_seed:
+        if not hasattr(evaluate_model, "seed"):
+            evaluate_model.seed = np.random.randint(0, 10000000)
+        env.seed(evaluate_model.seed)
     for i in range(n):
+
         obs = env.reset()
         model.reset()
-        # print(np.concatenate((env.obs[:env.length + 1] == -1, env.obs[:env.length + 1]), 0))
-        # print(model.memory)
-        # d = torch.tensor(list(reversed(list(env.obs[1:env.length + 1][:,2:]))))
-
-        # model.memory[:env.length,:env.height] = d
-        # print(model.memory)
-
         n_eval = 0
         done = False
         while not done and n_eval < max_eval:
@@ -400,7 +396,7 @@ if __name__ == '__main__':
     net = CopyNTM(copy_size, 12)
     for i in range(10):
         net.history = defaultdict(list)
-        env.seed(0)
+        # env.seed(0)
         evaluate_model(env, net, 1000, rend, n=1)
         net.plot_history()
         net.evolve(0.05)

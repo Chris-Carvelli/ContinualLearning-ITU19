@@ -9,8 +9,11 @@ from tests.minigrid.utils import *
 
 copy_size = 1
 length = 4
-population = 200
-sigma = 0.5
+population = 1000
+# sigma = 0.5
+# sigma = 0.1
+# sigma = 0.05
+sigma = 0.01
 n_elites = 5
 
 # copy_size = 8

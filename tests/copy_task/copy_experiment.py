@@ -36,7 +36,7 @@ def main():
     # env_key = f"CopyRnd-{copy_size}-v0"
 
     ga = GA(env_key, 1000, max_generations=5000,
-            sigma=0.5,
+            sigma=0.01,
             truncation=10,
             elite_trials=5,
             n_elites=5)
