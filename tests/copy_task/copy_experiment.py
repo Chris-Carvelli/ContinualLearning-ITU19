@@ -1,8 +1,11 @@
+import random
+
+import numpy
 from collections import defaultdict
 
 import psutil, os
 import gym
-
+import torch
 
 from custom_envs import *
 from models.ntm import CopyNTM, evaluate_model
@@ -24,11 +27,16 @@ def main():
     # Sets CPU usage priority to low
     lowpriority()
 
+    seed = 3
+    torch.manual_seed(seed)
+    numpy.random.seed(seed)
+    random.seed(seed)
+
     env_key = f"Copy-{copy_size}x{length}-v0"
     # env_key = f"CopyRnd-{copy_size}-v0"
 
-    ga = GA(env_key, 200, max_generations=5000,
-            sigma=0.005,
+    ga = GA(env_key, 1000, max_generations=5000,
+            sigma=0.5,
             truncation=10,
             elite_trials=5,
             n_elites=5)
