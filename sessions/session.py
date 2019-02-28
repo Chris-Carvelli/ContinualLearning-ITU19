@@ -134,7 +134,7 @@ class Session:
         else:
             print(f"The save folder already exists. (Path: {self.save_folder})")
             if self.ignore_warnings:
-                print("Loading session")
+                print(f"Loading session {self.name}")
                 response = "l"
             else:
                 choices = "Choose one:\n- Restart session and overwrite data folder (r)\n- Load folder (l)\n- Exit (q)"
@@ -166,6 +166,7 @@ class Session:
                 return
         self.save_data("session", self._session_data())
         shutil.copyfile(Path(sys.argv[0]), Path(self.save_folder) / "script_copy.py")
+        print(f"Starting session: {self.name}")
         self._run()
 
     def _run(self):
@@ -183,7 +184,7 @@ class Session:
                 break
         self.is_finished = True
         self.save_data("session", self._session_data())
-        print("Session done")
+        print("Session done (" + self.name + ')')
 
 
 class MultiSession(Session):

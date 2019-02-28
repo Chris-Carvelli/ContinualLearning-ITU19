@@ -54,16 +54,24 @@ class Copy(gym.Env):
     def _reward(self, action, target):
         if not self.reward_precopy_bits and target[0] == 0.5:
             return 0
-        p = 1
-        match = np.sum(1 - np.abs(action - target) ** p) / self.height
-        # min_match = 1 - .5**p
-        min_match = 0.25
+        diff = 1 - np.abs(action - target)
+        diff[diff < .25] = 0
         length = self.length
         if self.reward_precopy_bits:
             length = len(self.obs)
-        if match > min_match:
-            return (match - min_match) / ((1 - min_match) * length)
-        return 0
+        return np.sum(diff) / (len(diff) * length)
+        # p = 1
+        #
+        # match = np.sum(1 - np.abs(action - target) ** p) / self.height
+        #
+        # # min_match = 1 - .5**p
+        # min_match = 0.25
+        # length = self.length
+        # if self.reward_precopy_bits:
+        #     length = len(self.obs)
+        # if match > min_match:
+        #     return (match - min_match) / ((1 - min_match) * length)
+        # return 0
 
     def reset(self):
         bits = np.random.randint(0, 2, (self.length, self.height))
@@ -166,6 +174,20 @@ def test_randomness():
 
 
 if __name__ == '__main__':
+
+    # action = np.array([0.5, .1, 0, 1, 0])
+    # target = np.array([1, 0,   0, .1, 1])
+    #
+    # diff = 1 - np.abs(action - target)
+    # print(diff)
+    # diff[diff < .25] = 0
+    # print(diff)
+    # r = np.sum(diff) / len(diff)
+    # print(r)
+    # # match = np.sum(1 - np.abs(action - target) ** p)
+    #
+    #
+    # sys.exit()
     # test_randomness()
     # target = np.array([1,0,1,0,1])
     # action = np.array([0,0,0,0,0])
@@ -176,7 +198,8 @@ if __name__ == '__main__':
     # match = np.sum(1 - np.abs(action - target)**2) / len(action)
     # print(match)
 
-    #
+
+    from custom_envs import *
     copy_size = 2
     length = 4
     # c = Copy(copy_size, 4)
@@ -197,8 +220,8 @@ if __name__ == '__main__':
     #     step = c.step(d[2:])
     #     print(i, d[2:], step[0:3])
 
-    net = PerfectModel(c)
-    # net = ImperfectModel(c, v=1.0)
+    # net = PerfectModel(c)
+    net = ImperfectModel(c, v=1.0)
     # net = CopyNTM(copy_size, 22)
     net.history = defaultdict(list)
     evaluate_model(c, net, 100000, n=1, render=True)

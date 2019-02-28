@@ -9,8 +9,8 @@ from models.ntm import CopyNTM, evaluate_model
 from sessions.session import Session
 from tests.minigrid.utils import lowpriority
 
-copy_size = 4
-length = 12
+copy_size = 2
+length = 8
 
 
 class MyModel(CopyNTM):
@@ -27,7 +27,7 @@ def main():
     env_key = f"Copy-{copy_size}x{length}-v0"
     # env_key = f"CopyRnd-{copy_size}-v0"
 
-    ga = GA(env_key, 200, max_generations=5000,
+    ga = GA(env_key, 1000, max_generations=5000,
             sigma=0.01,
             truncation=10,
             elite_trials=5,
@@ -35,7 +35,7 @@ def main():
     ga.Model = MyModel
     ga.evaluate_model = evaluate_model
 
-    name = f"{env_key}_03_{ga.population}_{ga.sigma}_{ga.n_elites}"
+    name = f"{env_key}_04_{ga.population}_{ga.sigma}_{ga.n_elites}"
     session = Session(ga, name)
 
     session.start()
