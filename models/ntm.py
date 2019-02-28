@@ -265,7 +265,7 @@ class CopyNTM(NTM):
 
 
 
-def evaluate_model(env, model, max_eval, render=False, fps=60, n=50, use_seed=True):
+def evaluate_model(env, model, max_eval, render=False, fps=60, n=50, use_seed=False):
     tot_reward = 0
     if use_seed:
         if not hasattr(evaluate_model, "seed"):
