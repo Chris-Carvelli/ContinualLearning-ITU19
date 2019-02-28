@@ -96,6 +96,9 @@ class NTM(nn.Module):
         if self.overwrite_mode:
             if w > 0.5:
                 self.memory[self.head_pos] = np.copy(v)
+                # self.memory[self.head_pos] = np.round(v, 0)
+
+
                 if self.history is not None:
                     self.history["adds"][-1] = self._read()
         else:
@@ -219,12 +222,15 @@ class CopyNTM(NTM):
         super().__init__(None, memory_unit_size, max_memory=max_memory)
         self.in_size = copy_size + 2
         self.out_size = copy_size
-        hidden_size_1 = 100
+        hidden_size = 100
 
         self.network = nn.Sequential(
-            nn.Linear(self.in_size + self.memory_unit_size, hidden_size_1),
+            nn.Linear(self.in_size + self.memory_unit_size, hidden_size),
             nn.Sigmoid(),
-            nn.Linear(hidden_size_1, self.out_size + self.update_size()),
+            # nn.Linear(hidden_size, hidden_size),
+            # nn.Sigmoid(),
+            # nn.Linear(hidden_size, self.out_size + self.update_size()),
+            nn.Linear(hidden_size, self.out_size + self.update_size()),
             nn.Sigmoid(),
         )
         self.add_tensors = {}
@@ -255,7 +261,8 @@ class CopyNTM(NTM):
             if tensor.size() not in self.add_tensors:
                 self.add_tensors[tensor.size()] = torch.Tensor(tensor.size())
             if 'weight' in name:
-                nn.init.xavier_normal_(tensor)
+                # nn.init.xavier_normal_(tensor)
+                nn.init.normal(tensor)
             else:
                 tensor.data.zero_()
 
@@ -378,7 +385,7 @@ if __name__ == '__main__':
 
     copy_size = 4
     env = Copy(copy_size, 6)
-    net = CopyNTM(copy_size, 12)
+
     # net.evolve(0.01)
     # x = torch.randn(net.in_size).unsqueeze(0)
     # a = net(x)
@@ -388,14 +395,15 @@ if __name__ == '__main__':
     # print(b)
     # print(a - b)
     # net = CopyNTM(12)
-    net.history = defaultdict(list)
 
     rend = False
+    net = CopyNTM(copy_size, 12)
     for i in range(10):
+        net.history = defaultdict(list)
         env.seed(0)
         evaluate_model(env, net, 1000, rend, n=1)
         net.plot_history()
-        net.evolve(0.1)
+        net.evolve(0.05)
 
     # for i in range(15):
     #     # print(net.memory)
