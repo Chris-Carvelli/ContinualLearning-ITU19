@@ -1,4 +1,4 @@
-from tests.minigrid.ga import GA
+from src.ga import GA
 from sessions.session import Session, MultiSession
 
 # Example of MultiSession

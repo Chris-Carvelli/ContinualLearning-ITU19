@@ -1,17 +1,35 @@
 import gym
 import copy
 import random
+import gym_minigrid
 import numpy as np
+import src.ModelFactory as mf
+from configparser import ConfigParser
+import os
 
 # TMP networking
-from redis import Redis
-from rq import Queue
-import time
-from src.CompressedModel import worker_evaluate_model
+# from redis import Redis
+# from rq import Queue
+# import time
+# from src.CompressedModel import worker_evaluate_model
 
-from settings import REDIS_HOST
+# TMP
+# from settings import REDIS_HOST
 # from memory_profiler import profile
 
+termination_strategies = \
+    {
+        'all_generations': lambda ga_instance: ga_instance.g < ga_instance.max_generations,
+    }
+
+# TODO Make elite strategies dict and parent selection strategies dict
+elite_strategies =\
+    {
+
+    }
+parent_selection_strategies =\
+    {
+    }
 
 class GA:
     def __init__(self, env_key, population, model_builder,
@@ -43,7 +61,7 @@ class GA:
 
         self.scored_parents = None
         self.models = None
-        
+        self.config_file = None
         # strategies
         self.termination_strategy = lambda: self.g < self.max_generations
         # self.termination_strategy = lambda: self.evaluations_used < self.max_episode_eval
@@ -55,14 +73,59 @@ class GA:
 
         self.results = []
 
+
         # network management TODO move in different class
-        self.redis = Redis(REDIS_HOST)
-        self.queue = Queue(connection=self.redis, name='default')
-        for j in self.queue.jobs:
-            j.cancel()
+        # tmp
+        # self.redis = Redis(REDIS_HOST)
+        # self.queue = Queue(connection=self.redis, name='default')
+        # for j in self.queue.jobs:
+        #   j.cancel()
+
+    def __init__(self, config_file_path):
+        config = ConfigParser()
+        config.read(config_file_path)
+        self.config_file = config
+        self.model_builder = mf.builder_base
+        self.networked = bool(int(config["Utility"]["networked"]))
+        self.population = int(config["HyperParameters"]["population"])
+        self.max_episode_eval = int(config["HyperParameters"]["max_episode_eval"])
+        self.max_evals = int(config["HyperParameters"]["max_evals"])
+        self.max_generations = int(config["HyperParameters"]["max_generations"])
+        self.sigma = float(config["HyperParameters"]["sigma"])
+        self.truncation = int(config["HyperParameters"]["truncation"])
+        self.trials = int(config["HyperParameters"]["trials"])
+        self.elite_trials = int(config["HyperParameters"]["elite_trials"])
+        self.n_elites = int(config["HyperParameters"]["n_elites"])
+        self.hyper_mode = bool(int(config["HyperParameters"]["hyper_mode"]))
+
+        self.env_key = str(config["EnvironmentSettings"]["env_key"])
+
+        print(self.env_key)
+
+        self.scored_parents = None
+        self.models = self.init_models()
+
+        self.termination_strategy_name = config["Strategies"]["termination"]
+        # TODO Make Other strategies to be modular
+
+
+        # algorithm state
+        self.g = 0
+        self.evaluations_used = 0
+        self.env = gym.make(self.env_key)
+
+        # results TMP check if needed
+        self.results = []
+
+        # network management TODO move in different class
+        # tmp
+        # self.redis = Redis(REDIS_HOST)
+        # self.queue = Queue(connection=self.redis, name='default')
+        # for j in self.queue.jobs:
+        #   j.cancel()
 
     def iterate(self):
-        if self.termination_strategy():
+        if termination_strategies[self.termination_strategy_name](self):
             if self.models is None:
                 self.models = self.init_models()
 
@@ -150,46 +213,46 @@ class GA:
         return ret
 
     def network_eval(self, models, trials):
-        def enqueue(m):
-            return self.queue.enqueue(
-                worker_evaluate_model,
-                self.env_key,
-                m,
-                max_eval=trials,
-                ttl=650,
-                timeout=600
-            )
-
-        jobs = []
-        for m in models:
-            jobs.append(enqueue(m))
-        last_enqueue_time = time.time()
-        while True:
-            for i in range(len(jobs)):
-                if jobs[i].result is not None and not isinstance(jobs[i], FakeJob):
-                    jobs[i] = FakeJob(jobs[i])
-
-            def check_res(j):
-                if j.result is not None:
-                    return j.result
-                return None
-
-            scores = [check_res(j) for j in jobs]
-            if None not in scores:
-                break
-            if time.time() - last_enqueue_time > 600:
-                print(f'Reenqueuing unfinished jobs ({sum(x is None for x in scores)}).')
-                for i in range(len(jobs)):
-                    if jobs[i].result is None:
-                        jobs[i].cancel()
-                        jobs[i] = enqueue(self.models[i])
-                last_enqueue_time = time.time()
-            time.sleep(1)
-
-        scored_models = list(zip(self.models, scores))
-        scored_models.sort(key=lambda x: x[1], reverse=True)
-
-        return scored_models
+        print("UNIMPLEMENTED")
+        # def enqueue(m):
+        #     return self.queue.enqueue(
+        #         worker_evaluate_model,
+        #         self.env_key,
+        #         m,
+        #         max_eval=trials,
+        #         ttl=650,
+        #         timeout=600
+        #     )
+        #
+        # jobs = []
+        # for m in models:
+        #     jobs.append(enqueue(m))
+        # last_enqueue_time = time.time()
+        # while True:
+        #     for i in range(len(jobs)):
+        #         if jobs[i].result is not None and not isinstance(jobs[i], FakeJob):
+        #             jobs[i] = FakeJob(jobs[i])
+        #
+        #     def check_res(j):
+        #         if j.result is not None:
+        #             return j.result
+        #         return None
+        #
+        #     scores = [check_res(j) for j in jobs]
+        #     if None not in scores:
+        #         break
+        #     if time.time() - last_enqueue_time > 600:
+        #         print(f'Reenqueuing unfinished jobs ({sum(x is None for x in scores)}).')
+        #         for i in range(len(jobs)):
+        #             if jobs[i].result is None:
+        #                 jobs[i].cancel()
+        #                 jobs[i] = enqueue(self.models[i])
+        #         last_enqueue_time = time.time()
+        #     time.sleep(1)
+        #
+        # scored_models = list(zip(self.models, scores))
+        # scored_models.sort(key=lambda x: x[1], reverse=True)
+        # return scored_models
 
     # serialization
     def __getstate__(self):
@@ -198,8 +261,8 @@ class GA:
         del state['models']
 
         # TMP networking
-        del state['redis']
-        del state['queue']
+        # del state['redis']
+        # del state['queue']
 
         return state
 

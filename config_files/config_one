@@ -5,10 +5,10 @@ max_evals = 1000
 max_episode_eval = 100
 sigma = 0.05
 truncation = 10
-trials = 1
-elite_trials = 0
-n_elites = 1
-hyper_mode = True
+trials = 5
+elite_trials = 1
+n_elites = 5
+hyper_mode = 1
 
 [EnvironmentSettings]
 env_key = MiniGrid-Empty-Noise-8x8-v0
@@ -16,3 +16,6 @@ env_key = MiniGrid-Empty-Noise-8x8-v0
 [Strategies]
 elite_selection = elites
 termination = all_generations
+
+[Utility]
+networked = 0

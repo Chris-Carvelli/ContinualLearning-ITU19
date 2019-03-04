@@ -1,8 +1,9 @@
-from models.EvolvableModelHyper import EvolvableModel as HyperModel
-from models.EvolvableModelBase import EvolvableModel as BaseModel
+from src.models.EvolvableModelHyper import EvolvableModel as HyperModel
+from src.models.EvolvableModelBase import EvolvableModel as BaseModel
 
-from src.modules.FrostbitePolicy import PolicyNN
+# from src.modules.FrostbitePolicy import PolicyNN
 from src.modules.SimpleHyper import HyperNN
+from src.modules.MinigridPolicy import PolicyNN
 
 # TMP minigrid
 # MAX_SIZE = 32 * 64 * 2 * 2
