@@ -2,5 +2,7 @@ from src.ga import GA
 from sessions.session import Session, MultiSession
 
 # Example of MultiSession
-ms = MultiSession([GA('config_files/config_one'), GA('config_files/config_one'), GA('config_files/config_one')], "TestSessions")
+config_one = 'config_files/config_one'
+config_fast = 'config_files/config_fast'
+ms = MultiSession([GA(config_fast), GA(config_fast), GA(config_fast)], "TestSessions")
 ms.start()
