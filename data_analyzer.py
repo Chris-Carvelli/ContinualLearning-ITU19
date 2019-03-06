@@ -1,6 +1,5 @@
 import pickle
 import pandas
-import seaborn
 import tkinter as tk
 from tkinter import filedialog
 import os
@@ -8,6 +7,7 @@ import sessions.session
 
 pandas.set_option('display.max_columns', 20)
 pandas.set_option('display.width', 1000)
+
 
 def get_results_from_session():
     root = tk.Tk()
