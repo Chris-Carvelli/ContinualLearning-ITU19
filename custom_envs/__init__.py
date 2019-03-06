@@ -25,15 +25,15 @@ register(
     entry_point='custom_envs.envs:EmptyEnvNoise16x16'
 )
 
-for copy_size in (1, 2, 4, 6, 8, 10, 12):
-    for length in (1, 2, 4, 6, 8, 12, 16, 20, 24):
+for h in (1, 2, 4, 6, 8, 10, 12):
+    for l in (1, 2, 4, 6, 8, 12, 16, 20, 24):
         register(
-            id=f"Copy-{copy_size}x{length}-v0",
+            id=f"Copy-{h}x{l}-v0",
             entry_point='custom_envs.envs:Copy',
-            kwargs=dict(height=copy_size, length=length)
+            kwargs=dict(height=h, length=l)
         )
     register(
-        id=f"CopyRnd-{copy_size}-v0",
+        id=f"CopyRnd-{h}-v0",
         entry_point='custom_envs.envs:RandomCopy',
-        kwargs=dict(height=copy_size)
+        kwargs=dict(height=h)
     )

@@ -1,8 +1,5 @@
 import random
 
-import mkl
-mkl.set_num_threads(1)
-
 import torch
 
 import gym

@@ -7,9 +7,10 @@ import gym
 import numpy as np
 import torch
 
-from models.ntm import CopyNTM, evaluate_model
+
 from collections import defaultdict
 
+from src.modules.NTM_Module import NTM
 
 
 class Copy(gym.Env):
@@ -173,8 +174,7 @@ def test_randomness():
     print(s)
 
 
-if __name__ == '__main__':
-
+def main():
     # action = np.array([0.5, .1, 0, 1, 0])
     # target = np.array([1, 0,   0, .1, 1])
     #
@@ -199,7 +199,6 @@ if __name__ == '__main__':
     # print(match)
 
 
-    from custom_envs import *
     copy_size = 2
     length = 4
     # c = Copy(copy_size, 4)
@@ -207,6 +206,7 @@ if __name__ == '__main__':
     c = gym.make(f"Copy-{copy_size}x{length}-v0")
     # c = gym.make(f"CopyRnd-{copy_size}-v0")
     c.reset()
+    evaluate_model = NTM().evaluate
 
     # print(c.obs)
     # print(c.targets)
@@ -224,7 +224,7 @@ if __name__ == '__main__':
     net = ImperfectModel(c, v=1.0)
     # net = CopyNTM(copy_size, 22)
     net.history = defaultdict(list)
-    evaluate_model(c, net, 100000, n=1, render=True)
+    evaluate_model(c, 100000, render=True)
 
     # s = 0
     # n = 1000
@@ -248,3 +248,9 @@ if __name__ == '__main__':
     # print(net.reset())
     # for i in range(length * 2 + 1):
     #     print(net(0))
+
+
+if __name__ == '__main__':
+    # from src.modules import evaluate_model
+    from custom_envs import *
+    main()
