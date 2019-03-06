@@ -1,16 +1,14 @@
-from models.EvolvableModelHyper import EvolvableModel as HyperModel
-from models.EvolvableModelBase import EvolvableModel as BaseModel
+from src.models.EvolvableModelHyper import EvolvableModel as HyperModel
+from src.models.EvolvableModelBase import EvolvableModel as BaseModel
+from src.models.EvolvableModelNTM import EvolvableModel as NTMModel
 
-from src.modules.FrostbitePolicy import PolicyNN
 from src.modules.SimpleHyper import HyperNN
+from src.modules.MinigridPolicy import PolicyNN
+from src.modules.CopyNTM import CopyNTM as NTM
 
 # TMP minigrid
-# MAX_SIZE = 32 * 64 * 2 * 2
-# Z_NUM = 4
-
-# TMP Frostbite
-MAX_SIZE = 4 * 4 * 64 * 512
-Z_NUM = 5
+MAX_SIZE = 32 * 64 * 2 * 2
+Z_NUM = 4
 
 
 def builder_hyper():
@@ -24,3 +22,8 @@ def builder_hyper():
 
 def builder_base():
     return BaseModel(PolicyNN())
+
+
+def builder_ntm(copy_size):
+    return NTMModel(NTM(
+        copy_size=copy_size))

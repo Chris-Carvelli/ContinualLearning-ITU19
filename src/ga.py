@@ -4,12 +4,12 @@ import random
 import numpy as np
 
 # TMP networking
-from redis import Redis
-from rq import Queue
 import time
+# from redis import Redis
+# from rq import Queue
 from src.CompressedModel import worker_evaluate_model
 
-from settings import REDIS_HOST
+# from settings import REDIS_HOST
 # from memory_profiler import profile
 
 
@@ -56,10 +56,10 @@ class GA:
         self.results = []
 
         # network management TODO move in different class
-        self.redis = Redis(REDIS_HOST)
-        self.queue = Queue(connection=self.redis, name='default')
-        for j in self.queue.jobs:
-            j.cancel()
+        # self.redis = Redis(REDIS_HOST)
+        # self.queue = Queue(connection=self.redis, name='default')
+        # for j in self.queue.jobs:
+        #     j.cancel()
 
     def iterate(self):
         if self.termination_strategy():
@@ -112,9 +112,9 @@ class GA:
 
         scored_models = self.score_models(models, trials)
 
-        self.evaluations_used += sum(s[1] for _, s in scored_models)
-        scored_models = [(scored_models[i][0], sum(s[0] for _, s in scored_models[i * trials:(i + 1)*trials]) / trials)
-                         for i in range(0, len(scored_models), self.trials)]
+        self.evaluations_used += sum([sum(map(lambda x: x[1], xs)) for (_, xs) in scored_models])
+        scored_models = [(m, sum(map(lambda x: x[0], xs))/float(len(xs))) for m, xs in scored_models]
+
         scored_models.sort(key=lambda x: x[1], reverse=True)
 
         return scored_models
@@ -144,8 +144,10 @@ class GA:
         ret = []
         # not pytonic but clear, check performance and memory footprint
         for m in models:
+            run_res = []
             for t in range(trials):
-                ret.append((m, m.evaluate(self.env, self.max_episode_eval)))
+                run_res.append( m.evaluate(self.env, self.max_episode_eval))
+            ret.append((m, run_res))
 
         return ret
 
@@ -198,8 +200,8 @@ class GA:
         del state['models']
 
         # TMP networking
-        del state['redis']
-        del state['queue']
+        # del state['redis']
+        # del state['queue']
 
         return state
 

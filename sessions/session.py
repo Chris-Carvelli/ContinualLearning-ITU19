@@ -1,5 +1,6 @@
 import os
-import pickle
+# import pickle
+import dill
 import shutil
 import sys
 import threading
@@ -55,7 +56,9 @@ class Session:
         self.ignore_file = ignore_file
         self.save_folder = save_folder
         if self.save_folder is None:
-            self.save_folder = os.path.dirname(sys.argv[0])
+            self.save_folder = Path(os.path.dirname(sys.argv[0])) / "Experiments"
+            if not os.path.exists(self.save_folder):
+                os.makedirs(self.save_folder)
         self.save_folder = Path(self.save_folder) / (self.name + ".ses")
 
     def _session_data(self):
@@ -93,18 +96,18 @@ class Session:
 
     def save_data(self, filename, data, mode="wb", use_backup=True):
         """Saves data in the data folder"""
-        with open(Path(self.save_folder) / f"{filename}.pickle", mode) as fp:
-            pickle.dump(data, fp)
+        with open(Path(self.save_folder) / f"{filename}.dill", mode) as fp:
+            dill.dump(data, fp)
         if use_backup:
             with open(Path(self.save_folder) / f"{filename}.back", mode) as fp:
-                pickle.dump(data, fp)
+                dill.dump(data, fp)
 
     def load_data(self, filename, mode="rb", use_backup=True):
         """loads data from the data folder"""
         assert "b" in mode
         try:
-            with open(Path(self.save_folder) / f"{filename}.pickle", mode) as fp:
-                return pickle.load(fp)
+            with open(Path(self.save_folder) / f"{filename}.dill", mode) as fp:
+                return dill.load(fp)
         except Exception as e:
             if use_backup:
                 print(f"failed to load {filename}.pickle. Reason:")
@@ -113,7 +116,7 @@ class Session:
                 time.sleep(0.1)  # Get nicer print statements
                 print("Trying to load backup")
                 with open(Path(self.save_folder) / f"{filename}.back", mode) as fp:
-                    return pickle.load(fp)
+                    return dill.load(fp)
             else:
                 raise e
 
