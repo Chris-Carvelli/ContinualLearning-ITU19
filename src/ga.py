@@ -148,7 +148,11 @@ class GA:
 
         print(f'[gen {self.g}] get parents')
         # self.scored_parents = self.get_best_models([m for m, _ in scored_models[:self.truncation]])
-        scored_parents = self.get_best_models([m for m, _ in scored_models[:self.truncation]], self.elite_trials)
+        if self.elite_trials <= 0:
+            scored_parents = scored_models[:self.truncation]
+        else:
+            scored_parents = self.get_best_models([m for m, _ in scored_models[:self.truncation]], self.elite_trials)
+
 
         self._reproduce(scored_parents)
 
