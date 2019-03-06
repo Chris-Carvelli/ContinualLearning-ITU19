@@ -25,8 +25,8 @@ register(
     entry_point='custom_envs.envs:EmptyEnvNoise16x16'
 )
 
-for copy_size in (1, 2, 4, 6, 8, 10):
-    for length in (2, 4, 8, 12, 16, 20, 24):
+for copy_size in (1, 2, 4, 6, 8, 10, 12):
+    for length in (1, 2, 4, 6, 8, 12, 16, 20, 24):
         register(
             id=f"Copy-{copy_size}x{length}-v0",
             entry_point='custom_envs.envs:Copy',
