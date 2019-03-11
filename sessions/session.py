@@ -47,6 +47,8 @@ class Session:
         if repo_dir is not None:
             self.repo_dir = repo_dir
         while ".git" not in os.listdir(self.repo_dir):
+            if self.repo_dir == self.repo_dir.parent:
+                raise Exception(f"Could not find a .git folder while searching the directory tree")
             self.repo_dir = self.repo_dir.parent
 
         self.repo = Repo(self.repo_dir)
