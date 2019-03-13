@@ -88,7 +88,11 @@ class MultiEnv(gym.Env):
         self.env.close()
 
     def seed(self, seed=None):
-        raise NotImplementedError
+        for i, (env, _) in enumerate(self.schedule):
+            if seed is not None:
+                env.seed(i + seed)
+            else:
+                env.seed(None)
 
     def __str__(self):
         if self.spec is None:

@@ -1,3 +1,4 @@
+import random
 from typing import List, Tuple
 from gym_minigrid.minigrid import *
 from gym_minigrid.minigrid import Grid
@@ -134,11 +135,26 @@ class DoubleTMaze(AbstractTMaze):
 
 class TMaze(MultiEnv):
 
-    def __init__(self, corrider_length=3, rounds_pr_side=10, max_steps=None):
+    def __init__(self, corrider_length=3, rounds_pr_side=10, max_steps=None, rnd_order=True):
         envs = [SingleTMaze(corrider_length, 0, max_steps),
                 SingleTMaze(corrider_length, 1, max_steps)]
+        self.rnd_order = rnd_order
+        if self.rnd_order:
+            random.shuffle(envs)
         super().__init__(envs, rounds_pr_side)
         self.total_rounds = self.total_rounds - 2
+
+    def reset(self):
+        if self.rnd_order:
+            random.shuffle(self.schedule)
+        return super().reset()
+
+    def seed(self, seed=None):
+        if self.rnd_order:
+            random.seed(seed)
+            if self.round == 0 and self.i == 0:
+                random.shuffle(self.schedule)
+        super().seed(seed)
 
 
 def test_one_shot_tmaze():
@@ -169,6 +185,7 @@ def test_tmaze():
     rounds = 2
     length = 1
     env = TMaze(length, rounds)
+    env.seed(2)
     state = env.reset()
     del state["image"]
     print(state)
@@ -185,7 +202,7 @@ def test_tmaze():
     total_reward = 0
     for a in actions:
         state, reward, done, info = env.step(a)
-        time.sleep(.8)
+        time.sleep(.3)
         env.render()
         total_reward += reward
         del state["image"]
