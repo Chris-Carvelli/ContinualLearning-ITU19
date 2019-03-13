@@ -1,21 +1,10 @@
 import gym
 import copy
 import random
-import gym_minigrid
 import numpy as np
-import src.ModelFactory as mf
+import src.ControllerFactory as mf
 from configparser import ConfigParser
-import os
 
-# TMP networking
-# from redis import Redis
-# from rq import Queue
-# import time
-# from src.CompressedModel import worker_evaluate_model
-
-# TMP
-# from settings import REDIS_HOST
-# from memory_profiler import profile
 
 termination_strategies = \
     {
@@ -30,6 +19,7 @@ elite_strategies =\
 parent_selection_strategies =\
     {
     }
+
 
 class GA:
     def __init__(self, env_key, population, model_builder,
@@ -73,20 +63,12 @@ class GA:
 
         self.results = []
 
-
-        # network management TODO move in different class
-        # tmp
-        # self.redis = Redis(REDIS_HOST)
-        # self.queue = Queue(connection=self.redis, name='default')
-        # for j in self.queue.jobs:
-        #   j.cancel()
-
     def __init__(self, config_file_path):
         config = ConfigParser()
         config.read(config_file_path)
         self.config_file = config
         self.model_builder = mf.builder_base
-        self.networked = bool(int(config["Utility"]["networked"]))
+        # self.networked = bool(int(config["Utility"]["networked"]))
         self.population = int(config["HyperParameters"]["population"])
         self.max_episode_eval = int(config["HyperParameters"]["max_episode_eval"])
         self.max_evals = int(config["HyperParameters"]["max_evals"])
@@ -108,7 +90,6 @@ class GA:
         self.termination_strategy_name = config["Strategies"]["termination"]
         # TODO Make Other strategies to be modular
 
-
         # algorithm state
         self.g = 0
         self.evaluations_used = 0
@@ -116,13 +97,6 @@ class GA:
 
         # results TMP check if needed
         self.results = []
-
-        # network management TODO move in different class
-        # tmp
-        # self.redis = Redis(REDIS_HOST)
-        # self.queue = Queue(connection=self.redis, name='default')
-        # for j in self.queue.jobs:
-        #   j.cancel()
 
     def iterate(self):
         if termination_strategies[self.termination_strategy_name](self):
@@ -139,7 +113,7 @@ class GA:
 
     # @profile
     def evolve_iter(self):
-        print(f'[gen {self.g}] get best models')
+        print(f'[gen {self.g}] get best Controllers')
         scored_models = self.get_best_models(self.models, self.trials)
         scores = [s for _, s in scored_models]
         median_score = np.median(scores)
@@ -148,7 +122,10 @@ class GA:
 
         print(f'[gen {self.g}] get parents')
         # self.scored_parents = self.get_best_models([m for m, _ in scored_models[:self.truncation]])
-        scored_parents = self.get_best_models([m for m, _ in scored_models[:self.truncation]], self.elite_trials)
+        if self.elite_trials <= 0:
+            scored_parents = scored_models[:self.truncation]
+        else:
+            scored_parents = self.get_best_models([m for m, _ in scored_models[:self.truncation]], self.elite_trials)
 
         self._reproduce(scored_parents)
 
@@ -175,9 +152,9 @@ class GA:
 
         scored_models = self.score_models(models, trials)
 
-        self.evaluations_used += sum(s[1] for _, s in scored_models)
-        scored_models = [(scored_models[i][0], sum(s[0] for _, s in scored_models[i * trials:(i + 1)*trials]) / trials)
-                         for i in range(0, len(scored_models), self.trials)]
+        self.evaluations_used += sum([sum(map(lambda x: x[1], xs)) for (_, xs) in scored_models])
+        scored_models = [(m, sum(map(lambda x: x[0], xs))/float(len(xs))) for m, xs in scored_models]
+
         scored_models.sort(key=lambda x: x[1], reverse=True)
 
         return scored_models
@@ -201,68 +178,21 @@ class GA:
             return self.models
 
     def score_models(self, models, trials):
-        return self.network_eval(models, trials) if self.networked else self.local_eval(models, trials)
-
-    def local_eval(self, models, trials):
         ret = []
         # not pytonic but clear, check performance and memory footprint
         for m in models:
+            run_res = []
             for t in range(trials):
-                ret.append((m, m.evaluate(self.env, self.max_episode_eval)))
+                run_res.append(m.evaluate(self.env, self.max_episode_eval))
+            ret.append((m, run_res))
 
         return ret
-
-    def network_eval(self, models, trials):
-        print("UNIMPLEMENTED")
-        # def enqueue(m):
-        #     return self.queue.enqueue(
-        #         worker_evaluate_model,
-        #         self.env_key,
-        #         m,
-        #         max_eval=trials,
-        #         ttl=650,
-        #         timeout=600
-        #     )
-        #
-        # jobs = []
-        # for m in models:
-        #     jobs.append(enqueue(m))
-        # last_enqueue_time = time.time()
-        # while True:
-        #     for i in range(len(jobs)):
-        #         if jobs[i].result is not None and not isinstance(jobs[i], FakeJob):
-        #             jobs[i] = FakeJob(jobs[i])
-        #
-        #     def check_res(j):
-        #         if j.result is not None:
-        #             return j.result
-        #         return None
-        #
-        #     scores = [check_res(j) for j in jobs]
-        #     if None not in scores:
-        #         break
-        #     if time.time() - last_enqueue_time > 600:
-        #         print(f'Reenqueuing unfinished jobs ({sum(x is None for x in scores)}).')
-        #         for i in range(len(jobs)):
-        #             if jobs[i].result is None:
-        #                 jobs[i].cancel()
-        #                 jobs[i] = enqueue(self.models[i])
-        #         last_enqueue_time = time.time()
-        #     time.sleep(1)
-        #
-        # scored_models = list(zip(self.models, scores))
-        # scored_models.sort(key=lambda x: x[1], reverse=True)
-        # return scored_models
 
     # serialization
     def __getstate__(self):
         state = self.__dict__.copy()
 
-        del state['models']
-
-        # TMP networking
-        # del state['redis']
-        # del state['queue']
+        del state['Controllers']
 
         return state
 
@@ -271,9 +201,3 @@ class GA:
 
         self.models = None
         self.init_models()
-
-
-# TMP networking
-class FakeJob:
-    def __init__(self, j):
-        self.result = j.result

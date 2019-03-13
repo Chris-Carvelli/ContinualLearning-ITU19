@@ -108,7 +108,7 @@ class GA:
             raise StopIteration()
 
     def evolve_iter(self):
-        print(f'[gen {self.g}] get best models')
+        print(f'[gen {self.g}] get best Controllers')
         scored_models = self.get_best_models()
         scores = [s for _, s in scored_models]
         median_score = np.median(scores)
@@ -167,13 +167,13 @@ class GA:
             return [Model(self.hyper_mode) for _ in range(self.population)]
         else:
             self.reproduce()
-            # TODO horrible, make reproduce return the models. Maintain style all over the place
+            # TODO horrible, make reproduce return the Controllers. Maintain style all over the place
             return self.models
 
     # serialization
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state['models']
+        del state['Controllers']
 
         # TMP find better way (subObject could be ok but heavy syntax and additional ref)
         # for k in self.__dict__.keys():

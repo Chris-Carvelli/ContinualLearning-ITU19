@@ -5,7 +5,7 @@ from functools import reduce
 Z_VECT_EVOLUTION_PROBABILITY = 0.5
 
 
-class EvolvableModel:
+class Controller:
     def __init__(self, pnn, hnn):
         self.pnn = pnn
         self.hnn = hnn
