@@ -1,13 +1,13 @@
 [HyperParameters]
-population = 10
+population = 100
 max_generations = 20
-max_evals = 100
-max_episode_eval = 10
+max_evals = 1000
+max_episode_eval = 100
 sigma = 0.05
-truncation = 3
-trials = 5
+truncation = 10
+trials = 1
 elite_trials = 1
-n_elites = 5
+n_elites = 1
 hyper_mode = 1
 
 [EnvironmentSettings]
@@ -19,3 +19,6 @@ termination = all_generations
 
 [Utility]
 networked = 0
+
+[Controller]
+model_builder = base

@@ -1,10 +1,10 @@
 [HyperParameters]
-population = 100
+population = 10
 max_generations = 20
-max_evals = 1000
-max_episode_eval = 100
+max_evals = 100
+max_episode_eval = 10
 sigma = 0.05
-truncation = 10
+truncation = 3
 trials = 5
 elite_trials = 1
 n_elites = 5
