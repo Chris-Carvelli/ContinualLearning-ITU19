@@ -1,6 +1,6 @@
-from src.models.EvolvableModelHyper import EvolvableModel as HyperModel
-from src.models.EvolvableModelBase import EvolvableModel as BaseModel
-from src.models.EvolvableModelNTM import EvolvableModel as NTMModel
+from src.Controllers.ControllerHyper import Controller as HyperController
+from src.Controllers.ControllerBase import Controller as BaseController
+from src.Controllers.ControllerNTM import Controller as NTMController
 
 from src.modules.SimpleHyper import HyperNN
 from src.modules.MinigridPolicy import PolicyNN
@@ -12,7 +12,7 @@ Z_NUM = 4
 
 
 def builder_hyper():
-    return HyperModel(PolicyNN(), HyperNN(
+    return HyperController(PolicyNN(), HyperNN(
         z_dim=32,
         z_num=Z_NUM,
         out_features=MAX_SIZE,
@@ -21,9 +21,9 @@ def builder_hyper():
 
 
 def builder_base():
-    return BaseModel(PolicyNN())
+    return BaseController(PolicyNN())
 
 
 def builder_ntm(copy_size):
-    return NTMModel(NTM(
+    return NTMController(NTM(
         copy_size=copy_size))

@@ -1,16 +1,17 @@
-class EvolvableModel:
-    def __init__(self, pnn):
-        self.pnn = pnn
-        self.pnn.init()
+
+
+class Controller:
+    def __init__(self, ntm):
+        self.ntm = ntm
+        self.ntm.init()
 
     def evolve(self, sigma):
-        self.pnn.evolve(sigma)
+        self.ntm.evolve(sigma)
 
     def evaluate(self, env, max_eval, render=False, fps=60):
-        return self.pnn.evaluate(
+        return self.ntm.evaluate(
             env=env,
             max_eval=max_eval,
             render=render,
             fps=fps
         )
-

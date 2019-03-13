@@ -4,7 +4,7 @@ import torch
 
 from custom_envs import *
 from sessions.session import Session
-from src.ModelFactory import builder_ntm
+from src.ControllerFactory import builder_ntm
 from tests.minigrid.utils import lowpriority
 from src.ga import GA
 
