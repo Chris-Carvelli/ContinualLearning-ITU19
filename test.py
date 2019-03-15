@@ -71,4 +71,6 @@ if __name__ == "__main__":
     dill.dump(HyperNN(
         2, 2, 2,
         history=False
-    ), open('test_recursion', 'w+b'))
+    ), open('test_recursion.dill', 'w+b'))
+    hntm = dill.load(open('test_recursion.dill', 'r+b'))
+    print(hntm)

@@ -6,7 +6,7 @@ from torch import nn
 from src.modules.NTM_Module import NTM
 
 
-class HyperNN(nn.Module):
+class HyperNN(NTM):
     def __init__(self, in_size, z_num, out_size, mem_evolve_prob=0.5, mem_unit_size=4, n_fwd_pass=None, history=False):
         """
 
@@ -16,8 +16,8 @@ class HyperNN(nn.Module):
         :param mem_evolve_prob:
         :param mem_unit_size:
         """
-        # super().__init__(mem_unit_size, max_memory=in_size, fixed_size=True, history=history)
-        super().__init__()
+        super().__init__(mem_unit_size, max_memory=in_size, fixed_size=True, history=history)
+        # super().__init__()
 
         self.in_size = in_size
         self.z_num = z_num
@@ -29,9 +29,9 @@ class HyperNN(nn.Module):
         self.hidden_size = 100
 
         self.nn = nn.Sequential(
-            nn.Linear(self.in_size + 42, self.hidden_size),
+            nn.Linear(self.in_size + self.memory_unit_size, self.hidden_size),
             nn.Tanh(),
-            nn.Linear(self.hidden_size, self.out_size + 43),
+            nn.Linear(self.hidden_size, self.out_size + self.update_size()),
             nn.Tanh(),
         )
         self.add_tensors = {}
