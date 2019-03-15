@@ -69,7 +69,9 @@ class PolicyNN(nn.Module):
             # removed some scaffolding, check if something was needed
             values = self(Variable(torch.Tensor([state])))
             # values = env.step(env.action_space.sample())
-            action = np.argmax(values.data.numpy()[:env.action_space.n])
+            # TMP
+            # action = np.argmax(values.data.numpy()[:env.action_space.n])
+            action = np.argmax(values.data.numpy()[:7])
 
             # FIXME remapping toggle action
             if action is 3:

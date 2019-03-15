@@ -8,31 +8,45 @@ from torch import nn
 class NTM(nn.Module):
     """An Neural Turing Machine implemention using torch for Evolution"""
 
-    def __init__(self, memory_unit_size=4, max_memory=10000, history=False, overwrite_mode=True):
+    def __init__(self,
+                 memory_unit_size=4,
+                 max_memory=10000,
+                 history=False,
+                 overwrite_mode=True,
+                 fixed_size=False,
+                 ):
         super().__init__()
-        self.nn: nn.Module = None  # The neural network. Set in inherited class
-        self.min_similarity_to_jump = 0.5  # The minimum similarity required to jump to a specific location in memory
-        self.shift_length = 1  # The maximum step taken when the head shifts position
-        self.overwrite_mode = overwrite_mode  # If True memory writes will overwrite. Otherwise interpolate
-        self.max_memory = max_memory  # The maximum length of the
+        # self.nn: nn.Module = None  # The neural network. Set in inherited class
+
         self.memory_unit_size = memory_unit_size  # The unit size of each memory cell
-        self.head_pos = 0   # The position on the momory where read/write operations are currently being performed
-        self.memory: np.ndarray = None  # The
-        self.previous_read: np.ndarray = None
-        self.left_expands: int = None  # The number of times the memory has been expanded to the left
+        self.max_memory = max_memory  # The maximum length of the
         # History is used to plot the input, output, read-, write- operations and the location of the head.
         # History has no function impact on the model.
-        # self.history: defaultdict[list] = None
         self.history: defaultdict[list] = None
         if history:
             self.history = defaultdict(list)
+        self.overwrite_mode = overwrite_mode  # If True memory writes will overwrite. Otherwise interpolate
+        self.fixed_size = fixed_size
+
+        self.min_similarity_to_jump = 0.5  # The minimum similarity required to jump to a specific location in memory
+        self.shift_length = 1  # The maximum step taken when the head shifts position
+        self.head_pos = 0   # The position on the memory where read/write operations are currently being performed
+        self.memory: np.ndarray = None  # The
+        self.previous_read: np.ndarray = None
+        self.left_expands: int = None  # The number of times the memory has been expanded to the left
+
         self.reset()
 
     def reset(self):
         """Deletes all memory of the model and sets previous_read/initial_read_vector"""
         self.head_pos = 0
         self.left_expands = 0
-        self.memory = np.zeros((1, self.memory_unit_size))
+        self.memory = np.zeros(
+            (
+                self.max_memory if self.fixed_size else 1,
+                self.memory_unit_size
+            )
+        )
         self.previous_read = np.zeros(self.memory_unit_size)
         if self.history is not None:
             self.history = defaultdict(list)
@@ -151,60 +165,57 @@ class NTM(nn.Module):
             self.history["loc"][-1].append((self._relative_head_pos(), 1))
         return y
 
-    def plot_history(self):
+    def plot_history(self, window=None):
         if self.history is None:
             print("No history to plot")
             return
+
         import matplotlib.pyplot as plt
+        import seaborn as sns
+        sns.set()
+
         n = len(self.history["head_pos"])
         m = len(self.memory)
+
         loc = [[0] * n for _ in range(min(self.max_memory, m + 2))]
         for i, xs in enumerate(self.history["loc"]):
             for (l, w) in xs:
                 l = l % m
                 loc[l][i] = min(loc[l][i] + w, 1)
 
-        inputs = np.transpose(np.stack(self.history["in"], 0))
-        outputs = np.transpose(np.stack(self.history["out"], 0))
-        adds = np.transpose(np.stack(self.history["adds"], 0))
-        reads = np.transpose(np.stack(self.history["reads"], 0))
-        jumps = [[x for x in self.history["jumps"]]]
-        shifts = [[x for x in self.history["shifts"]]]
+        plots = [
+            [
+                np.transpose(np.stack(self.history["in"], 0)),
+                np.transpose(np.stack(self.history["out"], 0))
+            ],
+            [
+                np.transpose(np.stack(self.history["adds"], 0)),
+                np.transpose(np.stack(self.history["reads"], 0))
+            ],
+            [
+                loc,
+                loc
+            ]
+        ]
+        names = [['Inputs', 'Outputs'], ['Adds', 'Reads'], ['Loc', 'Loc']]
 
-        f, subplots = plt.subplots(3, 2, figsize=(4, 5))
-        # f, subplots = plt.subplots(4, 2, figsize=(4, 8))
-        subplots[0][0].imshow(inputs, vmin=0, vmax=1, cmap="gray")
-        subplots[1][0].imshow(reads, vmin=0, vmax=1, cmap="gray")
-        subplots[2][0].imshow(loc, vmin=0, vmax=1, cmap="hot")
-        subplots[0][1].imshow(outputs, vmin=0, vmax=1, cmap="gray")
-        subplots[1][1].imshow(adds, vmin=0, vmax=1, cmap="gray")
-        subplots[2][1].imshow(loc, vmin=0, vmax=1, cmap="hot")
-        subplots[0][0].set_ylabel('inputs')
-        subplots[1][0].set_ylabel('reads')
-        subplots[2][0].set_ylabel('loc')
-        subplots[0][1].set_ylabel('outputs')
-        subplots[1][1].set_ylabel('adds')
-        subplots[2][1].set_ylabel('loc')
-        # subplots[3][0].imshow(jumps, vmin=0, vmax=1, cmap="bone")
-        # subplots[3][1].imshow(shifts, vmin=-1.5, vmax=1.5, cmap="twilight")
-        # subplots[3][0].set_title('jumps')
-        # subplots[3][1].set_title('shifts')
-        for row in subplots:
-            for p in row:
-                p.axes.get_xaxis().set_visible(False)
-                p.axes.set_yticklabels([])
-                # p.axes.get_yaxis().set_visible(False)
-        plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
+        f, subplots = plt.subplots(3, 2, figsize=(20, 20))
+        # f.tight_layout(rect=[0, 0, .5, 1])
+        # cbar_ax = f.add_axes([.91, .3, .03, .4])
 
-        rect = f.patch.set_facecolor('lightsteelblue')
+        for i, row in enumerate(plots):
+            for j, p in enumerate(row):
+                sns.heatmap(
+                    p,
+                    ax=subplots[i][j],
+                    square=True,
+                    # cbar=i + j == 0,
+                    # cbar_ax=None if i + j else cbar_ax,
+                )
+                subplots[i][j].set_title(names[i][j])
+
         plt.show()
 
     def _relative_head_pos(self):
         """Retunrs the head position relative to the starting position"""
         return self.head_pos - self.left_expands
-
-    def evaluate(self, env, max_eval, render=False, fps=60):
-        raise NotImplementedError()
-
-    def evolve(self, sigma):
-        raise NotImplementedError()
