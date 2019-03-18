@@ -32,7 +32,7 @@ def main():
             env_key=env_key,
             model_builder=lambda: Controller(TMazeNTMModule(memory_unit_size)),
             population=200,
-            sigma=0.5,
+            sigma=0.1,
             # truncation=10,
             # trials=1,
             # elite_trials=1,
@@ -45,7 +45,7 @@ def main():
 
 
 def plot_results():
-    ga = load_session("Experiments/TMaze-1x5x6-v0-config_ntm_default-100_0.5_4.ses")
+    ga = load_session("Experiments/TMaze-1x5x6-v0-config_ntm_default-200_0.5_4.ses")
     plot(ga)
 
     gen = -1  # Last

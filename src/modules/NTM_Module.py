@@ -209,6 +209,8 @@ class NTM(nn.Module):
                     p,
                     ax=subplots[i][j],
                     square=True,
+                    vmin=0,
+                    vmax=1,
                     # cbar=i + j == 0,
                     # cbar_ax=None if i + j else cbar_ax,
                 )

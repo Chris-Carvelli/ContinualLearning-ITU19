@@ -1,3 +1,6 @@
+import random
+from collections import defaultdict
+
 import torch
 from torch import nn
 
@@ -43,10 +46,15 @@ class TMazeNTMModule(NTM):
 
 
     def evolve(self, sigma):
+        evolve_vision = random.random() >= .5
         for name, tensor in sorted(self.named_parameters()):
-            to_add = self.add_tensors[name]
-            to_add.normal_(0.0, sigma)
-            tensor.data.add_(to_add)
+            is_vision = name.startswith("conv")
+            if is_vision and evolve_vision or (not is_vision and (not evolve_vision)):
+                to_add = self.add_tensors[name]
+                to_add.normal_(0.0, sigma)
+                tensor.data.add_(to_add)
+
+
 
     def init(self):
         for name, tensor in self.named_parameters():
@@ -98,19 +106,25 @@ if __name__ == '__main__':
 
     from custom_envs import *
     import gym
+    import time
 
-    env = gym.make("TMaze-2x5-v0")
+    env = gym.make("TMaze-1x2x6-v0")
 
     ntm = TMazeNTMModule(6)
     ntm.init()
-
-    while ntm.evaluate(env, 30)[0] == 0:
-        ntm.evolve(.1)
-        print("round")
+    while ntm.evaluate(env, 30)[0] <= 0:
+        ntm.history = defaultdict(list)
+        ntm.evaluate(env, 1000, False, fps=12)
+        ntm.evolve(.5)
+        # print("round")
+        # ntm.plot_history()
+    ntm.history = defaultdict(list)
+    print(ntm.evaluate(env, 1000))
+    ntm.plot_history()
     while True:
-        ntm.evaluate(env, 30, True, fps=5)
-        import time
-        time.sleep(2)
+        ntm.history = None
+        print(ntm.evaluate(env, 1000, True, fps=3))
+        time.sleep(.5)
 
     # Test dill serialization
     # import dill
