@@ -13,12 +13,12 @@ class TMazeNTMModule(NTM):
 
         self.image_conv = nn.Sequential(
             nn.Conv2d(3, 16, (2, 2)),
-            nn.ReLU(),
+            nn.Sigmoid(),
             nn.MaxPool2d((2, 2)),
             nn.Conv2d(16, 32, (2, 2)),
-            nn.ReLU(),
+            nn.Sigmoid(),
             nn.Conv2d(32, 64, (2, 2)),
-            nn.ReLU(),
+            nn.Sigmoid(),
         )
 
         hidden_size = 100
@@ -55,7 +55,8 @@ class TMazeNTMModule(NTM):
             if 'weight' in name:
                 tensor.data.zero_()
             elif name.startswith("conv"):
-                nn.init.kaiming_normal_(tensor)
+                nn.init.xavier_normal(tensor)
+                # nn.init.kaiming_normal_(tensor)
             else:
                 nn.init.normal_(tensor)
 

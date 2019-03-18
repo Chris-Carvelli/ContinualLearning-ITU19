@@ -31,7 +31,7 @@ def main():
     ga = GA("config_files/" + config,
             env_key=env_key,
             model_builder=lambda: Controller(TMazeNTMModule(memory_unit_size)),
-            population=100,
+            population=200,
             sigma=0.5,
             # truncation=10,
             # trials=1,
@@ -60,6 +60,6 @@ def plot_results():
 
 
 if __name__ == "__main__":
-    # main()
-    plot_results()
+    main()
+    # plot_results()
 #
