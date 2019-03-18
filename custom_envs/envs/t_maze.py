@@ -38,6 +38,75 @@ class AbstractTMaze(MiniGridEnv):
             if self.grid_render.window:
                 self.grid_render.window.close()
 
+    def step(self, action):
+        self.step_count += 1
+
+        reward = 0
+        done = False
+
+        # Get the position in front of the agent
+        fwd_pos = self.front_pos
+
+        # Get the contents of the cell in front of the agent
+        fwd_cell = self.grid.get(*fwd_pos)
+
+        # Rotate left
+        if action == self.actions.left:
+            self.agent_dir -= 1
+            if self.agent_dir < 0:
+                self.agent_dir += 4
+
+        # Rotate right
+        elif action == self.actions.right:
+            self.agent_dir = (self.agent_dir + 1) % 4
+
+        # Move forward
+        elif action == self.actions.forward:
+            if fwd_cell == None or fwd_cell.can_overlap():
+                self.agent_pos = fwd_pos
+            else:
+                reward = -1
+            if fwd_cell != None and fwd_cell.type == 'goal':
+                done = True
+                reward = self._reward()
+            if fwd_cell != None and fwd_cell.type == 'lava':
+                done = True
+
+
+        # Pick up an object
+        elif action == self.actions.pickup:
+            if fwd_cell and fwd_cell.can_pickup():
+                if self.carrying is None:
+                    self.carrying = fwd_cell
+                    self.carrying.cur_pos = np.array([-1, -1])
+                    self.grid.set(*fwd_pos, None)
+
+        # Drop an object
+        elif action == self.actions.drop:
+            if not fwd_cell and self.carrying:
+                self.grid.set(*fwd_pos, self.carrying)
+                self.carrying.cur_pos = fwd_pos
+                self.carrying = None
+
+        # Toggle/activate an object
+        elif action == self.actions.toggle:
+            if fwd_cell:
+                fwd_cell.toggle(self, fwd_pos)
+
+        # Done action (not used by default)
+        elif action == self.actions.done:
+            pass
+
+        else:
+            assert False, "unknown action"
+
+        if self.step_count >= self.max_steps:
+            done = True
+
+        obs = self.gen_obs()
+
+        return obs, reward, done, {}
+
 
 class SingleTMaze(AbstractTMaze):
 
@@ -47,7 +116,7 @@ class SingleTMaze(AbstractTMaze):
         assert corridor_length > 0
 
         if max_steps is None:
-            max_steps = 4 + 4 * corridor_length
+            max_steps = 2 * (corridor_length + 1) + 2
 
         if self.reward_position == 0:
             self.mission = "Go to reward to the LEFT"
@@ -186,7 +255,7 @@ def test_tmaze():
     rounds = 2
     length = 1
     env = TMaze(length, rounds)
-    env.seed(2)
+    env.seed(1)
     state = env.reset()
     del state["image"]
     print(state)
@@ -198,7 +267,8 @@ def test_tmaze():
     # toggle = 5
     actions = [2] * length + [1] + [2] * length + \
               ([2] * length + [0] + [2] * length) * rounds + \
-              ([2] * length + [1] + [2] * length) * (rounds - 1)
+              ([2] * length + [1] + [2] * length) * (rounds - 1) \
+              # + ([2] * length + [1] + [2] * length)
     env.render()
     total_reward = 0
     for a in actions:

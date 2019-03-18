@@ -10,7 +10,7 @@ class NTM(nn.Module):
 
     def __init__(self,
                  memory_unit_size=4,
-                 max_memory=10000,
+                 max_memory=None,
                  history=False,
                  overwrite_mode=True,
                  fixed_size=False,
@@ -19,7 +19,7 @@ class NTM(nn.Module):
         # self.nn: nn.Module = None  # The neural network. Set in inherited class
 
         self.memory_unit_size = memory_unit_size  # The unit size of each memory cell
-        self.max_memory = max_memory  # The maximum length of the
+        self.max_memory = max_memory if max_memory else 1000000  # The maximum length of the
         # History is used to plot the input, output, read-, write- operations and the location of the head.
         # History has no function impact on the model.
         self.history: defaultdict[list] = None

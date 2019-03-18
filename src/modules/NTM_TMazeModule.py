@@ -67,18 +67,18 @@ class TMazeNTMModule(NTM):
         self.eval()
 
         tot_reward = 0
-        reward = 0
+        is_done = False
         n_eval = 0
         action_freq = np.zeros([7])
-        while reward == 0 and n_eval < max_eval:
+        while not is_done and n_eval < max_eval:
             values = self(state)
-            # values = env.step(env.action_space.sample())
             action = np.argmax(values)
             if action is 3:
                 action = 5
 
             action_freq[action] += 1
             state, reward, is_done, _ = env.step(action)
+
             if render:
                 env.render('human')
                 # print('action=%s, reward=%.2f' % (action, reward))
