@@ -11,7 +11,7 @@ from src.modules.NTM_Module import NTM
 
 
 class TMazeNTMModule(NTM):
-    def __init__(self, memory_unit_size, max_memory=None,):
+    def __init__(self, memory_unit_size, max_memory=1, ):
         super().__init__(memory_unit_size, max_memory=max_memory)
 
         self.image_conv = nn.Sequential(
@@ -44,7 +44,6 @@ class TMazeNTMModule(NTM):
         x = torch.cat((x, torch.tensor([reward]).float().unsqueeze(0)), 1)
         return super().forward(x)
 
-
     def evolve(self, sigma):
         evolve_vision = random.random() >= .5
         for name, tensor in sorted(self.named_parameters()):
@@ -53,8 +52,6 @@ class TMazeNTMModule(NTM):
                 to_add = self.add_tensors[name]
                 to_add.normal_(0.0, sigma)
                 tensor.data.add_(to_add)
-
-
 
     def init(self):
         for name, tensor in self.named_parameters():
@@ -92,15 +89,16 @@ class TMazeNTMModule(NTM):
                 env.render('human')
                 # print('action=%s, reward=%.2f' % (action, reward))
                 import time
-                time.sleep(1/fps)
+                time.sleep(1 / fps)
 
             tot_reward += reward
             n_eval += 1
 
         # env.close()
         # if tot_reward > 0:
-            # print(f'action_freq: {action_freq/n_eval}\treward: {tot_reward}')
+        # print(f'action_freq: {action_freq/n_eval}\treward: {tot_reward}')
         return tot_reward, n_eval
+
 
 if __name__ == '__main__':
 
@@ -134,5 +132,3 @@ if __name__ == '__main__':
     # ntm2 = dill.load(open(Path(sys.argv[0]).parent / "test.dill", "rb"))
     # print(ntm)
     # print(ntm2)
-
-

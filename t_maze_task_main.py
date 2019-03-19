@@ -24,21 +24,21 @@ def main():
     config = "config_ntm_default"
     length = 1
     rounds = 5
-    memory_unit_size = 4
+    memory_unit_size = 1
 
     env_key = f"TMaze-{length}x{rounds}x6-v0"
 
     ga = GA("config_files/" + config,
             env_key=env_key,
             model_builder=lambda: Controller(TMazeNTMModule(memory_unit_size)),
-            population=200,
-            sigma=0.1,
+            population=500,
+            sigma=0.5,
             # truncation=10,
             # trials=1,
             # elite_trials=1,
             # n_elites=5,
             )
-    name = f"{env_key}-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
+    name = f"{env_key}-0003source-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
 
     session = Session(ga, name)
     session.start()
