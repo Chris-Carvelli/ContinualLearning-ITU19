@@ -8,6 +8,7 @@ import numpy as np
 from torch.autograd import Variable
 
 from src.modules.NTM_Module import NTM
+from src.utils import add_min_prob
 
 
 class TMazeNTMModule(NTM):
@@ -26,10 +27,10 @@ class TMazeNTMModule(NTM):
 
         hidden_size = 100
         self.nn = nn.Sequential(
-            nn.Linear(64 + 1 + self.memory_unit_size, hidden_size),
+            nn.Linear(64 + 1 + self.memory_unit_size, 3 + self.update_size()),
             nn.Sigmoid(),
-            nn.Linear(hidden_size, 4 + self.update_size()),
-            nn.Sigmoid(),
+            # nn.Linear(hidden_size, 3 + self.update_size()),
+            # nn.Sigmoid(),
         )
         self.add_tensors = {}
         self.init()
@@ -65,7 +66,7 @@ class TMazeNTMModule(NTM):
             else:
                 nn.init.normal_(tensor)
 
-    def evaluate(self, env, max_eval, render=False, fps=60):
+    def evaluate(self, env, max_eval, render=False, fps=60, show_action_frequency=False, random_actions=True):
         # env = gym.make(env_key)
         # env = FlatObsWrapper(env)
         state = env.reset()
@@ -76,27 +77,32 @@ class TMazeNTMModule(NTM):
         is_done = False
         n_eval = 0
         action_freq = np.zeros([7])
+        prop_product = 1
         while not is_done and n_eval < max_eval:
             values = self(state)
-            action = np.argmax(values)
-            if action is 3:
-                action = 5
-
+            if random_actions:
+                p = add_min_prob(values, 0.0)
+                action = np.random.choice(np.array(range(len(p)), dtype=np.int), p=p)
+                prop_product *= p[action]
+            else:
+                values = self(state)
+                action = np.argmax(values)
             action_freq[action] += 1
             state, reward, is_done, _ = env.step(action)
 
             if render:
                 env.render('human')
-                # print('action=%s, reward=%.2f' % (action, reward))
                 import time
                 time.sleep(1 / fps)
-
-            tot_reward += reward
+            if reward > 0:
+                tot_reward += reward * prop_product
+                prop_product = 1
+            # tot_reward += reward
             n_eval += 1
 
-        # env.close()
-        # if tot_reward > 0:
-        # print(f'action_freq: {action_freq/n_eval}\treward: {tot_reward}')
+        if show_action_frequency:
+            print(f'action_freq: {action_freq / n_eval}\treward: {tot_reward}')
+        env.close()
         return tot_reward, n_eval
 
 
@@ -108,14 +114,15 @@ if __name__ == '__main__':
 
     env = gym.make("TMaze-1x2x6-v0")
 
-    ntm = TMazeNTMModule(6)
+    ntm = TMazeNTMModule(1)
     ntm.init()
-    while ntm.evaluate(env, 30)[0] <= 0:
+    ntm.divergence = 1
+    while ntm.evaluate(env, 30)[0] <= 0.5:
         ntm.history = defaultdict(list)
         ntm.evaluate(env, 1000, False, fps=12)
         ntm.evolve(.5)
         # print("round")
-        # ntm.plot_history()
+        ntm.plot_history()
     ntm.history = defaultdict(list)
     print(ntm.evaluate(env, 1000))
     ntm.plot_history()

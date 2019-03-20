@@ -24,28 +24,28 @@ def main():
     config = "config_ntm_default"
     length = 1
     rounds = 5
-    memory_unit_size = 1
+    memory_unit_size = 10
 
-    env_key = f"TMaze-{length}x{rounds}x6-v0"
+    env_key = f"TMaze-{length}x{rounds}x12-v0"
 
     ga = GA("config_files/" + config,
             env_key=env_key,
             model_builder=lambda: Controller(TMazeNTMModule(memory_unit_size)),
-            population=500,
+            population=30,
             sigma=0.5,
             # truncation=10,
             # trials=1,
             # elite_trials=1,
             # n_elites=5,
             )
-    name = f"{env_key}-0003source-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
+    name = f"{env_key}-0004-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
 
     session = Session(ga, name)
     session.start()
 
 
 def plot_results():
-    ga = load_session("Experiments/TMaze-1x5x6-v0-config_ntm_default-200_0.5_4.ses")
+    ga = load_session("Experiments/TMaze-1x5x20-v0-0004-config_ntm_default-100_0.5_1.ses")
     plot(ga)
 
     gen = -1  # Last
@@ -53,7 +53,7 @@ def plot_results():
         champ = ga.results[gen][-1][x % len(ga.results[gen][-1])][0]
         if hasattr(champ, "ntm"):
             champ.ntm.history = defaultdict(list)
-        res = champ.evaluate(ga.env, 100000, render=True)
+        res = champ.evaluate(ga.env, 100000, render=True, fps=4)
         print(res)
         if hasattr(champ, "ntm"):
             champ.ntm.plot_history()

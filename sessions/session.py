@@ -106,20 +106,25 @@ class Session:
 
     def check_git_status(self):
         """Checks if the there are uncommitted changes to the git head that should be committed before session start"""
-        d = Dir(self.repo.working_dir, exclude_file=self.ignore_file)
+        try:
+            d = Dir(self.repo.working_dir, exclude_file=self.ignore_file)
 
-        changed_files = [i.a_path for i in self.repo.index.diff(self.repo.head.commit) if
-                         not d.is_excluded(Path(self.repo.working_dir) / i.a_path)]
-        untracked_files = [f for f in self.repo.untracked_files if not d.is_excluded(Path(self.repo.working_dir) / f)]
-        dirty_files = changed_files + untracked_files
-        if self.ignore_uncommited_changes_to_main:
-            target = sys.argv[0].replace(Path(self.repo_dir).as_posix() + "/", "")
-            if target in dirty_files:
-                dirty_files.remove(target)
-        if len(dirty_files) > 0:
-            print("The following files were untracked or had uncommitted changes:")
-            for f in dirty_files:
-                print("- " + f)
+            changed_files = [i.a_path for i in self.repo.index.diff(self.repo.head.commit) if
+                             not d.is_excluded(Path(self.repo.working_dir) / i.a_path)]
+            untracked_files = [f for f in self.repo.untracked_files if not d.is_excluded(Path(self.repo.working_dir) / f)]
+            dirty_files = changed_files + untracked_files
+            if self.ignore_uncommited_changes_to_main:
+                target = sys.argv[0].replace(Path(self.repo_dir).as_posix() + "/", "")
+                if target in dirty_files:
+                    dirty_files.remove(target)
+            if len(dirty_files) > 0:
+                print("The following files were untracked or had uncommitted changes:")
+                for f in dirty_files:
+                    print("- " + f)
+                return False
+        except Exception as e:
+            print("Encountered exception while checking git status")
+            traceback.print_exc()
             return False
         return True
 
