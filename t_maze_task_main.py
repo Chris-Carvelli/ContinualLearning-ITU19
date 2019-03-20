@@ -45,7 +45,8 @@ def main():
 
 
 def plot_results():
-    ga = load_session("Experiments/TMaze-1x5x20-v0-0004-config_ntm_default-100_0.5_1.ses")
+    # ga = load_session("Experiments/TMaze-1x5x20-v0-0004-config_ntm_default-100_0.5_1.ses")
+    ga = load_session("Experiments/TMaze-1x5x12-v0-0004-config_ntm_default-30_0.5_10.ses")
     plot(ga)
 
     gen = -1  # Last
@@ -62,4 +63,3 @@ def plot_results():
 if __name__ == "__main__":
     main()
     # plot_results()
-#

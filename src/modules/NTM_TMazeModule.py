@@ -23,11 +23,12 @@ class TMazeNTMModule(NTM):
             nn.Sigmoid(),
             nn.Conv2d(32, 64, (2, 2)),
             nn.Sigmoid(),
+            nn.Linear(64, 6),
+            nn.Sigmoid(),
         )
 
-        hidden_size = 100
         self.nn = nn.Sequential(
-            nn.Linear(64 + 1 + self.memory_unit_size, 3 + self.update_size()),
+            nn.Linear(6 + 1 + self.memory_unit_size, 3 + self.update_size()),
             nn.Sigmoid(),
             # nn.Linear(hidden_size, 3 + self.update_size()),
             # nn.Sigmoid(),
@@ -66,9 +67,7 @@ class TMazeNTMModule(NTM):
             else:
                 nn.init.normal_(tensor)
 
-    def evaluate(self, env, max_eval, render=False, fps=60, show_action_frequency=False, random_actions=True):
-        # env = gym.make(env_key)
-        # env = FlatObsWrapper(env)
+    def evaluate(self, env, max_eval, render=False, fps=60, show_action_frequency=False, random_actions=False):
         state = env.reset()
         self.reset()
         self.eval()
