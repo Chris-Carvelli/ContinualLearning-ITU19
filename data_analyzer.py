@@ -9,13 +9,39 @@ pandas.set_option('display.max_columns', 20)
 pandas.set_option('display.width', 1000)
 
 
-def get_results_from_session():
-    root = tk.Tk()
-    root.withdraw()
-    file_path = filedialog.askdirectory(initialdir=os.getcwd(), title='Session Folder (.ses)')
-    results = load_session(file_path)
-    return results
 
+def get_results_from_session():
+    experiments_folder = "Experiments"
+    #root = tk.Tk()
+    #root.withdraw()
+    #file_path = filedialog.askdirectory(initialdir=os.getcwd(), title='Session Folder (.ses)')
+    session_directories = []
+    for file in os.listdir(experiments_folder):
+        path = experiments_folder+"\\"+file
+        if os.path.isdir(path):
+            session_directories.append(path)
+
+    print_possible_folders(session_directories)
+
+    while True:
+        try:
+            index = int(input("Select folder by providing index (int) :"))
+        except ValueError:
+            print("Not an integer! Try again.")
+            continue
+        else:
+            if index >= len(session_directories):
+                print("Index too large")
+            else:
+                return load_session(os.getcwd() + "\\" + session_directories[index])
+                break
+
+def print_possible_folders(directories_list):
+    print("Results folders: ")
+    i = 0
+    for folder in directories_list:
+        print(" "+str(i)+" "+str(folder))
+        i = i + 1
 
 def results_to_dataframe(results):
 
