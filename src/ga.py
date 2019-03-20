@@ -43,8 +43,10 @@ class GA:
         config = ConfigParser()
         if config_file_path is not None:
             config.read(config_file_path)
+            print("NON DEFAULT")
         else:
             config.read('config_files/config_default')
+            print("DEFAULT CONFIG")
         self.config_file = config
 
         if model_builder is None:
@@ -257,8 +259,7 @@ class GA:
     # serialization
     def __getstate__(self):
         state = self.__dict__.copy()
-
-        #        del state['Controllers']
+        del state['Controllers']
 
         return state
 
