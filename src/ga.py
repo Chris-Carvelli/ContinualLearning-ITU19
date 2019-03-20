@@ -47,7 +47,6 @@ class GA:
         else:
             config.read('config_files/config_default')
             print("DEFAULT CONFIG")
-        self.config_file = config
 
         if model_builder is None:
             self.model_builder = model_library[config["Controller"]["model_builder"]]
@@ -259,7 +258,8 @@ class GA:
     # serialization
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state['Controllers']
+
+        del state['models']
 
         return state
 

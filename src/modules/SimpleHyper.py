@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.utils import random_z_v, chunks
+from src.utils import random_z_v
 
 
 class HyperNN(nn.Module):
@@ -13,23 +13,24 @@ class HyperNN(nn.Module):
         self.z_num = z_num
         self.z_v_evolve_prob = z_v_evolve_prob
 
+        self.nn = nn.Sequential(
+            nn.Linear(z_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, out_features),
+        )
         self.z_v = random_z_v(self.z_dim, self.z_num)
-
-        self.l1 = nn.Linear(z_dim, 128)
-        self.l2 = nn.Linear(128, 128)
-        self.out = nn.Linear(128, out_features)
 
         self.add_tensors = {}
 
         self.init()
 
     def forward(self, layer_index):
-        x = chunks(self.z_v, self.z_dim)[layer_index]
-
-        x = F.relu(self.l1(x))
-        x = F.relu(self.l2(x))
-
-        return self.out(x)
+        if layer_index is None:
+            return [self.nn(x) for x in self.z_v]
+        else:
+            return self.nn(self.z_v[layer_index])
 
     def evolve(self, sigma):
         p = torch.distributions.normal.Normal(0.5, 0.1).sample().item()

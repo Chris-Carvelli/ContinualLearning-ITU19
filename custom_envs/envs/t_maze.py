@@ -9,12 +9,13 @@ from custom_envs.envs.multi_env import MultiEnv
 class AbstractTMaze(MiniGridEnv):
     reward_position: int
     grid: Grid
+    corridor_length: int
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     def _reward(self):
-        min_steps = (1 + 2 * self.corrider_length)
+        min_steps = (1 + 2 * self.corridor_length)
         redundant_steps = max(0, self.step_count - min_steps)
         max_steps = self.max_steps - min_steps + 1
         max_reward = 0.1
@@ -40,21 +41,21 @@ class AbstractTMaze(MiniGridEnv):
 
 class SingleTMaze(AbstractTMaze):
 
-    def __init__(self, corrider_length=3, reward_position=0, max_steps=None):
+    def __init__(self, corridor_length=3, reward_position=0, max_steps=None):
         self.reward_position = reward_position
-        self.corrider_length = corrider_length
-        assert corrider_length > 0
+        self.corridor_length = corridor_length
+        assert corridor_length > 0
 
         if max_steps is None:
-            max_steps = 4 + 4 * corrider_length
+            max_steps = 4 + 4 * corridor_length
 
         if self.reward_position == 0:
             self.mission = "Go to reward to the LEFT"
         else:
             self.mission = "Go to reward to the RIGHT"
         super().__init__(
-            width=3 + 2 * corrider_length,
-            height=3 + corrider_length,
+            width=3 + 2 * corridor_length,
+            height=3 + corridor_length,
             max_steps=max_steps,
             see_through_walls=True  # True for maximum performance
         )
@@ -87,20 +88,20 @@ class SingleTMaze(AbstractTMaze):
 
 class DoubleTMaze(AbstractTMaze):
 
-    def __init__(self, corrider_length=3, reward_position=0, max_steps=None):
+    def __init__(self, corridor_length=3, reward_position=0, max_steps=None):
         self.reward_position = reward_position
-        self.corrider_length = corrider_length
-        assert corrider_length > 0
+        self.corridor_length = corridor_length
+        assert corridor_length > 0
 
         if max_steps is None:
-            max_steps = 4 + 4 * corrider_length
+            max_steps = 4 + 4 * corridor_length
 
         goals = ["UPPER LEFT", "UPPER RIGHT", "LOWER RIGHT", "LOWER LEFT", ]
         self.mission = f"Go to reward to the {goals[self.reward_position]}"
 
         super().__init__(
-            width=3 + 2 * corrider_length,
-            height=3 + 2 * corrider_length,
+            width=3 + 2 * corridor_length,
+            height=3 + 2 * corridor_length,
             max_steps=max_steps,
             see_through_walls=True  # True for maximum performance
         )
@@ -118,7 +119,7 @@ class DoubleTMaze(AbstractTMaze):
 
         # Create walls
         for y in range(2, height - 2):
-            for x in range(1,  width - 1):
+            for x in range(1, width - 1):
                 if x == int(width / 2):
                     continue
                 self.grid.set(x, y, Wall())
@@ -135,9 +136,9 @@ class DoubleTMaze(AbstractTMaze):
 
 class TMaze(MultiEnv):
 
-    def __init__(self, corrider_length=3, rounds_pr_side=10, max_steps=None, rnd_order=True):
-        envs = [SingleTMaze(corrider_length, 0, max_steps),
-                SingleTMaze(corrider_length, 1, max_steps)]
+    def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=False):
+        envs = [SingleTMaze(corridor_length, 0, max_steps),
+                SingleTMaze(corridor_length, 1, max_steps)]
         self.rnd_order = rnd_order
         if self.rnd_order:
             random.shuffle(envs)
@@ -215,4 +216,3 @@ def test_tmaze():
 if __name__ == '__main__':
     # test_one_shot_tmaze()
     test_tmaze()
-

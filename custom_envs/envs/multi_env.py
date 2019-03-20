@@ -35,7 +35,7 @@ class MultiEnv(gym.Env):
             if self.i < len(self.schedule):
                 if self.close_prevous_env:
                     self.to_close_list.append(self.env)
-                self.env = self.schedule[self.i][0]
+                self._set_env(self.schedule[self.i][0])
                 env_change = True
                 self.on_env_change()
             else:
@@ -57,7 +57,7 @@ class MultiEnv(gym.Env):
 
     def reset(self):
         self.i: int = 0
-        self.env: gym.Env = self.schedule[self.i][0]
+        self._set_env(self.schedule[self.i][0])
         self.rewards = []
         self.round: int = 0
         state = self.env.reset()

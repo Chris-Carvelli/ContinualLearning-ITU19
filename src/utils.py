@@ -11,7 +11,7 @@ sns.set()
 
 def random_z_v(z_dim, z_num):
     # ret = np.random.normal(0.01, 1.0, z_dim * z_num)
-    return torch.distributions.normal.Normal(torch.zeros([z_dim * z_num]), 0.01).sample()
+    return torch.distributions.normal.Normal(torch.zeros([z_num, z_dim]), 0.1).sample()
 
 
 def plot(target):
