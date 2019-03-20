@@ -12,9 +12,10 @@ from src.utils import add_min_prob, parameter_stats
 
 
 class TMazeNTMModule(NTM):
-    def __init__(self, memory_unit_size, max_memory=1, ):
+    def __init__(self, memory_unit_size, max_memory=1, reward_inputs=1):
         super().__init__(memory_unit_size, max_memory=max_memory)
 
+        self.reward_inputs = reward_inputs
         self.image_conv = nn.Sequential(
             nn.Conv2d(3, 16, (2, 2)),
             nn.Sigmoid(),
@@ -28,7 +29,7 @@ class TMazeNTMModule(NTM):
         )
 
         self.nn = nn.Sequential(
-            nn.Linear(8 + 1 + self.memory_unit_size, 3 + self.update_size()),
+            nn.Linear(8 + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
             nn.Sigmoid(),
             # nn.Linear(hidden_size, 3 + self.update_size()),
             # nn.Sigmoid(),
@@ -43,7 +44,7 @@ class TMazeNTMModule(NTM):
         x = self.image_conv(x)
         x = x.reshape(x.shape[0], -1)
 
-        x = torch.cat((x, torch.tensor([reward]).float().unsqueeze(0)), 1)
+        x = torch.cat((x, torch.tensor([reward] * self.reward_inputs).float().unsqueeze(0)), 1)
         return super().forward(x)
 
     def evolve(self, sigma):
@@ -121,10 +122,10 @@ if __name__ == '__main__':
     ntm.divergence = 1
 
     while True:
-        # print(ntm.evaluate(env, 1000, render=True, fps=10, show_action_frequency=True))
-        ntm.evaluate(env, 1000, render=False, fps=10)
-        ntm.evolve(.5)
-        parameter_stats(ntm, False)
+        print(ntm.evaluate(env, 1000, render=True, fps=10, show_action_frequency=True))
+        # ntm.evaluate(env, 1000, render=False, fps=10)
+        # ntm.evolve(.5)
+        # parameter_stats(ntm, False)
 
 
     # while ntm.evaluate(env, 30)[0] <= 0.5:
