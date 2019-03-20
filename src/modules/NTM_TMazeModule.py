@@ -21,14 +21,14 @@ class TMazeNTMModule(NTM):
             nn.MaxPool2d((2, 2)),
             nn.Conv2d(16, 32, (2, 2)),
             nn.Sigmoid(),
-            nn.Conv2d(32, 64, (2, 2)),
+            nn.Conv2d(32, 8, (2, 2)),
             nn.Sigmoid(),
-            nn.Linear(64, 6),
-            nn.Sigmoid(),
+            # nn.Linear(64, 6),
+            # nn.Sigmoid(),
         )
 
         self.nn = nn.Sequential(
-            nn.Linear(6 + 1 + self.memory_unit_size, 3 + self.update_size()),
+            nn.Linear(8 + 1 + self.memory_unit_size, 3 + self.update_size()),
             nn.Sigmoid(),
             # nn.Linear(hidden_size, 3 + self.update_size()),
             # nn.Sigmoid(),
@@ -84,7 +84,6 @@ class TMazeNTMModule(NTM):
                 action = np.random.choice(np.array(range(len(p)), dtype=np.int), p=p)
                 prop_product *= p[action]
             else:
-                values = self(state)
                 action = np.argmax(values)
             action_freq[action] += 1
             state, reward, is_done, _ = env.step(action)
@@ -111,24 +110,30 @@ if __name__ == '__main__':
     import gym
     import time
 
-    env = gym.make("TMaze-1x2x6-v0")
+    env = gym.make("TMaze-1x2x12-v0")
 
     ntm = TMazeNTMModule(1)
     ntm.init()
     ntm.divergence = 1
-    while ntm.evaluate(env, 30)[0] <= 0.5:
-        ntm.history = defaultdict(list)
-        ntm.evaluate(env, 1000, False, fps=12)
-        ntm.evolve(.5)
-        # print("round")
-        ntm.plot_history()
-    ntm.history = defaultdict(list)
-    print(ntm.evaluate(env, 1000))
-    ntm.plot_history()
+
     while True:
-        ntm.history = None
-        print(ntm.evaluate(env, 1000, True, fps=3))
-        time.sleep(.5)
+        print(ntm.evaluate(env, 1000, render=True, fps=10, show_action_frequency=True))
+        ntm.evolve(.5)
+
+
+    # while ntm.evaluate(env, 30)[0] <= 0.5:
+    #     ntm.history = defaultdict(list)
+    #     ntm.evaluate(env, 1000, False, fps=12)
+    #     ntm.evolve(.5)
+    #     # print("round")
+    #     ntm.plot_history()
+    # ntm.history = defaultdict(list)
+    # print(ntm.evaluate(env, 1000))
+    # ntm.plot_history()
+    # while True:
+    #     ntm.history = None
+    #     print(ntm.evaluate(env, 1000, True, fps=3))
+    #     time.sleep(.5)
 
     # Test dill serialization
     # import dill

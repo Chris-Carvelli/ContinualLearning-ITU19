@@ -13,3 +13,4 @@ dill
 mkl
 redis
 rq
+ffmpeg
