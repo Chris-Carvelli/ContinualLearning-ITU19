@@ -5,14 +5,59 @@ from gym_minigrid.minigrid import Grid
 
 from custom_envs.envs.multi_env import MultiEnv
 
+class SingleTMaze(MiniGridEnv):
 
-class AbstractTMaze(MiniGridEnv):
-    reward_position: int
-    grid: Grid
-    corridor_length: int
+    def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False):
+        self.is_double = is_double
+        self.reward_position = reward_position
+        self.corridor_length = corridor_length
+        assert corridor_length > 0
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        if max_steps is None:
+            max_steps = 4 + 4 * corridor_length
+
+        goals = ["UPPER LEFT", "UPPER RIGHT", "LOWER RIGHT", "LOWER LEFT", ]
+        self.mission = f"Go to reward to the {goals[self.reward_position]}"
+
+        super().__init__(
+            grid_size=3 + 2 * corridor_length,
+            max_steps=max_steps,
+            see_through_walls=True  # True for maximum performance
+        )
+
+    def _gen_grid(self, width, height):
+        # Create an empty grid
+        self.grid = Grid(width, height)
+
+        # Generate the surrounding walls
+        self.grid.wall_rect(0, 0, width, height)
+
+        # Place the agent in the top-left corner
+        self.start_pos = (int(width / 2), int(height / 2))
+        self.start_dir = 3
+
+        # Create walls
+        for y in range(2, height - 2):
+            for x in range(1, width - 1):
+
+                if x == int(width / 2):
+                    continue
+                self.grid.set(x, y, Wall())
+        if not self.is_double:
+            for y in range(int(height / 2) + 1, height - 1):
+                for x in range(1, width - 1):
+                    self.grid.set(x, y, Wall())
+
+        # Create rewards
+        reward_positions = [
+            (1, 1),
+            (width - 2, 1),
+            (width - 2, height - 2),
+            (1, height - 2),
+        ]
+        if not self.is_double:
+            reward_positions = reward_positions[:2]
+        self._gen_rewards(reward_positions)
 
     def _reward(self):
         min_steps = (1 + 2 * self.corridor_length)
@@ -32,112 +77,9 @@ class AbstractTMaze(MiniGridEnv):
             if self.reward_position == i % len(rewards_pos):
                 g.is_goal = True
 
-    def close(self):
-        if self.grid_render:
-            self.grid_render.close()
-            if self.grid_render.window:
-                self.grid_render.window.close()
-
-
-
-class SingleTMaze(AbstractTMaze):
-
-    def __init__(self, corridor_length=3, reward_position=0, max_steps=None):
-        self.reward_position = reward_position
-        self.corridor_length = corridor_length
-        assert corridor_length > 0
-
-        if max_steps is None:
-            max_steps = 2 * (corridor_length + 1) + 2
-
-        if self.reward_position == 0:
-            self.mission = "Go to reward to the LEFT"
-        else:
-            self.mission = "Go to reward to the RIGHT"
-        super().__init__(
-            width=3 + 2 * corridor_length,
-            height=3 + corridor_length,
-            max_steps=max_steps,
-            see_through_walls=True  # True for maximum performance
-        )
-
-    def _gen_grid(self, width, height):
-        # Create an empty grid
-        self.grid = Grid(width, height)
-
-        # Generate the surrounding walls
-        self.grid.wall_rect(0, 0, width, height)
-
-        # Place the agent in the top-left corner
-        self.start_pos = (int(width / 2), height - 2)
-        self.start_dir = 3
-
-        # Create walls
-        for y in range(2, height - 1):
-            for x in range(1, int(width / 2)):
-                self.grid.set(x, y, Wall())
-            for x in range(int(width / 2) + 1, width - 1):
-                self.grid.set(x, y, Wall())
-
-        # Create rewards
-        reward_positions = [
-            (1, 1),
-            (width - 2, 1),
-        ]
-        self._gen_rewards(reward_positions)
-
-
-class DoubleTMaze(AbstractTMaze):
-
-    def __init__(self, corridor_length=3, reward_position=0, max_steps=None):
-        self.reward_position = reward_position
-        self.corridor_length = corridor_length
-        assert corridor_length > 0
-
-        if max_steps is None:
-            max_steps = 4 + 4 * corridor_length
-
-        goals = ["UPPER LEFT", "UPPER RIGHT", "LOWER RIGHT", "LOWER LEFT", ]
-        self.mission = f"Go to reward to the {goals[self.reward_position]}"
-
-        super().__init__(
-            width=3 + 2 * corridor_length,
-            height=3 + 2 * corridor_length,
-            max_steps=max_steps,
-            see_through_walls=True  # True for maximum performance
-        )
-
-    def _gen_grid(self, width, height):
-        # Create an empty grid
-        self.grid = Grid(width, height)
-
-        # Generate the surrounding walls
-        self.grid.wall_rect(0, 0, width, height)
-
-        # Place the agent in the top-left corner
-        self.start_pos = (int(width / 2), int(height / 2))
-        self.start_dir = 3
-
-        # Create walls
-        for y in range(2, height - 2):
-            for x in range(1, width - 1):
-                if x == int(width / 2):
-                    continue
-                self.grid.set(x, y, Wall())
-
-        # Create rewards
-        reward_positions = [
-            (1, 1),
-            (width - 2, 1),
-            (width - 2, height - 2),
-            (1, height - 2),
-        ]
-        self._gen_rewards(reward_positions)
-
-
 class TMaze(MultiEnv):
 
-    def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=False):
+    def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=True):
         envs = [SingleTMaze(corridor_length, 0, max_steps),
                 SingleTMaze(corridor_length, 1, max_steps)]
         self.rnd_order = rnd_order
@@ -161,9 +103,8 @@ class TMaze(MultiEnv):
 
 def test_one_shot_tmaze():
     import time
-    length = 2
-    # env = SingleTMaze(length, 0)
-    env = DoubleTMaze(length, 0)
+    length = 1
+    env = SingleTMaze(length, 0)
 
     # Actions
     # left = 0
@@ -185,7 +126,7 @@ def test_one_shot_tmaze():
 def test_tmaze():
     import time
     rounds = 2
-    length = 1
+    length = 2
     env = TMaze(length, rounds)
     env.seed(1)
     state = env.reset()

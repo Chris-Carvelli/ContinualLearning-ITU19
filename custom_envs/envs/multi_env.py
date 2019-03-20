@@ -80,12 +80,13 @@ class MultiEnv(gym.Env):
         return obs
 
     def render(self, mode='human', **kwargs):
-        if self.i > 0:
-            self.schedule[(self.i - 1) % len(self.schedule)][0].render(mode, **kwargs)
+
         for e in self.to_close_list:
             e.close()
         self.to_close_list = []
-        self.env.render(mode, **kwargs)
+        if self.i > 0 and self.round == 0:
+            return self.schedule[(self.i - 1) % len(self.schedule)][0].render(mode, **kwargs)
+        return self.env.render(mode, **kwargs)
 
     def close(self):
         self.env.close()

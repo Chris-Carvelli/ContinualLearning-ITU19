@@ -50,3 +50,8 @@ for rounds in (1, 2, 5, 10, 20, 50, 100, 200, 500, 1000):
                 entry_point='custom_envs.envs:TMaze',
                 kwargs=dict(corridor_length=length, rounds_pr_side=rounds, max_steps=max_steps)
             )
+
+register(
+    id=f"SingleTMaze-v0",
+    entry_point='custom_envs.envs:SingleTMaze'
+)
