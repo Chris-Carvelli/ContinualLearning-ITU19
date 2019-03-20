@@ -1,3 +1,6 @@
+import random
+from collections import defaultdict
+
 import torch
 from torch import nn
 
@@ -5,28 +8,29 @@ import numpy as np
 from torch.autograd import Variable
 
 from src.modules.NTM_Module import NTM
+from src.utils import add_min_prob
 
 
 class TMazeNTMModule(NTM):
-    def __init__(self, memory_unit_size, max_memory=None,):
+    def __init__(self, memory_unit_size, max_memory=1, ):
         super().__init__(memory_unit_size, max_memory=max_memory)
 
         self.image_conv = nn.Sequential(
             nn.Conv2d(3, 16, (2, 2)),
-            nn.ReLU(),
+            nn.Sigmoid(),
             nn.MaxPool2d((2, 2)),
             nn.Conv2d(16, 32, (2, 2)),
-            nn.ReLU(),
+            nn.Sigmoid(),
             nn.Conv2d(32, 64, (2, 2)),
-            nn.ReLU(),
+            nn.Sigmoid(),
         )
 
         hidden_size = 100
         self.nn = nn.Sequential(
-            nn.Linear(64 + 1 + self.memory_unit_size, hidden_size),
+            nn.Linear(64 + 1 + self.memory_unit_size, 3 + self.update_size()),
             nn.Sigmoid(),
-            nn.Linear(hidden_size, 4 + self.update_size()),
-            nn.Sigmoid(),
+            # nn.Linear(hidden_size, 3 + self.update_size()),
+            # nn.Sigmoid(),
         )
         self.add_tensors = {}
         self.init()
@@ -41,12 +45,14 @@ class TMazeNTMModule(NTM):
         x = torch.cat((x, torch.tensor([reward]).float().unsqueeze(0)), 1)
         return super().forward(x)
 
-
     def evolve(self, sigma):
+        evolve_vision = random.random() >= .5
         for name, tensor in sorted(self.named_parameters()):
-            to_add = self.add_tensors[name]
-            to_add.normal_(0.0, sigma)
-            tensor.data.add_(to_add)
+            is_vision = name.startswith("conv")
+            if is_vision and evolve_vision or (not is_vision and (not evolve_vision)):
+                to_add = self.add_tensors[name]
+                to_add.normal_(0.0, sigma)
+                tensor.data.add_(to_add)
 
     def init(self):
         for name, tensor in self.named_parameters():
@@ -55,11 +61,12 @@ class TMazeNTMModule(NTM):
             if 'weight' in name:
                 tensor.data.zero_()
             elif name.startswith("conv"):
-                nn.init.kaiming_normal_(tensor)
+                nn.init.xavier_normal(tensor)
+                # nn.init.kaiming_normal_(tensor)
             else:
                 nn.init.normal_(tensor)
 
-    def evaluate(self, env, max_eval, render=False, fps=60):
+    def evaluate(self, env, max_eval, render=False, fps=60, show_action_frequency=False, random_actions=True):
         # env = gym.make(env_key)
         # env = FlatObsWrapper(env)
         state = env.reset()
@@ -67,49 +74,62 @@ class TMazeNTMModule(NTM):
         self.eval()
 
         tot_reward = 0
-        reward = 0
+        is_done = False
         n_eval = 0
         action_freq = np.zeros([7])
-        while reward == 0 and n_eval < max_eval:
+        prop_product = 1
+        while not is_done and n_eval < max_eval:
             values = self(state)
-            # values = env.step(env.action_space.sample())
-            action = np.argmax(values)
-            if action is 3:
-                action = 5
-
+            if random_actions:
+                p = add_min_prob(values, 0.0)
+                action = np.random.choice(np.array(range(len(p)), dtype=np.int), p=p)
+                prop_product *= p[action]
+            else:
+                values = self(state)
+                action = np.argmax(values)
             action_freq[action] += 1
             state, reward, is_done, _ = env.step(action)
+
             if render:
                 env.render('human')
-                # print('action=%s, reward=%.2f' % (action, reward))
                 import time
-                time.sleep(1/fps)
-
-            tot_reward += reward
+                time.sleep(1 / fps)
+            if reward > 0:
+                tot_reward += reward * prop_product
+                prop_product = 1
+            # tot_reward += reward
             n_eval += 1
 
-        # env.close()
-        # if tot_reward > 0:
-            # print(f'action_freq: {action_freq/n_eval}\treward: {tot_reward}')
+        if show_action_frequency:
+            print(f'action_freq: {action_freq / n_eval}\treward: {tot_reward}')
+        env.close()
         return tot_reward, n_eval
+
 
 if __name__ == '__main__':
 
     from custom_envs import *
     import gym
+    import time
 
-    env = gym.make("TMaze-2x5-v0")
+    env = gym.make("TMaze-1x2x6-v0")
 
-    ntm = TMazeNTMModule(6)
+    ntm = TMazeNTMModule(1)
     ntm.init()
-
-    while ntm.evaluate(env, 30)[0] == 0:
-        ntm.evolve(.1)
-        print("round")
+    ntm.divergence = 1
+    while ntm.evaluate(env, 30)[0] <= 0.5:
+        ntm.history = defaultdict(list)
+        ntm.evaluate(env, 1000, False, fps=12)
+        ntm.evolve(.5)
+        # print("round")
+        ntm.plot_history()
+    ntm.history = defaultdict(list)
+    print(ntm.evaluate(env, 1000))
+    ntm.plot_history()
     while True:
-        ntm.evaluate(env, 30, True, fps=5)
-        import time
-        time.sleep(2)
+        ntm.history = None
+        print(ntm.evaluate(env, 1000, True, fps=3))
+        time.sleep(.5)
 
     # Test dill serialization
     # import dill
@@ -119,5 +139,3 @@ if __name__ == '__main__':
     # ntm2 = dill.load(open(Path(sys.argv[0]).parent / "test.dill", "rb"))
     # print(ntm)
     # print(ntm2)
-
-

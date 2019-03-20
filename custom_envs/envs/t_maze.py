@@ -39,6 +39,7 @@ class AbstractTMaze(MiniGridEnv):
                 self.grid_render.window.close()
 
 
+
 class SingleTMaze(AbstractTMaze):
 
     def __init__(self, corridor_length=3, reward_position=0, max_steps=None):
@@ -47,7 +48,7 @@ class SingleTMaze(AbstractTMaze):
         assert corridor_length > 0
 
         if max_steps is None:
-            max_steps = 4 + 4 * corridor_length
+            max_steps = 2 * (corridor_length + 1) + 2
 
         if self.reward_position == 0:
             self.mission = "Go to reward to the LEFT"
@@ -186,7 +187,7 @@ def test_tmaze():
     rounds = 2
     length = 1
     env = TMaze(length, rounds)
-    env.seed(2)
+    env.seed(1)
     state = env.reset()
     del state["image"]
     print(state)
@@ -198,7 +199,8 @@ def test_tmaze():
     # toggle = 5
     actions = [2] * length + [1] + [2] * length + \
               ([2] * length + [0] + [2] * length) * rounds + \
-              ([2] * length + [1] + [2] * length) * (rounds - 1)
+              ([2] * length + [1] + [2] * length) * (rounds - 1) \
+              # + ([2] * length + [1] + [2] * length)
     env.render()
     total_reward = 0
     for a in actions:
