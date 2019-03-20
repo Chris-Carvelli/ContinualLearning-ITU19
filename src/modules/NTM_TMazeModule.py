@@ -8,7 +8,7 @@ import numpy as np
 from torch.autograd import Variable
 
 from src.modules.NTM_Module import NTM
-from src.utils import add_min_prob
+from src.utils import add_min_prob, parameter_stats
 
 
 class TMazeNTMModule(NTM):
@@ -54,6 +54,10 @@ class TMazeNTMModule(NTM):
                 to_add = self.add_tensors[name]
                 to_add.normal_(0.0, sigma)
                 tensor.data.add_(to_add)
+                if ".bias" in name:
+                    tensor.data.clamp_(-3, 3)
+                else:
+                    tensor.data.clamp_(-1, 1)
 
     def init(self):
         for name, tensor in self.named_parameters():
@@ -117,8 +121,10 @@ if __name__ == '__main__':
     ntm.divergence = 1
 
     while True:
-        print(ntm.evaluate(env, 1000, render=True, fps=10, show_action_frequency=True))
+        # print(ntm.evaluate(env, 1000, render=True, fps=10, show_action_frequency=True))
+        ntm.evaluate(env, 1000, render=False, fps=10)
         ntm.evolve(.5)
+        parameter_stats(ntm, False)
 
 
     # while ntm.evaluate(env, 30)[0] <= 0.5:

@@ -195,16 +195,19 @@ class Session:
                     assert isinstance(repo, str)
                     hexsha = repo
                 if self.repo.head.commit.hexsha != hexsha:
-                    print("The loaded session belonged to a different commit and cannot be loaded")
-                    print(f"Before rerunning script please checkout commit({hexsha})")
-                    return
-                else:
-                    self.worker = worker
-                    if on_load is not None:
-                        print(f"Calling on_load method: {on_load.__name__}")
-                        on_load(self)
-                    self._run()
-                    return
+                    print("WARNING: The loaded session belonged to a different commit and cannot be loaded")
+                    print(f"Consider rerunning script after checking out commit({hexsha})")
+                    if not self.ignore_warnings:
+                        print("Continue? (Y/N)")
+                        response = get_input(valid_inputs=("y", "n", ))
+                        if response == "n":
+                            return
+                self.worker = worker
+                if on_load is not None:
+                    print(f"Calling on_load method: {on_load.__name__}")
+                    on_load(self)
+                self._run()
+                return
             elif response == "r":
                 print("Confirm (y/n)")
                 if get_input(("y", "n")) == "y":

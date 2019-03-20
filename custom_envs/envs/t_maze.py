@@ -36,6 +36,9 @@ class SingleTMaze(MiniGridEnv):
         self.start_pos = (int(width / 2), int(height / 2))
         self.start_dir = 3
 
+        is_double = False
+        if hasattr(self, "is_double"):
+            is_double = self.is_double
         # Create walls
         for y in range(2, height - 2):
             for x in range(1, width - 1):
@@ -43,7 +46,7 @@ class SingleTMaze(MiniGridEnv):
                 if x == int(width / 2):
                     continue
                 self.grid.set(x, y, Wall())
-        if not self.is_double:
+        if not is_double:
             for y in range(int(height / 2) + 1, height - 1):
                 for x in range(1, width - 1):
                     self.grid.set(x, y, Wall())
@@ -55,7 +58,7 @@ class SingleTMaze(MiniGridEnv):
             (width - 2, height - 2),
             (1, height - 2),
         ]
-        if not self.is_double:
+        if not is_double:
             reward_positions = reward_positions[:2]
         self._gen_rewards(reward_positions)
 
@@ -126,7 +129,7 @@ def test_one_shot_tmaze():
 def test_tmaze():
     import time
     rounds = 2
-    length = 2
+    length = 1
     env = TMaze(length, rounds)
     env.seed(1)
     state = env.reset()
