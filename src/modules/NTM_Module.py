@@ -172,7 +172,7 @@ class NTM(nn.Module):
         """Start recording history, clearing any previous history recorded"""
         self.history = defaultdict(list)
 
-    def plot_history(self, window=None):
+    def plot_history(self, window=None, vmin=None, vmax=None):
         if self.history is None:
             print("No history to plot")
             return
@@ -216,8 +216,8 @@ class NTM(nn.Module):
                     p,
                     ax=subplots[i][j],
                     square=True,
-                    vmin=0,
-                    vmax=1,
+                    vmin=vmin,
+                    vmax=vmax,
                     # cbar=i + j == 0,
                     # cbar_ax=None if i + j else cbar_ax,
                 )

@@ -1,5 +1,7 @@
 import os
 # import pickle
+from typing import Callable
+
 import dill
 import shutil
 import sys
@@ -91,7 +93,7 @@ class Session:
         self.save_folder = Path(self.save_folder) / (self.name + ".ses")
 
     def _session_data(self):
-        return self.worker, self.repo, self.is_finished
+        return self.worker, self.repo.head.commit.hexsha, self.is_finished
 
     def load_results(self):
         """This method is for loading session results after the session has finished"""
@@ -154,7 +156,7 @@ class Session:
             else:
                 raise e
 
-    def start(self):
+    def start(self, on_load: Callable[['Session'], None] = None):
         """Starts the session. It will guide the user throug a series of questions about choices for the session
         regarding git status and restarting/overwriting previous sessions"""
         status = self.check_git_status()
@@ -179,17 +181,28 @@ class Session:
                 response = get_input(valid_inputs=("r", "l", "q"))
             if response == "l":
                 (worker, repo, is_finished) = self.load_data("session")
-                # if is_finished:
-                #     self.worker = worker
-                #     print("Loaded session is already finished.")
-                #     return
-                commit = repo.head.commit
-                if self.repo.head.commit != commit:
+
+                if isinstance(repo, Repo):
+
+                    try:
+                        hexsha = repo.head.commit.hexsha
+                    except ValueError:
+                        print("(Probably) got error when comparing loaded head with current. This most likely is an "
+                              "issue of data stored with an old version of session when loading data on a different PC")
+                        traceback.print_exc()
+                        hexsha = None
+                else:
+                    assert isinstance(repo, str)
+                    hexsha = repo
+                if self.repo.head.commit.hexsha != hexsha:
                     print("The loaded session belonged to a different commit and cannot be loaded")
-                    print(f"Before rerunning script please checkout commit({commit}): {commit.message}")
+                    print(f"Before rerunning script please checkout commit({hexsha})")
                     return
                 else:
                     self.worker = worker
+                    if on_load is not None:
+                        print(f"Calling on_load method: {on_load.__name__}")
+                        on_load(self)
                     self._run()
                     return
             elif response == "r":
