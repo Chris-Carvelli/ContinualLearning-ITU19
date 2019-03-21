@@ -1,4 +1,5 @@
 import random
+import sys
 from collections import defaultdict
 
 import numpy
@@ -78,5 +79,8 @@ def plot_results():
 
 
 if __name__ == "__main__":
-    # main()
-    plot_results()
+    if len(sys.argv) > 1 and "plot" in sys.argv[1]:
+        plot_results()
+    else:
+        main()
+
