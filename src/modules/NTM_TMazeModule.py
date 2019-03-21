@@ -8,26 +8,30 @@ import numpy as np
 from torch.autograd import Variable
 
 from src.modules.NTM_Module import NTM
-from src.utils import add_min_prob
+from src.utils import add_min_prob, parameter_stats
 
 
 class TMazeNTMModule(NTM):
-    def __init__(self, memory_unit_size, max_memory=1, ):
+    reward_inputs = 1
+
+    def __init__(self, memory_unit_size, max_memory=1, reward_inputs=1):
         super().__init__(memory_unit_size, max_memory=max_memory)
 
+        self.reward_inputs = reward_inputs
         self.image_conv = nn.Sequential(
             nn.Conv2d(3, 16, (2, 2)),
             nn.Sigmoid(),
             nn.MaxPool2d((2, 2)),
             nn.Conv2d(16, 32, (2, 2)),
             nn.Sigmoid(),
-            nn.Conv2d(32, 64, (2, 2)),
+            nn.Conv2d(32, 8, (2, 2)),
             nn.Sigmoid(),
+            # nn.Linear(64, 6),
+            # nn.Sigmoid(),
         )
 
-        hidden_size = 100
         self.nn = nn.Sequential(
-            nn.Linear(64 + 1 + self.memory_unit_size, 3 + self.update_size()),
+            nn.Linear(8 + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
             nn.Sigmoid(),
             # nn.Linear(hidden_size, 3 + self.update_size()),
             # nn.Sigmoid(),
@@ -42,7 +46,7 @@ class TMazeNTMModule(NTM):
         x = self.image_conv(x)
         x = x.reshape(x.shape[0], -1)
 
-        x = torch.cat((x, torch.tensor([reward]).float().unsqueeze(0)), 1)
+        x = torch.cat((x, torch.tensor([reward] * self.reward_inputs).float().unsqueeze(0)), 1)
         return super().forward(x)
 
     def evolve(self, sigma):
@@ -53,6 +57,10 @@ class TMazeNTMModule(NTM):
                 to_add = self.add_tensors[name]
                 to_add.normal_(0.0, sigma)
                 tensor.data.add_(to_add)
+                # if ".bias" in name:
+                #     tensor.data.clamp_(-3, 3)
+                # else:
+                #     tensor.data.clamp_(-1, 1)
 
     def init(self):
         for name, tensor in self.named_parameters():
@@ -66,9 +74,8 @@ class TMazeNTMModule(NTM):
             else:
                 nn.init.normal_(tensor)
 
-    def evaluate(self, env, max_eval, render=False, fps=60, show_action_frequency=False, random_actions=True):
-        # env = gym.make(env_key)
-        # env = FlatObsWrapper(env)
+    def evaluate(self, env, max_eval, render=False, fps=60, show_action_frequency=False, random_actions=False,
+                 mode="human"):
         state = env.reset()
         self.reset()
         self.eval()
@@ -85,13 +92,12 @@ class TMazeNTMModule(NTM):
                 action = np.random.choice(np.array(range(len(p)), dtype=np.int), p=p)
                 prop_product *= p[action]
             else:
-                values = self(state)
                 action = np.argmax(values)
             action_freq[action] += 1
             state, reward, is_done, _ = env.step(action)
 
             if render:
-                env.render('human')
+                env.render(mode)
                 import time
                 time.sleep(1 / fps)
             if reward > 0:
@@ -112,24 +118,31 @@ if __name__ == '__main__':
     import gym
     import time
 
-    env = gym.make("TMaze-1x2x6-v0")
+    env = gym.make("TMaze-1x2x12-v0")
 
     ntm = TMazeNTMModule(1)
     ntm.init()
     ntm.divergence = 1
-    while ntm.evaluate(env, 30)[0] <= 0.5:
-        ntm.history = defaultdict(list)
-        ntm.evaluate(env, 1000, False, fps=12)
-        ntm.evolve(.5)
-        # print("round")
-        ntm.plot_history()
-    ntm.history = defaultdict(list)
-    print(ntm.evaluate(env, 1000))
-    ntm.plot_history()
+
     while True:
-        ntm.history = None
-        print(ntm.evaluate(env, 1000, True, fps=3))
-        time.sleep(.5)
+        print(ntm.evaluate(env, 1000, render=True, fps=10, show_action_frequency=True))
+        # ntm.evaluate(env, 1000, render=False, fps=10)
+        # ntm.evolve(.5)
+        # parameter_stats(ntm, False)
+
+    # while ntm.evaluate(env, 30)[0] <= 0.5:
+    #     ntm.history = defaultdict(list)
+    #     ntm.evaluate(env, 1000, False, fps=12)
+    #     ntm.evolve(.5)
+    #     # print("round")
+    #     ntm.plot_history()
+    # ntm.history = defaultdict(list)
+    # print(ntm.evaluate(env, 1000))
+    # ntm.plot_history()
+    # while True:
+    #     ntm.history = None
+    #     print(ntm.evaluate(env, 1000, True, fps=3))
+    #     time.sleep(.5)
 
     # Test dill serialization
     # import dill
