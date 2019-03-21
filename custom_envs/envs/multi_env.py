@@ -53,7 +53,7 @@ class MultiEnv(gym.Env):
         if round_done:
             done, state = self._next_round()
         obs = self._get_obs(state, round_done, reward)
-        score = reward / max(2, self.total_rounds)
+        score = reward / max(1, self.total_rounds)
         return obs, score, done, info
 
     def reset(self):

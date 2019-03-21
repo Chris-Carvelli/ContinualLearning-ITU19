@@ -74,7 +74,8 @@ class TMazeNTMModule(NTM):
             else:
                 nn.init.normal_(tensor)
 
-    def evaluate(self, env, max_eval, render=False, fps=60, show_action_frequency=False, random_actions=False):
+    def evaluate(self, env, max_eval, render=False, fps=60, show_action_frequency=False, random_actions=False,
+                 mode="human"):
         state = env.reset()
         self.reset()
         self.eval()
@@ -96,7 +97,7 @@ class TMazeNTMModule(NTM):
             state, reward, is_done, _ = env.step(action)
 
             if render:
-                env.render('human')
+                env.render(mode)
                 import time
                 time.sleep(1 / fps)
             if reward > 0:
@@ -128,7 +129,6 @@ if __name__ == '__main__':
         # ntm.evaluate(env, 1000, render=False, fps=10)
         # ntm.evolve(.5)
         # parameter_stats(ntm, False)
-
 
     # while ntm.evaluate(env, 30)[0] <= 0.5:
     #     ntm.history = defaultdict(list)
