@@ -12,6 +12,8 @@ from src.utils import add_min_prob, parameter_stats
 
 
 class TMazeNTMModule(NTM):
+    reward_inputs = 1
+
     def __init__(self, memory_unit_size, max_memory=1, reward_inputs=1):
         super().__init__(memory_unit_size, max_memory=max_memory)
 
@@ -55,10 +57,10 @@ class TMazeNTMModule(NTM):
                 to_add = self.add_tensors[name]
                 to_add.normal_(0.0, sigma)
                 tensor.data.add_(to_add)
-                if ".bias" in name:
-                    tensor.data.clamp_(-3, 3)
-                else:
-                    tensor.data.clamp_(-1, 1)
+                # if ".bias" in name:
+                #     tensor.data.clamp_(-3, 3)
+                # else:
+                #     tensor.data.clamp_(-1, 1)
 
     def init(self):
         for name, tensor in self.named_parameters():

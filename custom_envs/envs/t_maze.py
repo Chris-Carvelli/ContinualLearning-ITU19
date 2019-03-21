@@ -81,20 +81,26 @@ class SingleTMaze(MiniGridEnv):
                 g.is_goal = True
 
 class TMaze(MultiEnv):
+    cyclic_order = True
 
-    def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=True):
+    def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=False, cyclic_order=True):
+        self.cyclic_order = cyclic_order
         envs = [SingleTMaze(corridor_length, 0, max_steps),
                 SingleTMaze(corridor_length, 1, max_steps)]
         self.rnd_order = rnd_order
         if self.rnd_order:
             random.shuffle(envs)
+
         super().__init__(envs, rounds_pr_side)
         self.total_rounds = self.total_rounds - 2
 
     def reset(self):
         if self.rnd_order:
             random.shuffle(self.schedule)
+        elif self.cyclic_order:
+            self.schedule = [self.schedule[(i + 1) % len(self.schedule)] for i in range(len(self.schedule))]
         return super().reset()
+
 
     def seed(self, seed=None):
         if self.rnd_order:

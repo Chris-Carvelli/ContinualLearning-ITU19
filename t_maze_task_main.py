@@ -26,22 +26,24 @@ def main():
     length = 1
     rounds = 5
     memory_unit_size = 2
+    r_inputs = 1
 
     env_key = f"TMaze-{length}x{rounds}-v0"
 
     ga = GA("config_files/" + config,
             env_key=env_key,
-            model_builder=lambda: Controller(TMazeNTMModule(memory_unit_size, reward_inputs=6)),
-            population=100,
-            sigma=0.5,
-            trials=3,
-            elite_trials=5
+            model_builder=lambda: Controller(TMazeNTMModule(memory_unit_size, reward_inputs=r_inputs)),
+            population=300,
+            sigma=0.3,
+            trials=2,
+            elite_trials=2
             # truncation=10,
             # trials=1,
             # elite_trials=1,
             # n_elites=5,
             )
-    name = f"{env_key}-0007-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
+    # name = f"{env_key}-0007-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}_r-inputs_{r_inputs}"
+    name = f"{env_key}-0008-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
 
     session = Session(ga, name)
     session.start()
@@ -52,7 +54,8 @@ def plot_results():
     # ga = load_session("Experiments/TMaze-1x5x12-v0-0004-config_ntm_default-30_0.5_10.ses")
     # ga = load_session("Experiments/TMaze-1x5-v0-0005-config_ntm_default-200_0.5_2.ses")
     # ga = load_session("Experiments/TMaze-1x5-v0-0005-config_ntm_default-100_0.5_2.ses")
-    ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2.ses")
+    # ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2.ses")
+    ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2_r-inputs_6.ses")
     plot(ga)
 
     from custom_envs.envs import TMaze
@@ -75,5 +78,5 @@ def plot_results():
 
 
 if __name__ == "__main__":
-    main()
-    # plot_results()
+    # main()
+    plot_results()
