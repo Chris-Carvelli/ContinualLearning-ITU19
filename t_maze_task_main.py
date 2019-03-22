@@ -35,7 +35,7 @@ def main():
             env_key=env_key,
             model_builder=lambda: Controller(TMazeNTMModule(memory_unit_size, reward_inputs=r_inputs)),
             population=300,
-            sigma=0.3,
+            sigma=0.5,
             trials=2,
             elite_trials=2
             # truncation=10,
@@ -44,7 +44,7 @@ def main():
             # n_elites=5,
             )
     # name = f"{env_key}-0007-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}_r-inputs_{r_inputs}"
-    name = f"{env_key}-0008-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
+    name = f"{env_key}-0009-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
 
     session = Session(ga, name)
     session.start()

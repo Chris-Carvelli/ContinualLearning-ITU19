@@ -34,7 +34,7 @@ def get_results_from_session():
                 print("Index too large")
             else:
                 return load_session(os.getcwd() + "\\" + session_directories[index])
-                break
+            break
 
 def print_possible_folders(directories_list):
     print("Results folders: ")

@@ -20,11 +20,11 @@ class TMazeNTMModule(NTM):
         self.reward_inputs = reward_inputs
         self.image_conv = nn.Sequential(
             nn.Conv2d(3, 16, (2, 2)),
-            nn.Sigmoid(),
+            nn.ReLU,
             nn.MaxPool2d((2, 2)),
-            nn.Conv2d(16, 32, (2, 2)),
-            nn.Sigmoid(),
-            nn.Conv2d(32, 8, (2, 2)),
+            nn.Conv2d(16, 16, (2, 2)),
+            nn.ReLU(),
+            nn.Conv2d(16, 8, (2, 2)),
             nn.Sigmoid(),
             # nn.Linear(64, 6),
             # nn.Sigmoid(),
@@ -50,17 +50,19 @@ class TMazeNTMModule(NTM):
         return super().forward(x)
 
     def evolve(self, sigma):
-        evolve_vision = random.random() >= .5
+        r = random.random()
+        evolve_vision = 0 <= r < .333 or .666 <= r < 1
+        evolve_nn = .333 <= r < 1
         for name, tensor in sorted(self.named_parameters()):
             is_vision = name.startswith("conv")
-            if is_vision and evolve_vision or (not is_vision and (not evolve_vision)):
+            if is_vision and evolve_vision or (not is_vision and evolve_nn):
                 to_add = self.add_tensors[name]
                 to_add.normal_(0.0, sigma)
                 tensor.data.add_(to_add)
-                # if ".bias" in name:
-                #     tensor.data.clamp_(-3, 3)
-                # else:
-                #     tensor.data.clamp_(-1, 1)
+                if ".bias" in name:
+                    tensor.data.clamp_(-3, 3)
+                else:
+                    tensor.data.clamp_(-1, 1)
 
     def init(self):
         for name, tensor in self.named_parameters():
@@ -68,11 +70,12 @@ class TMazeNTMModule(NTM):
                 self.add_tensors[name] = torch.Tensor(tensor.size())
             if 'weight' in name:
                 tensor.data.zero_()
-            elif name.startswith("conv"):
-                nn.init.xavier_normal(tensor)
-                # nn.init.kaiming_normal_(tensor)
-            else:
-                nn.init.normal_(tensor)
+            nn.init.normal_(tensor, .5)
+            # elif name.startswith("conv"):
+            #     nn.init.xavier_normal(tensor)
+            #     # nn.init.kaiming_normal_(tensor)
+            # else:
+            #     nn.init.normal_(tensor)
 
     def evaluate(self, env, max_eval, render=False, fps=60, show_action_frequency=False, random_actions=False,
                  mode="human"):
