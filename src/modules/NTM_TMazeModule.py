@@ -20,10 +20,10 @@ class TMazeNTMModule(NTM):
         self.reward_inputs = reward_inputs
         self.image_conv = nn.Sequential(
             nn.Conv2d(3, 16, (2, 2)),
-            nn.ReLU,
+            nn.Sigmoid(),
             nn.MaxPool2d((2, 2)),
             nn.Conv2d(16, 16, (2, 2)),
-            nn.ReLU(),
+            nn.Sigmoid(),
             nn.Conv2d(16, 8, (2, 2)),
             nn.Sigmoid(),
             # nn.Linear(64, 6),

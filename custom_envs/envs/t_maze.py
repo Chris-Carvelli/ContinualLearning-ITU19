@@ -8,6 +8,8 @@ from custom_envs.envs.multi_env import MultiEnv
 
 class SingleTMaze(MiniGridEnv):
     is_double = False
+    reward_values = dict(goal=1, fake_goal=-0.1)
+
 
     def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False):
         self.is_double = is_double
@@ -26,6 +28,7 @@ class SingleTMaze(MiniGridEnv):
             max_steps=max_steps,
             see_through_walls=True  # True for maximum performance
         )
+        self.reward_range = (min(self.reward_values["fake_goal"], 0), self.reward_values["goal"])
 
     def _gen_grid(self, width, height):
         # Create an empty grid
@@ -69,11 +72,12 @@ class SingleTMaze(MiniGridEnv):
         min_steps = (1 + 2 * self.corridor_length)
         redundant_steps = max(0, self.step_count - min_steps)
         max_steps = self.max_steps - min_steps + 1
-        max_reward = 0.1
         cell = self.grid.get(self.agent_pos[0], self.agent_pos[1])
+        max_reward = self.reward_values["fake_goal"]
         if hasattr(cell, "is_goal") and cell.is_goal:
-            max_reward = 0.9
-        return max_reward * (1 - min(1, (redundant_steps / max_steps)))
+            max_reward = self.reward_values["goal"]
+        return min(max_reward, max_reward * (1 - min(1, (redundant_steps / max_steps))))
+
 
     def _gen_rewards(self, rewards_pos: List[Tuple[int, int]]):
         for i, (x, y) in enumerate(rewards_pos):
@@ -107,6 +111,17 @@ class TMaze(MultiEnv):
 
         super().__init__(envs, rounds_pr_side)
         self.total_rounds = self.total_rounds - 2
+
+    def step(self, action):
+        current_round = self.round
+        obs, score, done, info = super().step(action)
+
+        # Ignore the result from the first round and normalize total score over all rounds to 1
+        if current_round == 0:
+            score = 0
+        else:
+            score = score * self.total_rounds / (self.total_rounds - 2)
+        return obs, score, done, info
 
     def reset(self):
         if self.rnd_order:

@@ -37,11 +37,11 @@ def main():
             population=300,
             sigma=0.5,
             trials=2,
-            elite_trials=2
+            elite_trials=2,
             # truncation=10,
             # trials=1,
             # elite_trials=1,
-            # n_elites=5,
+            n_elites=10,
             )
     # name = f"{env_key}-0007-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}_r-inputs_{r_inputs}"
     name = f"{env_key}-0009-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
@@ -56,7 +56,8 @@ def plot_results():
     # ga = load_session("Experiments/TMaze-1x5-v0-0005-config_ntm_default-200_0.5_2.ses")
     # ga = load_session("Experiments/TMaze-1x5-v0-0005-config_ntm_default-100_0.5_2.ses")
     # ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2.ses")
-    ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2_r-inputs_6.ses")
+    # ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2_r-inputs_6.ses")
+    ga = load_session("Experiments/TMaze-1x5-v0-0009-config_ntm_default-300_0.5_2.ses")
     plot(ga)
 
     from custom_envs.envs import TMaze
@@ -72,7 +73,7 @@ def plot_results():
         if hasattr(champ, "ntm"):
             parameter_stats(champ.ntm, False)
             champ.ntm.history = defaultdict(list)
-        res = champ.evaluate(env, 100000, render=True, fps=6)
+        res = champ.ntm.evaluate(env, 100000, render=True, fps=6, mode="print")
         print(res)
         if hasattr(champ, "ntm"):
             champ.ntm.plot_history()
