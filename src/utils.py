@@ -85,14 +85,14 @@ def parameter_stats(nn: nn.Module, print_indivual_params=True):
 
 def model_diff(models: List[nn.Module], verbose=True):
     """Prints out the standard deviation between parameters of the supplied models in the form of a NxN matrix"""
-    std_array = np.array([[0 for _ in range(len(models))] for _ in range(len(models))])
+    std_array = np.array([[0 for _ in range(len(models))] for _ in range(len(models))], dtype=np.float)
     for i, m1 in enumerate(models):
         params1 = torch.nn.utils.parameters_to_vector(m1.parameters()).detach().numpy()
-        for j, m2 in enumerate(models[i + 1:]):
+        for j, m2 in enumerate(models[:i]):
             params2 = torch.nn.utils.parameters_to_vector(m2.parameters()).detach().numpy()
             std = np.std(params1 - params2)
-            std_array[i, j] = std
+            std_array[i, j] = 0
             std_array[j, i] = std
     if verbose:
-        print(std_array)
+        print(np.round(std_array, 2))
     return std_array

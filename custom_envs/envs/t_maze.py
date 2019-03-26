@@ -8,8 +8,8 @@ from custom_envs.envs.multi_env import MultiEnv
 
 class SingleTMaze(MiniGridEnv):
     is_double = False
-    reward_values = dict(goal=1, fake_goal=0.1)
-
+    reward_values = dict(goal=1, fake_goal=-0.1)
+    explored_positions: List[(int, int)] = None
 
     def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False):
         self.is_double = is_double
@@ -29,6 +29,18 @@ class SingleTMaze(MiniGridEnv):
             see_through_walls=True  # True for maximum performance
         )
         self.reward_range = (min(self.reward_values["fake_goal"], 0), self.reward_values["goal"])
+
+    def reset(self):
+        super().reset()
+        self.explored_positions = [self.agent_pos]
+
+    def step(self, action):
+        obs, reward, done, info = super().step(action)
+        if self.agent_pos not in self.explored_positions:
+            self.explored_positions.append(self.agent_pos)
+        if done and reward == 0:
+            reward = 0.1 * len(self.explored_positions) / (self.corridor_length * 3 - 1)
+        return obs, reward, done, info
 
     def _gen_grid(self, width, height):
         # Create an empty grid
@@ -78,7 +90,6 @@ class SingleTMaze(MiniGridEnv):
             max_reward = self.reward_values["goal"]
         return min(max_reward, max_reward * (1 - min(1, (redundant_steps / max_steps))))
 
-
     def _gen_rewards(self, rewards_pos: List[Tuple[int, int]]):
         for i, (x, y) in enumerate(rewards_pos):
             g = Goal()
@@ -112,17 +123,6 @@ class TMaze(MultiEnv):
         super().__init__(envs, rounds_pr_side)
         self.total_rounds = self.total_rounds - 2
 
-    def step(self, action):
-        current_round = self.round
-        obs, score, done, info = super().step(action)
-
-        # Ignore the result from the first round and normalize total score over all rounds to 1
-        if current_round == 0:
-            score = 0
-        else:
-            score = score * self.total_rounds / (self.total_rounds - 2)
-        return obs, score, done, info
-
     def reset(self):
         if self.rnd_order:
             random.shuffle(self.schedule)
@@ -132,7 +132,14 @@ class TMaze(MultiEnv):
         return super().reset()
 
     def step(self, action):
+        current_round = self.round
         obs, score, done, info = super().step(action)
+
+        # Ignore the result from the first round and normalize total score over all rounds to 1
+        if current_round == 0:
+            score = 0
+        else:
+            score = score * self.total_rounds / (self.total_rounds - 2)
         if obs["reward"] != 0:
             if not self.print_render_buffer.endswith("["):
                 self.print_render_buffer += f' ,{obs["reward"]}'
@@ -143,7 +150,7 @@ class TMaze(MultiEnv):
             if not done:
                 self.print_render_buffer += f"{self.env.mission}: Rewards=["
         if done:
-            self.print_render_buffer +="<END>"
+            self.print_render_buffer += "<END>"
         return obs, score, done, info
 
     def on_env_change(self):

@@ -2,10 +2,13 @@ import gym
 import copy
 import random
 import numpy as np
+from torch import nn
+
 import src.ControllerFactory as mf
 from configparser import ConfigParser
 from src.ControllerFactory import *
 from custom_envs import *
+from src.utils import model_diff
 
 termination_strategies = \
     {
@@ -26,6 +29,8 @@ elite_strategies = \
 parent_selection_strategies = \
     {
     }
+
+
 class GA:
     def __init__(self, config_file_path=None,
                  env_key=None,
@@ -123,6 +128,7 @@ class GA:
 
         # results TMP check if needed
         self.results = []
+
     '''
     def __init__(self, env_key, population, model_builder,
                  networked=False,
@@ -165,6 +171,7 @@ class GA:
 
         self.results = [] 
     '''
+
     def iterate(self):
         if termination_strategies[self.termination_strategy_name](self):
             if self.models is None:
@@ -194,6 +201,9 @@ class GA:
         else:
             scored_parents = self.get_best_models([m for m, _ in scored_models[:self.truncation]], self.elite_trials)
 
+        if isinstance(scored_parents[0][0], nn.Module):
+            if np.sum(model_diff([t[0] for t in scored_parents], verbose=False)) <= 0:
+                print(f'[gen {self.g}] WARNING: Elites are all identical')
         self._reproduce(scored_parents)
 
         print(f'[gen {self.g}] reproduce')
@@ -229,14 +239,14 @@ class GA:
     # @profile
     def _reproduce(self, scored_parents):
         # Elitism
-        self.models = []
+        self.models = [p for p, _ in scored_parents[:self.n_elites]]
 
         for individual in range(self.population - self.n_elites):
             random_choice = random.choice(scored_parents)
             cpy = copy.deepcopy(random_choice)[0]
             self.models.append(cpy)
             self.models[-1].evolve(self.sigma)
-        self.models += [p for p, _ in scored_parents[:self.n_elites]]
+        # self.models += [p for p, _ in scored_parents[:self.n_elites]]
 
     def init_models(self):
         if not self.scored_parents:
