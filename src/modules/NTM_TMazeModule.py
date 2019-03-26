@@ -22,7 +22,7 @@ class TMazeNTMModule(NTM):
             nn.Conv2d(3, 16, (2, 2)),
             nn.Sigmoid(),
             nn.MaxPool2d((2, 2)),
-            nn.Conv2d(16, 16, (2, 2)),
+            nn.Conv2d(32, 16, (2, 2)),
             nn.Sigmoid(),
             nn.Conv2d(16, 8, (2, 2)),
             nn.Sigmoid(),
@@ -70,12 +70,14 @@ class TMazeNTMModule(NTM):
                 self.add_tensors[name] = torch.Tensor(tensor.size())
             if 'weight' in name:
                 tensor.data.zero_()
-            nn.init.normal_(tensor, .5)
-            # elif name.startswith("conv"):
-            #     nn.init.xavier_normal(tensor)
-            #     # nn.init.kaiming_normal_(tensor)
-            # else:
-            #     nn.init.normal_(tensor)
+            else:
+                nn.init.normal_(tensor, .5)
+                # nn.init.kaiming_normal_(tensor)
+                # if name.startswith("conv"):
+                #     nn.init.xavier_normal(tensor)
+                #     # nn.init.kaiming_normal_(tensor)
+                # else:
+                #     nn.init.normal_(tensor)
 
     def evaluate(self, env, max_eval, render=False, fps=60, show_action_frequency=False, random_actions=False,
                  mode="human"):

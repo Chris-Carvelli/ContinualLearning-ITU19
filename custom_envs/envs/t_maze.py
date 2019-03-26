@@ -8,7 +8,7 @@ from custom_envs.envs.multi_env import MultiEnv
 
 class SingleTMaze(MiniGridEnv):
     is_double = False
-    reward_values = dict(goal=1, fake_goal=-0.1)
+    reward_values = dict(goal=1, fake_goal=0.1)
 
 
     def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False):

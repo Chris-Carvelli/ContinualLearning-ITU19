@@ -1,3 +1,5 @@
+from typing import List
+
 import dill
 import numpy as np
 import torch
@@ -79,3 +81,18 @@ def parameter_stats(nn: nn.Module, print_indivual_params=True):
         for name, p in nn.named_parameters():
             p = p.detach().numpy()
             print(f"{name:40s}max/min = {np.max(p):.1f}/{np.min(p):.1f}, mean={np.mean(p):.1f}+/-{np.std(p):.2f}")
+
+
+def model_diff(models: List[nn.Module], verbose=True):
+    """Prints out the standard deviation between parameters of the supplied models in the form of a NxN matrix"""
+    std_array = np.array([[0 for _ in range(len(models))] for _ in range(len(models))])
+    for i, m1 in enumerate(models):
+        params1 = torch.nn.utils.parameters_to_vector(m1.parameters()).detach().numpy()
+        for j, m2 in enumerate(models[i + 1:]):
+            params2 = torch.nn.utils.parameters_to_vector(m2.parameters()).detach().numpy()
+            std = np.std(params1 - params2)
+            std_array[i, j] = std
+            std_array[j, i] = std
+    if verbose:
+        print(std_array)
+    return std_array
