@@ -8,8 +8,7 @@ from custom_envs.envs.multi_env import MultiEnv
 
 class SingleTMaze(MiniGridEnv):
     is_double = False
-    reward_values = dict(goal=1, fake_goal=-0.1)
-    explored_positions: List[(int, int)] = None
+    reward_values = dict(goal=1, fake_goal=0.1)
 
     def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False):
         self.is_double = is_double
@@ -29,18 +28,6 @@ class SingleTMaze(MiniGridEnv):
             see_through_walls=True  # True for maximum performance
         )
         self.reward_range = (min(self.reward_values["fake_goal"], 0), self.reward_values["goal"])
-
-    def reset(self):
-        super().reset()
-        self.explored_positions = [self.agent_pos]
-
-    def step(self, action):
-        obs, reward, done, info = super().step(action)
-        if self.agent_pos not in self.explored_positions:
-            self.explored_positions.append(self.agent_pos)
-        if done and reward == 0:
-            reward = 0.1 * len(self.explored_positions) / (self.corridor_length * 3 - 1)
-        return obs, reward, done, info
 
     def _gen_grid(self, width, height):
         # Create an empty grid

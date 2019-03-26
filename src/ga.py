@@ -16,7 +16,7 @@ termination_strategies = \
     }
 model_library = \
     {
-        'ntm': lambda copy_size: builder_ntm(copy_size),
+        'ntm': lambda: builder_base(),
         'base': lambda: builder_base(),
         'hyper': lambda: builder_hyper()
     }

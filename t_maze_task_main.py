@@ -33,15 +33,15 @@ def main():
     ga = GA("config_files/" + config,
             env_key=env_key,
             model_builder=lambda: TMazeNTMModule(memory_unit_size, reward_inputs=r_inputs),
-            population=300,
-            sigma=0.3,
+            population=100,
+            sigma=0.5,
             trials=2,
             elite_trials=0,
             truncation=-1,
             n_elites=10,
             )
     # name = f"{env_key}-0007-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}_r-inputs_{r_inputs}"
-    name = f"{env_key}-0012-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
+    name = f"{env_key}-0014-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
 
     session = Session(ga, name)
     session.start()
@@ -55,7 +55,7 @@ def plot_results():
     # ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2.ses")
     # ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2_r-inputs_6.ses")
     # ga = load_session("Experiments/TMaze-1x5-v0-0009-config_ntm_default-300_0.5_2.ses")
-    ga = load_session("Experiments/TMaze-1x10-v0-0013-config_ntm_default-100_0.5_2.ses")
+    ga = load_session("Experiments/TMaze-1x10-v0-0014-config_ntm_default-100_0.5_2.ses")
 
     print("Lead generation parameter standard deviation")
     model_diff([ga.results[-1][-1][i][0].nn for i in range(len(ga.results[-1][-1]))])
@@ -64,8 +64,8 @@ def plot_results():
 
     from custom_envs.envs import TMaze
     import numpy as np
-    # env = TMaze(1, 3)
-    env = ga.env
+    env = TMaze(1, 4)
+    # env = ga.env
 
     # print(f"Champion standard deviation difference of last {min(10, len(ga.results))} generations")
     # model_diff([ga.results[i][-1][0][0].nn for i in range(min(len(ga.results), 10))])

@@ -15,7 +15,7 @@ class TMazeNTMModule(NTM):
     reward_inputs = 1
 
     def __init__(self, memory_unit_size, max_memory=1, reward_inputs=1):
-        super().__init__(memory_unit_size, max_memory=max_memory)
+        super().__init__(memory_unit_size, max_memory=max_memory, overwrite_mode=False)
 
         self.reward_inputs = reward_inputs
         self.image_conv = nn.Sequential(
