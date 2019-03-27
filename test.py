@@ -17,7 +17,7 @@ def main():
     print('main')
 
     ga = GA(
-            env_key='TMaze-5x10-v0',
+            env_key='TMaze-2x10-v0',
             model_builder=lambda: Controller(
                 PolicyNN(),
                 HyperNN(
@@ -28,9 +28,9 @@ def main():
                     n_fwd_pass=32
                 ),
             ),
-            population=10,
+            population=500,
             max_generations=20,
-            max_episode_eval=100,
+            max_episode_eval=10000,
             sigma=0.005,
             truncation=7,
             elite_trials=5,
@@ -39,8 +39,9 @@ def main():
     res = True
     while res is not False:
         res = ga.iterate()
-        # FIXME
-        # dill.dump(ga, open('ga.dill', 'w+b'))
+
+        res[-1][0][0].evaluate(ga.env_key, 1000, True)
+        dill.dump(ga, open('ga.dill', 'w+b'))
         dill.dump(res, open('res.dill', 'a+b'))
         print(res)
 
@@ -67,10 +68,17 @@ def plot_w(r, shape):
 
 
 if __name__ == "__main__":
-    from src.modules.NTM_Module import NTM
-    dill.dump(HyperNN(
-        2, 2, 2,
-        history=False
-    ), open('test_recursion.dill', 'w+b'))
-    hntm = dill.load(open('test_recursion.dill', 'r+b'))
-    print(hntm)
+    env = gym.make('TMaze-2x10-v0')
+    c = Controller(
+                PolicyNN(),
+                HyperNN(
+                    in_size=32,
+                    z_num=4,
+                    out_size=32 * 64 * 2 * 2,
+                    mem_evolve_prob=0.5,
+                    n_fwd_pass=32
+                ),
+            )
+
+    c.evaluate(env, 10000, True)
+    # main()

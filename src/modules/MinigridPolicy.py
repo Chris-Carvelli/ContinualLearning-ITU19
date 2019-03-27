@@ -61,9 +61,11 @@ class PolicyNN(nn.Module):
         tot_reward = 0
         reward = 0
         n_eval = 0
+        is_done = False
         # FIXME culls out and remap actions. Find better way
         action_freq = np.zeros([7])
-        while reward == 0 and n_eval < max_eval:
+
+        while not is_done:
             state = state['image']
 
             # removed some scaffolding, check if something was needed
@@ -80,7 +82,7 @@ class PolicyNN(nn.Module):
             action_freq[action] += 1
             state, reward, is_done, _ = env.step(action)
             if render:
-                print('hello')
+                print(f'render eval {n_eval}')
                 env.render('human')
                 print('action=%s, reward=%.2f' % (action, reward))
                 time.sleep(1/fps)
