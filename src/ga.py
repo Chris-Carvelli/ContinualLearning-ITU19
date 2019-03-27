@@ -1,3 +1,5 @@
+from typing import Any, Callable
+
 import gym
 import copy
 import random
@@ -30,8 +32,15 @@ parent_selection_strategies = \
     {
     }
 
+sigma_strategies = {
+    'constant': lambda self: self.sigma,
+    'half-life=10': lambda self: self.sigma * 0.5**(self.g/10.0),
+}
+
 
 class GA:
+    sigma_strategy: Callable[['GA'], float] = lambda self: self.sigma
+
     def __init__(self, config_file_path=None,
                  env_key=None,
                  population=None,
@@ -44,7 +53,9 @@ class GA:
                  trials=None,
                  elite_trials=None,
                  n_elites=None,
-                 hyper_mode=None):
+                 hyper_mode=None,
+                 sigma_strategy=None,
+                 ):
         config = ConfigParser()
         if config_file_path is not None:
             config.read(config_file_path)
@@ -112,6 +123,14 @@ class GA:
             self.env_key = str(config["EnvironmentSettings"]["env_key"])
         else:
             self.env_key = env_key
+
+        if sigma_strategy is None:
+            self.sigma_strategy = sigma_strategies["constant"]
+        elif isinstance(sigma_strategy, str):
+            self.sigma_strategy = sigma_strategies[sigma_strategy]
+        else:
+            self.sigma_strategy = sigma_strategy
+
 
         print(self.env_key)
 
@@ -201,9 +220,16 @@ class GA:
         else:
             scored_parents = self.get_best_models([m for m, _ in scored_models[:self.truncation]], self.elite_trials)
 
-        if isinstance(scored_parents[0][0], nn.Module):
-            if np.sum(model_diff([t[0] for t in scored_parents], verbose=False)) <= 0:
-                print(f'[gen {self.g}] WARNING: Elites are all identical')
+        # Comparing scored parents
+        # if isinstance(scored_parents[0][0], nn.Module):
+        #     if np.sum(model_diff([t[0] for t in scored_parents[:self.n_elites]], verbose=False)) <= 0:
+        #         print(f'[gen {self.g}] WARNING: Elites are all identical')
+        #     if self.scored_parents is not None:
+        #         s = model_diff([t[0] for t in scored_parents[:self.n_elites]],
+        #                        [t[0] for t in self.scored_parents[:self.n_elites]], verbose=False)
+        #         if np.sum(s) == 0:
+        #             print(f'[gen {self.g}] WARNING: Elites are all identical to previous generation')
+
         self._reproduce(scored_parents)
 
         print(f'[gen {self.g}] reproduce')
@@ -241,12 +267,12 @@ class GA:
         # Elitism
         self.models = [p for p, _ in scored_parents[:self.n_elites]]
 
+        sigma = self.sigma_strategy(self)
         for individual in range(self.population - self.n_elites):
             random_choice = random.choice(scored_parents)
             cpy = copy.deepcopy(random_choice)[0]
             self.models.append(cpy)
-            self.models[-1].evolve(self.sigma)
-        # self.models += [p for p, _ in scored_parents[:self.n_elites]]
+            self.models[-1].evolve(sigma)
 
     def init_models(self):
         if not self.scored_parents:

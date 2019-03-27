@@ -13,7 +13,9 @@ from src.utils import parameter_stats, model_diff
 from tests.minigrid.utils import lowpriority, plot
 from src.ga import GA
 
+numpy.set_printoptions(threshold=sys.maxsize)
 
+data_nr = 15
 
 def main():
     lowpriority()
@@ -39,9 +41,10 @@ def main():
             elite_trials=0,
             truncation=-1,
             n_elites=10,
+            sigma_strategy="half-life=10"
             )
     # name = f"{env_key}-0007-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}_r-inputs_{r_inputs}"
-    name = f"{env_key}-0014-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
+    name = f"{env_key}-{data_nr:4.s}-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
 
     session = Session(ga, name)
     session.start()
@@ -55,7 +58,7 @@ def plot_results():
     # ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2.ses")
     # ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2_r-inputs_6.ses")
     # ga = load_session("Experiments/TMaze-1x5-v0-0009-config_ntm_default-300_0.5_2.ses")
-    ga = load_session("Experiments/TMaze-1x10-v0-0014-config_ntm_default-100_0.5_2.ses")
+    ga = load_session(f"Experiments/TMaze-1x10-v0-{data_nr:4.s}-config_ntm_default-100_0.5_2.ses")
 
     print("Lead generation parameter standard deviation")
     model_diff([ga.results[-1][-1][i][0].nn for i in range(len(ga.results[-1][-1]))])
