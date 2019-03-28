@@ -34,7 +34,11 @@ parent_selection_strategies = \
 
 sigma_strategies = {
     'constant': lambda self: self.sigma,
-    'half-life=10': lambda self: self.sigma * 0.5**(self.g/10.0),
+    'half-life-10': lambda self: self.sigma * 0.5 ** (self.g / 10.0),
+    'half-life-30': lambda self: self.sigma * 0.5 ** (self.g / 30.0),
+    'decay5': lambda self: self.sigma * 5 / (5 + self.g),
+    'decay1': lambda self: self.sigma * 1 / (1 + self.g),
+    'linear1000-0.01': lambda self: self.sigma * (0.01 + max(0, (1000 - self.g) / 1000)),
 }
 
 
@@ -131,7 +135,6 @@ class GA:
         else:
             self.sigma_strategy = sigma_strategy
 
-
         print(self.env_key)
 
         self.scored_parents = None
@@ -198,7 +201,7 @@ class GA:
 
             ret = self.evolve_iter()
             self.g += 1
-            print(f"median_score={ret[0]}, mean_score={ret[1]}, max_score={ret[2]}")
+            print(f"[gen {self.g}] median_score={ret[0]}, mean_score={ret[1]}, max_score={ret[2]}")
 
             return ret
         else:
@@ -206,14 +209,14 @@ class GA:
 
     # @profile
     def evolve_iter(self):
-        print(f'[gen {self.g}] get best Controllers')
+        # print(f'[gen {self.g}] get best Controllers')
         scored_models = self.get_best_models(self.models, self.trials)
         scores = [s for _, s in scored_models]
         median_score = np.median(scores)
         mean_score = np.mean(scores)
         max_score = scored_models[0][1]
 
-        print(f'[gen {self.g}] get parents')
+        # print(f'[gen {self.g}] get parents')
         # self.scored_parents = self.get_best_models([m for m, _ in scored_models[:self.truncation]])
         if self.elite_trials <= 0:
             scored_parents = scored_models[:self.truncation]
@@ -221,18 +224,18 @@ class GA:
             scored_parents = self.get_best_models([m for m, _ in scored_models[:self.truncation]], self.elite_trials)
 
         # Comparing scored parents
-        # if isinstance(scored_parents[0][0], nn.Module):
-        #     if np.sum(model_diff([t[0] for t in scored_parents[:self.n_elites]], verbose=False)) <= 0:
-        #         print(f'[gen {self.g}] WARNING: Elites are all identical')
-        #     if self.scored_parents is not None:
-        #         s = model_diff([t[0] for t in scored_parents[:self.n_elites]],
-        #                        [t[0] for t in self.scored_parents[:self.n_elites]], verbose=False)
-        #         if np.sum(s) == 0:
-        #             print(f'[gen {self.g}] WARNING: Elites are all identical to previous generation')
+        if isinstance(scored_parents[0][0], nn.Module):
+            if np.sum(model_diff([t[0] for t in scored_parents[:self.n_elites]], verbose=False)) <= 0:
+                print(f'[gen {self.g}] WARNING: Elites are all identical')
+            if self.scored_parents is not None:
+                s = model_diff([t[0] for t in scored_parents[:self.n_elites]],
+                               [t[0] for t in self.scored_parents[:self.n_elites]], verbose=False)
+                if np.sum(s) == 0:
+                    print(f'[gen {self.g}] WARNING: Elites are all identical to previous generation')
 
         self._reproduce(scored_parents)
 
-        print(f'[gen {self.g}] reproduce')
+        # print(f'[gen {self.g}] reproduce')
 
         # just reassigning self.scored_parents doesn't reduce the refcount, laking memory
         # buffering in a local variable, cleaning after the deepcopy and the assign the new parents

@@ -15,37 +15,40 @@ from src.ga import GA
 
 numpy.set_printoptions(threshold=sys.maxsize)
 
-data_nr = 15
+seed = 4
+
+data_nr = 16
+sigma_strategy = "linear1000-0.01"
+population = 100
+sigma = 0.5
+
+config = "config_ntm_default"
+length = 1
+rounds = 5
+memory_unit_size = 2
+r_inputs = 1
+max_memory = 2
+
+env_key = f"TMaze-{length}x{rounds}-v0"
+name = f"{env_key}-{data_nr:04d}-{config}-{population}_{sigma}_{memory_unit_size}_{max_memory}_{sigma_strategy}"
+
 
 def main():
     lowpriority()
-    seed = 4
     torch.manual_seed(seed)
     numpy.random.seed(seed)
     random.seed(seed)
-
-    config = "config_ntm_default"
-    length = 1
-    rounds = 10
-    memory_unit_size = 2
-    r_inputs = 1
-
-    env_key = f"TMaze-{length}x{rounds}-v0"
-
     ga = GA("config_files/" + config,
             env_key=env_key,
-            model_builder=lambda: TMazeNTMModule(memory_unit_size, reward_inputs=r_inputs),
-            population=100,
-            sigma=0.5,
+            model_builder=lambda: TMazeNTMModule(memory_unit_size, max_memory=max_memory, reward_inputs=r_inputs),
+            population=population,
+            sigma=sigma,
             trials=2,
             elite_trials=0,
             truncation=-1,
             n_elites=10,
-            sigma_strategy="half-life=10"
+            sigma_strategy=sigma_strategy
             )
-    # name = f"{env_key}-0007-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}_r-inputs_{r_inputs}"
-    name = f"{env_key}-{data_nr:4.s}-{config}-{ga.population}_{ga.sigma}_{memory_unit_size}"
-
     session = Session(ga, name)
     session.start()
 
@@ -58,7 +61,8 @@ def plot_results():
     # ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2.ses")
     # ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2_r-inputs_6.ses")
     # ga = load_session("Experiments/TMaze-1x5-v0-0009-config_ntm_default-300_0.5_2.ses")
-    ga = load_session(f"Experiments/TMaze-1x10-v0-{data_nr:4.s}-config_ntm_default-100_0.5_2.ses")
+    # ga = load_session(f"Experiments/TMaze-1x10-v0-{data_nr:04d}-config_ntm_default-100_0.5_2.ses")
+    ga = load_session(f"Experiments/{name}.ses")
 
     print("Lead generation parameter standard deviation")
     model_diff([ga.results[-1][-1][i][0].nn for i in range(len(ga.results[-1][-1]))])
@@ -67,12 +71,11 @@ def plot_results():
 
     from custom_envs.envs import TMaze
     import numpy as np
-    env = TMaze(1, 4)
-    # env = ga.env
+    # env = TMaze(1, 5)
+    env = ga.env
 
     # print(f"Champion standard deviation difference of last {min(10, len(ga.results))} generations")
     # model_diff([ga.results[i][-1][0][0].nn for i in range(min(len(ga.results), 10))])
-
 
     gen = -1  # Last
     for x in range(4):
@@ -83,6 +86,8 @@ def plot_results():
         if hasattr(module, "history"):
             parameter_stats(module, False)
             module.history = defaultdict(list)
+        res = champ.evaluate(env, 100000, render=True, fps=6, mode="print")
+        print(res)
         res = champ.evaluate(env, 100000, render=True, fps=6, mode="print")
         print(res)
         if hasattr(module, "history"):
@@ -96,4 +101,3 @@ if __name__ == "__main__":
         plot_results()
     else:
         main()
-

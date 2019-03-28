@@ -18,23 +18,29 @@ class TMazeNTMModule(NTM):
         super().__init__(memory_unit_size, max_memory=max_memory, overwrite_mode=True)
 
         self.reward_inputs = reward_inputs
-        self.image_conv = nn.Sequential(
-            nn.Conv2d(3, 16, (2, 2)),
-            nn.Sigmoid(),
-            nn.MaxPool2d((2, 2)),
-            nn.Conv2d(16, 32, (2, 2)),
-            nn.Sigmoid(),
-            nn.Conv2d(32, 8, (2, 2)),
-            nn.Sigmoid(),
-            # nn.Linear(64, 6),
-            # nn.Sigmoid(),
-        )
 
+        # Old setup
+        # self.image_conv = nn.Sequential(
+        #     nn.Conv2d(3, 16, (2, 2)),
+        #     nn.Sigmoid(),
+        #     nn.MaxPool2d((2, 2)),
+        #     nn.Conv2d(16, 32, (2, 2)),
+        #     nn.Sigmoid(),
+        #     nn.Conv2d(32, 8, (2, 2)),
+        #     nn.Sigmoid(),
+        #     # nn.Linear(64, 6),
+        #     # nn.Sigmoid(),
+        # )
+        #
+        #
+        # self.nn = nn.Sequential(
+        #     nn.Linear(8 + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
+        #     nn.Sigmoid(),
+        # )
+        self.image_conv = lambda x: torch.tensor(x).view(-1)
         self.nn = nn.Sequential(
-            nn.Linear(8 + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
+            nn.Linear(7*7*3 + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
             nn.Sigmoid(),
-            # nn.Linear(hidden_size, 3 + self.update_size()),
-            # nn.Sigmoid(),
         )
         self.add_tensors = {}
         self.init()
@@ -128,6 +134,10 @@ if __name__ == '__main__':
     ntm = TMazeNTMModule(1)
     ntm.init()
     ntm.divergence = 1
+
+    params = torch.nn.utils.parameters_to_vector(ntm.parameters()).detach().numpy()
+    print(len(params))
+
 
     while True:
         print(ntm.evaluate(env, 1000, render=True, fps=10, show_action_frequency=True))

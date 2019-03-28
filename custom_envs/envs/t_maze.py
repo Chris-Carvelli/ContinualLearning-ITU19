@@ -108,7 +108,6 @@ class TMaze(MultiEnv):
             random.shuffle(envs)
 
         super().__init__(envs, rounds_pr_side)
-        self.total_rounds = self.total_rounds - 2
 
     def reset(self):
         if self.rnd_order:
@@ -119,7 +118,7 @@ class TMaze(MultiEnv):
         return super().reset()
 
     def step(self, action):
-        current_round = self.round
+        current_round = int(self.round)
         obs, score, done, info = super().step(action)
 
         # Ignore the result from the first round and normalize total score over all rounds to 1
@@ -183,7 +182,7 @@ def test_one_shot_tmaze():
 
 def test_tmaze():
     import time
-    rounds = 2
+    rounds = 3
     length = 1
     env = TMaze(length, rounds)
     env.seed(1)
@@ -196,21 +195,23 @@ def test_tmaze():
     # right = 1
     # forward = 2
     # toggle = 5
-    actions = [2] * length + [1] + [2] * length + \
-              ([2] * length + [0] + [2] * length) * rounds + \
-              ([2] * length + [1] + [2] * length) * (rounds - 1) \
+    actions = ([2] * length + [0] + [2] * length) * rounds * 2
+    # actions = [2] * length + [1] + [2] * length + \
+    #           ([2] * length + [0] + [2] * length) * rounds + \
+    #           ([2] * length + [1] + [2] * length) * (rounds - 1) \
         # + ([2] * length + [1] + [2] * length)
     # env.render()
     total_reward = 0
     for a in actions:
         state, reward, done, info = env.step(a)
-        # time.sleep(.5)
-        env.render("print")
+        # env.render("print")
+        env.render()
+        time.sleep(.5)
         total_reward += reward
         del state["image"]
         print(reward, done, state)
-        if done:
-            assert total_reward >= 1
+    print(total_reward)
+    assert total_reward >= 1
     time.sleep(1)
 
 
