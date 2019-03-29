@@ -2,6 +2,7 @@ import random
 from collections import defaultdict
 
 import torch
+from gym_minigrid import minigrid
 from torch import nn
 
 import numpy as np
@@ -18,8 +19,9 @@ class TMazeNTMModule(NTM):
         super().__init__(memory_unit_size, max_memory=max_memory, overwrite_mode=True)
 
         self.reward_inputs = reward_inputs
+        view_size = minigrid.AGENT_VIEW_SIZE
 
-        # Old setup
+
         # self.image_conv = nn.Sequential(
         #     nn.Conv2d(3, 16, (2, 2)),
         #     nn.Sigmoid(),
@@ -31,15 +33,14 @@ class TMazeNTMModule(NTM):
         #     # nn.Linear(64, 6),
         #     # nn.Sigmoid(),
         # )
-        #
-        #
         # self.nn = nn.Sequential(
         #     nn.Linear(8 + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
         #     nn.Sigmoid(),
         # )
-        self.image_conv = lambda x: torch.tensor(x).view(-1)
+
+        self.image_conv = lambda x: x.unsqueeze(0)
         self.nn = nn.Sequential(
-            nn.Linear(7*7*3 + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
+            nn.Linear(view_size*view_size*3 + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
             nn.Sigmoid(),
         )
         self.add_tensors = {}

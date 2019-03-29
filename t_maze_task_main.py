@@ -4,6 +4,7 @@ from collections import defaultdict
 
 import numpy
 import torch
+from gym_minigrid import minigrid
 
 from custom_envs import *
 from sessions.session import Session, load_session
@@ -15,19 +16,23 @@ from src.ga import GA
 
 numpy.set_printoptions(threshold=sys.maxsize)
 
+minigrid.AGENT_VIEW_SIZE = 3
+minigrid.OBS_ARRAY_SIZE = (minigrid.AGENT_VIEW_SIZE, minigrid.AGENT_VIEW_SIZE, 3)
+
 seed = 4
 
-data_nr = 16
-sigma_strategy = "linear1000-0.01"
+data_nr = 17
+sigma_strategy = "half-life-10"
+# sigma_strategy = "linear1000-0.01"
 population = 100
-sigma = 0.5
+sigma = 0.05
 
 config = "config_ntm_default"
-length = 1
+length = 3
 rounds = 5
 memory_unit_size = 2
 r_inputs = 1
-max_memory = 2
+max_memory = 1
 
 env_key = f"TMaze-{length}x{rounds}-v0"
 name = f"{env_key}-{data_nr:04d}-{config}-{population}_{sigma}_{memory_unit_size}_{max_memory}_{sigma_strategy}"
@@ -65,7 +70,7 @@ def plot_results():
     ga = load_session(f"Experiments/{name}.ses")
 
     print("Lead generation parameter standard deviation")
-    model_diff([ga.results[-1][-1][i][0].nn for i in range(len(ga.results[-1][-1]))])
+    # model_diff([ga.results[-1][-1][i][0].nn for i in range(len(ga.results[-1][-1]))])
     plot(ga)
     # sys.exit()
 
@@ -73,6 +78,7 @@ def plot_results():
     import numpy as np
     # env = TMaze(1, 5)
     env = ga.env
+    print(env.reset())
 
     # print(f"Champion standard deviation difference of last {min(10, len(ga.results))} generations")
     # model_diff([ga.results[i][-1][0][0].nn for i in range(min(len(ga.results), 10))])

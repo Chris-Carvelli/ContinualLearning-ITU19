@@ -4,6 +4,7 @@ from gym_minigrid.minigrid import *
 from gym_minigrid.minigrid import Grid
 
 from custom_envs.envs.multi_env import MultiEnv
+import gym_minigrid.minigrid as minigrid
 
 
 class SingleTMaze(MiniGridEnv):
@@ -98,15 +99,18 @@ class SingleTMaze(MiniGridEnv):
 class TMaze(MultiEnv):
     cyclic_order = True
     print_render_buffer = ""
+    explored_corners: List[Tuple[int, int]] = None
+    view_size = None
 
-    def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=False, cyclic_order=True):
+    def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=False, cyclic_order=True,
+                 view_size=None):
         self.cyclic_order = cyclic_order
         envs = [SingleTMaze(corridor_length, 0, max_steps),
                 SingleTMaze(corridor_length, 1, max_steps)]
         self.rnd_order = rnd_order
         if self.rnd_order:
             random.shuffle(envs)
-
+        self.view_size = view_size
         super().__init__(envs, rounds_pr_side)
 
     def reset(self):
@@ -121,11 +125,6 @@ class TMaze(MultiEnv):
         current_round = int(self.round)
         obs, score, done, info = super().step(action)
 
-        # Ignore the result from the first round and normalize total score over all rounds to 1
-        if current_round == 0:
-            score = 0
-        else:
-            score = score * self.total_rounds / (self.total_rounds - 2)
         if obs["reward"] != 0:
             if not self.print_render_buffer.endswith("["):
                 self.print_render_buffer += f' ,{obs["reward"]}'
@@ -137,11 +136,17 @@ class TMaze(MultiEnv):
                 self.print_render_buffer += f"{self.env.mission}: Rewards=["
         if done:
             self.print_render_buffer += "<END>"
+
+        if current_round == 0:
+            score = 0
+        else:
+            score = score * self.total_rounds / (self.total_rounds - 2)
         return obs, score, done, info
 
     def on_env_change(self):
         if self.i == 0 and self.round == 0:
             self.print_render_buffer += f"{self.env.mission}: Rewards=["
+        self.explored_corners = []
 
     def seed(self, seed=None):
         if self.rnd_order:
@@ -183,7 +188,7 @@ def test_one_shot_tmaze():
 def test_tmaze():
     import time
     rounds = 3
-    length = 1
+    length = 10
     env = TMaze(length, rounds)
     env.seed(1)
     state = env.reset()
@@ -199,7 +204,7 @@ def test_tmaze():
     # actions = [2] * length + [1] + [2] * length + \
     #           ([2] * length + [0] + [2] * length) * rounds + \
     #           ([2] * length + [1] + [2] * length) * (rounds - 1) \
-        # + ([2] * length + [1] + [2] * length)
+    # + ([2] * length + [1] + [2] * length)
     # env.render()
     total_reward = 0
     for a in actions:
@@ -217,4 +222,8 @@ def test_tmaze():
 
 if __name__ == '__main__':
     # test_one_shot_tmaze()
-    test_tmaze()
+    # test_tmaze()
+    env = TMaze()
+    # state, reward, done, info = env.step(2)
+    state = env.reset()
+    print(state)
