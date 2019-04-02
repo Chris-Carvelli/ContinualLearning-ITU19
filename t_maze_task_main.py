@@ -16,10 +16,10 @@ from src.ga import GA
 
 numpy.set_printoptions(threshold=sys.maxsize)
 
-minigrid.AGENT_VIEW_SIZE = 3
+minigrid.AGENT_VIEW_SIZE = 7
 minigrid.OBS_ARRAY_SIZE = (minigrid.AGENT_VIEW_SIZE, minigrid.AGENT_VIEW_SIZE, 3)
 
-seed = 4
+seed = 3
 
 data_nr = 17
 # sigma_strategy = "half-life-10"
@@ -35,8 +35,8 @@ r_inputs = 1
 max_memory = 3
 
 env_key = f"TMaze-{length}x{rounds}-v0"
+# name = f"{env_key}-{data_nr:04d}-{config}-{population}_{sigma}_{memory_unit_size}_{max_memory}_{sigma_strategy}"
 name = f"{env_key}-{data_nr:04d}-{config}-{population}_{sigma}_{memory_unit_size}_{max_memory}_{minigrid.AGENT_VIEW_SIZE}_{sigma_strategy}"
-# name = f"{env_key}-{data_nr:04d}-{config}-{population}_{sigma}_{memory_unit_size}_{max_memory}_{minigrid.AGENT_VIEW_SIZE}_{sigma_strategy}"
 
 
 def main():

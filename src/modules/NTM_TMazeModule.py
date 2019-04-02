@@ -15,34 +15,50 @@ from src.utils import add_min_prob, parameter_stats
 class TMazeNTMModule(NTM):
     reward_inputs = 1
 
+
     def __init__(self, memory_unit_size, max_memory=1, reward_inputs=1):
         super().__init__(memory_unit_size, max_memory=max_memory, overwrite_mode=True)
 
         self.reward_inputs = reward_inputs
         view_size = minigrid.AGENT_VIEW_SIZE
 
+        if view_size <= 3:
+            self.image_conv = lambda x: x.unsqueeze(0)
+            self.nn = nn.Sequential(
+                nn.Linear(view_size * view_size * 3 + self.reward_inputs + self.memory_unit_size,
+                          3 + self.update_size()),
+                nn.Sigmoid(),
+            )
+        else:
+            output_size = 8
+            # self.image_conv = nn.Sequential(
+            #     nn.Conv2d(3, 16, (2, 2)),
+            #     nn.Sigmoid(),
+            #     nn.MaxPool2d((2, 2)),
+            #     nn.Conv2d(16, 32, (2, 2)),
+            #     nn.Sigmoid(),
+            #     nn.Conv2d(32, output_size, (2, 2)),
+            #     nn.Sigmoid(),
+            #     # nn.Linear(64, 6),
+            #     # nn.Sigmoid(),
+            # )
+            self.image_conv = nn.Sequential(
+                nn.Conv2d(3, 8, (2, 2)),
+                nn.Sigmoid(),
+                nn.MaxPool2d((2, 2)),
+                nn.Conv2d(8, 16, (2, 2)),
+                nn.Sigmoid(),
+                nn.Conv2d(16, output_size, (2, 2)),
+                nn.Sigmoid(),
+            )
 
-        # self.image_conv = nn.Sequential(
-        #     nn.Conv2d(3, 16, (2, 2)),
-        #     nn.Sigmoid(),
-        #     nn.MaxPool2d((2, 2)),
-        #     nn.Conv2d(16, 32, (2, 2)),
-        #     nn.Sigmoid(),
-        #     nn.Conv2d(32, 8, (2, 2)),
-        #     nn.Sigmoid(),
-        #     # nn.Linear(64, 6),
-        #     # nn.Sigmoid(),
-        # )
-        # self.nn = nn.Sequential(
-        #     nn.Linear(8 + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
-        #     nn.Sigmoid(),
-        # )
+            self.nn = nn.Sequential(
+                nn.Linear(output_size + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
+                nn.Sigmoid(),
+            )
 
-        self.image_conv = lambda x: x.unsqueeze(0)
-        self.nn = nn.Sequential(
-            nn.Linear(view_size*view_size*3 + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
-            nn.Sigmoid(),
-        )
+
+
         self.add_tensors = {}
         self.init()
 
@@ -57,10 +73,13 @@ class TMazeNTMModule(NTM):
         return super().forward(x)
 
     def evolve(self, sigma):
-        r = random.random()
-        evolve_vision = 0 <= r < .333 or .666 <= r < 1
-        evolve_nn = .333 <= r < 1
-        for name, tensor in sorted(self.named_parameters()):
+        named_params = self.named_parameters()
+        evolve_vision, evolve_nn = True, True
+        if any(map(lambda t: "conv" in t[0], named_params)):
+            r = random.random()
+            evolve_vision = 0 <= r < .333 or .666 <= r <= 1
+            evolve_nn = .333 <= r <= 1
+        for name, tensor in sorted(named_params):
             is_vision = name.startswith("conv")
             if is_vision and evolve_vision or (not is_vision and evolve_nn):
                 to_add = self.add_tensors[name]
@@ -138,10 +157,11 @@ if __name__ == '__main__':
 
     params = torch.nn.utils.parameters_to_vector(ntm.parameters()).detach().numpy()
     print(len(params))
+    print(list(map(lambda t: "conv" in t[0], ntm.named_parameters())))
+    print(any(map(lambda t: "conv" in t[0], ntm.named_parameters())))
 
-
-    while True:
-        print(ntm.evaluate(env, 1000, render=True, fps=10, show_action_frequency=True))
+    # while True:
+    #     print(ntm.evaluate(env, 1000, render=True, fps=10, show_action_frequency=True))
         # ntm.evaluate(env, 1000, render=False, fps=10)
         # ntm.evolve(.5)
         # parameter_stats(ntm, False)
