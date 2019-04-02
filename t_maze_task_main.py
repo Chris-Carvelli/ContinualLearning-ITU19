@@ -22,20 +22,21 @@ minigrid.OBS_ARRAY_SIZE = (minigrid.AGENT_VIEW_SIZE, minigrid.AGENT_VIEW_SIZE, 3
 seed = 4
 
 data_nr = 17
-sigma_strategy = "half-life-10"
-# sigma_strategy = "linear1000-0.01"
-population = 100
-sigma = 0.05
+# sigma_strategy = "half-life-10"
+sigma_strategy = "cyclic1000-0.01"
+population = 500
+sigma = .1
 
 config = "config_ntm_default"
 length = 3
 rounds = 5
 memory_unit_size = 2
 r_inputs = 1
-max_memory = 1
+max_memory = 3
 
 env_key = f"TMaze-{length}x{rounds}-v0"
-name = f"{env_key}-{data_nr:04d}-{config}-{population}_{sigma}_{memory_unit_size}_{max_memory}_{sigma_strategy}"
+name = f"{env_key}-{data_nr:04d}-{config}-{population}_{sigma}_{memory_unit_size}_{max_memory}_{minigrid.AGENT_VIEW_SIZE}_{sigma_strategy}"
+# name = f"{env_key}-{data_nr:04d}-{config}-{population}_{sigma}_{memory_unit_size}_{max_memory}_{minigrid.AGENT_VIEW_SIZE}_{sigma_strategy}"
 
 
 def main():
@@ -58,6 +59,18 @@ def main():
     session.start()
 
 
+def restart():
+    # ga = load_session(f"Experiments/{name}.ses")
+    name = "TMaze-3x5-v0-0017-config_ntm_default-300_0.1_2_1_linear1000-0.01_RESTART"
+    ga = load_session(f"Experiments/{name}.ses")
+    from src.ga import sigma_strategies
+    ga.sigma_strategy = sigma_strategies["cyclic1000-0.01"]
+
+    session = Session(ga, name)
+    session.start()
+
+
+
 def plot_results():
     # ga = load_session("Experiments/TMaze-1x5x20-v0-0004-config_ntm_default-100_0.5_1.ses")
     # ga = load_session("Experiments/TMaze-1x5x12-v0-0004-config_ntm_default-30_0.5_10.ses")
@@ -67,6 +80,8 @@ def plot_results():
     # ga = load_session("Experiments/TMaze-1x5-v0-0007-config_ntm_default-100_0.5_2_r-inputs_6.ses")
     # ga = load_session("Experiments/TMaze-1x5-v0-0009-config_ntm_default-300_0.5_2.ses")
     # ga = load_session(f"Experiments/TMaze-1x10-v0-{data_nr:04d}-config_ntm_default-100_0.5_2.ses")
+    # ga = load_session(f"Experiments/TMaze-3x5-v0-0017-config_ntm_default-300_0.1_2_1_linear1000-0.01_RESTART.ses")
+    # ga = load_session(f"Experiments/TMaze-3x5-v0-0017-config_ntm_default-300_0.1_2_1_linear1000-0.01_RESTART.ses")
     ga = load_session(f"Experiments/{name}.ses")
 
     print("Lead generation parameter standard deviation")
@@ -78,7 +93,6 @@ def plot_results():
     import numpy as np
     # env = TMaze(1, 5)
     env = ga.env
-    print(env.reset())
 
     # print(f"Champion standard deviation difference of last {min(10, len(ga.results))} generations")
     # model_diff([ga.results[i][-1][0][0].nn for i in range(min(len(ga.results), 10))])
@@ -105,5 +119,7 @@ def plot_results():
 if __name__ == "__main__":
     if len(sys.argv) > 1 and "plot" in sys.argv[1]:
         plot_results()
+    elif len(sys.argv) > 1 and "restart" in sys.argv[1]:
+        restart()
     else:
         main()

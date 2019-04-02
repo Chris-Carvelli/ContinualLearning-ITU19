@@ -39,6 +39,7 @@ sigma_strategies = {
     'decay5': lambda self: self.sigma * 5 / (5 + self.g),
     'decay1': lambda self: self.sigma * 1 / (1 + self.g),
     'linear1000-0.01': lambda self: self.sigma * (0.01 + max(0, (1000 - self.g) / 1000)),
+    'cyclic1000-0.01': lambda self: self.sigma * (0.01 + 1 - (self.g % 1000) / 1000),
 }
 
 
