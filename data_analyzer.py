@@ -23,7 +23,6 @@ def get_results_from_session():
 
 
 def results_to_dataframe(results):
-
     if isinstance(results, sessions.session.MultiSession):
         workers = results.workers
     elif isinstance(results, sessions.session.Session):
