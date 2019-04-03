@@ -1,5 +1,8 @@
+import datetime
 import os
 # import pickle
+from typing import Callable
+
 import dill
 import shutil
 import sys
@@ -51,12 +54,12 @@ def load_session(path, use_backup=True):
             raise e
 
 
-
 class Session:
     """A session represents some work that needs to be done and saved, and possibly paused"""
     repo_dir = Path(os.path.dirname(os.path.abspath(__file__)))
     is_finished = False  # True when the session has finished all the work
     ignore_uncommited_changes_to_main = True
+    runtime = datetime.timedelta()
 
     def __init__(self, worker, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True):
         """
@@ -91,7 +94,7 @@ class Session:
         self.save_folder = Path(self.save_folder) / (self.name + ".ses")
 
     def _session_data(self):
-        return self.worker, self.repo, self.is_finished
+        return self.worker, self.repo.head.commit.hexsha, self.is_finished, self.runtime
 
     def load_results(self):
         """This method is for loading session results after the session has finished"""
@@ -106,20 +109,26 @@ class Session:
 
     def check_git_status(self):
         """Checks if the there are uncommitted changes to the git head that should be committed before session start"""
-        d = Dir(self.repo.working_dir, exclude_file=self.ignore_file)
+        try:
+            d = Dir(self.repo.working_dir, exclude_file=self.ignore_file)
 
-        changed_files = [i.a_path for i in self.repo.index.diff(self.repo.head.commit) if
-                         not d.is_excluded(Path(self.repo.working_dir) / i.a_path)]
-        untracked_files = [f for f in self.repo.untracked_files if not d.is_excluded(Path(self.repo.working_dir) / f)]
-        dirty_files = changed_files + untracked_files
-        if self.ignore_uncommited_changes_to_main:
-            target = sys.argv[0].replace(Path(self.repo_dir).as_posix() + "/", "")
-            if target in dirty_files:
-                dirty_files.remove(target)
-        if len(dirty_files) > 0:
-            print("The following files were untracked or had uncommitted changes:")
-            for f in dirty_files:
-                print("- " + f)
+            changed_files = [i.a_path for i in self.repo.index.diff(self.repo.head.commit) if
+                             not d.is_excluded(Path(self.repo.working_dir) / i.a_path)]
+            untracked_files = [f for f in self.repo.untracked_files if
+                               not d.is_excluded(Path(self.repo.working_dir) / f)]
+            dirty_files = changed_files + untracked_files
+            if self.ignore_uncommited_changes_to_main:
+                target = sys.argv[0].replace(Path(self.repo_dir).as_posix() + "/", "")
+                if target in dirty_files:
+                    dirty_files.remove(target)
+            if len(dirty_files) > 0:
+                print("The following files were untracked or had uncommitted changes:")
+                for f in dirty_files:
+                    print("- " + f)
+                return False
+        except Exception as e:
+            print("Encountered exception while checking git status")
+            traceback.print_exc()
             return False
         return True
 
@@ -149,7 +158,7 @@ class Session:
             else:
                 raise e
 
-    def start(self):
+    def start(self, on_load: Callable[['Session'], None] = None):
         """Starts the session. It will guide the user throug a series of questions about choices for the session
         regarding git status and restarting/overwriting previous sessions"""
         status = self.check_git_status()
@@ -173,20 +182,41 @@ class Session:
                 print(choices)
                 response = get_input(valid_inputs=("r", "l", "q"))
             if response == "l":
-                (worker, repo, is_finished) = self.load_data("session")
-                # if is_finished:
-                #     self.worker = worker
-                #     print("Loaded session is already finished.")
-                #     return
-                commit = repo.head.commit
-                if self.repo.head.commit != commit:
-                    print("The loaded session belonged to a different commit and cannot be loaded")
-                    print(f"Before rerunning script please checkout commit({commit}): {commit.message}")
-                    return
+                data = self.load_data("session")
+                if len(data) == 3:
+                    (worker, repo, is_finished) = data
+                elif len(data) == 4:
+                    (worker, repo, is_finished, datetime) = data
+                    self.runtime = datetime
                 else:
-                    self.worker = worker
-                    self._run()
-                    return
+                    raise AssertionError()
+
+                if isinstance(repo, Repo):
+
+                    try:
+                        hexsha = repo.head.commit.hexsha
+                    except ValueError:
+                        print("(Probably) got error when comparing loaded head with current. This most likely is an "
+                              "issue of data stored with an old version of session when loading data on a different PC")
+                        traceback.print_exc()
+                        hexsha = None
+                else:
+                    assert isinstance(repo, str)
+                    hexsha = repo
+                if self.repo.head.commit.hexsha != hexsha:
+                    print("WARNING: The loaded session belonged to a different commit and cannot be loaded")
+                    print(f"Consider rerunning script after checking out commit({hexsha})")
+                    if not self.ignore_warnings:
+                        print("Continue? (Y/N)")
+                        response = get_input(valid_inputs=("y", "n",))
+                        if response == "n":
+                            return
+                self.worker = worker
+                if on_load is not None:
+                    print(f"Calling on_load method: {on_load.__name__}")
+                    on_load(self)
+                self._run()
+                return
             elif response == "r":
                 print("Confirm (y/n)")
                 if get_input(("y", "n")) == "y":
@@ -207,7 +237,9 @@ class Session:
         """
         while True:
             try:
+                starttime = datetime.datetime.now()
                 i = self.worker.iterate()
+                self.runtime += (datetime.datetime.now() - starttime)
                 self.save_data("session", self._session_data())
                 if self.terminate:
                     print("Session terminated")
@@ -216,7 +248,7 @@ class Session:
                 break
         self.is_finished = True
         self.save_data("session", self._session_data())
-        print("Session done (" + self.name + ')')
+        print(f"Session done ({self.name}) in total time: {self.runtime}")
 
 
 class MultiSession(Session):
@@ -230,7 +262,7 @@ class MultiSession(Session):
         self.worker = self
 
     def iterate(self):
-        while self.current_worker < len(self.workers):
+        if self.current_worker < len(self.workers):
             try:
                 self.workers[self.current_worker].iterate()
             except StopIteration:
@@ -239,4 +271,5 @@ class MultiSession(Session):
             except Exception as e:
                 print(f"Error in worker ({self.current_worker})")
                 traceback.print_exc()
-        raise StopIteration()
+        else:
+            raise StopIteration()

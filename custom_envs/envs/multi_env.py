@@ -29,17 +29,18 @@ class MultiEnv(gym.Env):
         self.round += 1
         env_change = False
         done = False
-        if self.round >= self.schedule[self.i][1]:
+        if self.round >= self.schedule[self.i % len(self.schedule)][1]:
             self.round = 0
-            self.i += 1
+            self.i = self.i + 1
             if self.i < len(self.schedule):
                 if self.close_prevous_env:
                     self.to_close_list.append(self.env)
-                self._set_env(self.schedule[self.i][0])
+                self._set_env(self.schedule[self.i % len(self.schedule)][0])
                 env_change = True
                 self.on_env_change()
             else:
                 done = True
+        state = None
         if not done:
             self.on_new_round(env_change)
         state = self.env.reset()
@@ -52,7 +53,7 @@ class MultiEnv(gym.Env):
         if round_done:
             done, state = self._next_round()
         obs = self._get_obs(state, round_done, reward)
-        score = reward / max(2, self.total_rounds)
+        score = reward / max(1, self.total_rounds)
         return obs, score, done, info
 
     def reset(self):
@@ -79,10 +80,13 @@ class MultiEnv(gym.Env):
         return obs
 
     def render(self, mode='human', **kwargs):
+
         for e in self.to_close_list:
             e.close()
         self.to_close_list = []
-        self.env.render(mode, **kwargs)
+        if self.i > 0 and self.round == 0:
+            return self.schedule[(self.i - 1) % len(self.schedule)][0].render(mode, **kwargs)
+        return self.env.render(mode, **kwargs)
 
     def close(self):
         self.env.close()

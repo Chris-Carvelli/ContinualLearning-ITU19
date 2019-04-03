@@ -1,7 +1,7 @@
 import dill
-
+import numpy as np
 import torch
-
+import torch.nn as nn
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -42,3 +42,40 @@ def chunks(l, n):
         ret.append(l[i:i + n])
 
     return ret
+
+
+def redistribute(v: np.ndarray, f=1):
+    """Accepts an input vector v of values in range [0, 1]. The sharpening factor f determines how much the
+    values are pushed towards 1 (f=1 means no change)"""
+    with np.errstate(divide='ignore'):
+        return 1 / (1 + (1 / v - 1)) ** (1 / f)
+
+
+def diverge(v: np.ndarray, f=1):
+    """Accepts and input vector v with values in range [0, 1]. Values above 0.5 are pushed towards 1 and value below
+    0.5 will be pushed towards 0. f determines how much values are pushed towards """
+    u = v - 0.5
+    return 0.5 + np.sign(u) * (redistribute(np.abs(u) * 2, f) / 2)
+
+
+def add_min_prob(w: np.ndarray, min_prob=0):
+    """
+    Returns a probability distribution p based on w
+    :param w: Weights
+    :param min_prob: The minimum probability allowed in the probability distribution. if min_prop=0 the returned values
+    will simply be  w / sum(w)
+    :return: probability distribution
+    """
+    assert min_prob < 1 / len(w)
+    w = (w + np.sum(w) * min_prob / (1 - len(w) * min_prob))
+    return w / np.sum(w)
+
+
+def parameter_stats(nn: nn.Module, print_indivual_params=True):
+    """Prints various statistics about the paramters of a neural neural network"""
+    p = torch.nn.utils.parameters_to_vector(nn.parameters()).detach().numpy()
+    print(f"max/min = {max(p):.1f}/{min(p):.1f}, mean={np.mean(p):.1f}+/-{np.std(p):.2f}")
+    if print_indivual_params:
+        for name, p in nn.named_parameters():
+            p = p.detach().numpy()
+            print(f"{name:40s}max/min = {np.max(p):.1f}/{np.min(p):.1f}, mean={np.mean(p):.1f}+/-{np.std(p):.2f}")

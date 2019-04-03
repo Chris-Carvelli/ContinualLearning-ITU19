@@ -3,6 +3,7 @@ from collections import defaultdict
 import torch
 import numpy as np
 from torch import nn
+from src.utils import *
 
 
 class NTM(nn.Module):
@@ -10,7 +11,7 @@ class NTM(nn.Module):
 
     def __init__(self,
                  memory_unit_size=4,
-                 max_memory=10000,
+                 max_memory=None,
                  history=False,
                  overwrite_mode=True,
                  fixed_size=False,
@@ -19,7 +20,7 @@ class NTM(nn.Module):
         # self.nn: nn.Module = None  # The neural network. Set in inherited class
 
         self.memory_unit_size = memory_unit_size  # The unit size of each memory cell
-        self.max_memory = max_memory  # The maximum length of the
+        self.max_memory = max_memory if max_memory else 1000000  # The maximum length of the
         # History is used to plot the input, output, read-, write- operations and the location of the head.
         # History has no function impact on the model.
         self.history: defaultdict[list] = None
@@ -30,11 +31,11 @@ class NTM(nn.Module):
 
         self.min_similarity_to_jump = 0.5  # The minimum similarity required to jump to a specific location in memory
         self.shift_length = 1  # The maximum step taken when the head shifts position
-        self.head_pos = 0   # The position on the memory where read/write operations are currently being performed
+        self.head_pos = 0  # The position on the memory where read/write operations are currently being performed
         self.memory: np.ndarray = None  # The
         self.previous_read: np.ndarray = None
         self.left_expands: int = None  # The number of times the memory has been expanded to the left
-
+        self.divergence = 1  # Higher values pushes update-vector values to diverge towards 0 or 1
         self.reset()
 
     def reset(self):
@@ -143,6 +144,8 @@ class NTM(nn.Module):
         out = self.nn(x_joined).squeeze(0).detach().numpy()
         output = out[:-self.update_size()]
         update_vector = out[-self.update_size():]
+        if hasattr(self, "divergence") and self.divergence != 1:
+            update_vector[2:] = diverge(update_vector[2:], self.divergence)
         return output, update_vector
 
     def forward(self, x):
@@ -165,7 +168,11 @@ class NTM(nn.Module):
             self.history["loc"][-1].append((self._relative_head_pos(), 1))
         return y
 
-    def plot_history(self, window=None):
+    def start_history(self):
+        """Start recording history, clearing any previous history recorded"""
+        self.history = defaultdict(list)
+
+    def plot_history(self, window=None, vmin=None, vmax=None):
         if self.history is None:
             print("No history to plot")
             return
@@ -209,6 +216,8 @@ class NTM(nn.Module):
                     p,
                     ax=subplots[i][j],
                     square=True,
+                    vmin=vmin,
+                    vmax=vmax,
                     # cbar=i + j == 0,
                     # cbar_ax=None if i + j else cbar_ax,
                 )
@@ -219,3 +228,4 @@ class NTM(nn.Module):
     def _relative_head_pos(self):
         """Retunrs the head position relative to the starting position"""
         return self.head_pos - self.left_expands
+
