@@ -1,3 +1,4 @@
+import datetime
 import os
 # import pickle
 from typing import Callable
@@ -53,12 +54,12 @@ def load_session(path, use_backup=True):
             raise e
 
 
-
 class Session:
     """A session represents some work that needs to be done and saved, and possibly paused"""
     repo_dir = Path(os.path.dirname(os.path.abspath(__file__)))
     is_finished = False  # True when the session has finished all the work
     ignore_uncommited_changes_to_main = True
+    runtime = datetime.timedelta()
 
     def __init__(self, worker, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True):
         """
@@ -93,7 +94,7 @@ class Session:
         self.save_folder = Path(self.save_folder) / (self.name + ".ses")
 
     def _session_data(self):
-        return self.worker, self.repo.head.commit.hexsha, self.is_finished
+        return self.worker, self.repo.head.commit.hexsha, self.is_finished, self.runtime
 
     def load_results(self):
         """This method is for loading session results after the session has finished"""
@@ -113,7 +114,8 @@ class Session:
 
             changed_files = [i.a_path for i in self.repo.index.diff(self.repo.head.commit) if
                              not d.is_excluded(Path(self.repo.working_dir) / i.a_path)]
-            untracked_files = [f for f in self.repo.untracked_files if not d.is_excluded(Path(self.repo.working_dir) / f)]
+            untracked_files = [f for f in self.repo.untracked_files if
+                               not d.is_excluded(Path(self.repo.working_dir) / f)]
             dirty_files = changed_files + untracked_files
             if self.ignore_uncommited_changes_to_main:
                 target = sys.argv[0].replace(Path(self.repo_dir).as_posix() + "/", "")
@@ -180,7 +182,14 @@ class Session:
                 print(choices)
                 response = get_input(valid_inputs=("r", "l", "q"))
             if response == "l":
-                (worker, repo, is_finished) = self.load_data("session")
+                data = self.load_data("session")
+                if len(data) == 3:
+                    (worker, repo, is_finished) = data
+                elif len(data) == 4:
+                    (worker, repo, is_finished, datetime) = data
+                    self.runtime = datetime
+                else:
+                    raise AssertionError()
 
                 if isinstance(repo, Repo):
 
@@ -199,7 +208,7 @@ class Session:
                     print(f"Consider rerunning script after checking out commit({hexsha})")
                     if not self.ignore_warnings:
                         print("Continue? (Y/N)")
-                        response = get_input(valid_inputs=("y", "n", ))
+                        response = get_input(valid_inputs=("y", "n",))
                         if response == "n":
                             return
                 self.worker = worker
@@ -228,7 +237,9 @@ class Session:
         """
         while True:
             try:
+                starttime = datetime.datetime.now()
                 i = self.worker.iterate()
+                self.runtime += (datetime.datetime.now() - starttime)
                 self.save_data("session", self._session_data())
                 if self.terminate:
                     print("Session terminated")
@@ -237,7 +248,7 @@ class Session:
                 break
         self.is_finished = True
         self.save_data("session", self._session_data())
-        print("Session done (" + self.name + ')')
+        print(f"Session done ({self.name}) in total time: {self.runtime}")
 
 
 class MultiSession(Session):
@@ -251,7 +262,7 @@ class MultiSession(Session):
         self.worker = self
 
     def iterate(self):
-        while self.current_worker < len(self.workers):
+        if self.current_worker < len(self.workers):
             try:
                 self.workers[self.current_worker].iterate()
             except StopIteration:
@@ -260,4 +271,5 @@ class MultiSession(Session):
             except Exception as e:
                 print(f"Error in worker ({self.current_worker})")
                 traceback.print_exc()
-        raise StopIteration()
+        else:
+            raise StopIteration()
