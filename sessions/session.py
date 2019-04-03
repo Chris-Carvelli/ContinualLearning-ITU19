@@ -25,6 +25,33 @@ def get_input(valid_inputs=("y", "n")):
     return res
 
 
+def load_session(path, use_backup=True):
+    """
+    Loads a session
+    :param path: The session folder (labelled .ses) containng the session.dill and session.back file
+    :param use_backup: If True, will attempt to load backup if main fails
+    :return:
+    """
+    target = Path(path) / "session.dill"
+
+    try:
+        with open(target, "rb") as fp:
+            return dill.load(fp)[0]
+    except Exception as e:
+        if use_backup:
+            print(f"failed to load {target.name}. Reason:")
+            target = target.with_suffix(".back")
+            time.sleep(0.1)  # Get nicer print statements
+            traceback.print_exc()
+            time.sleep(0.1)  # Get nicer print statements
+            print("Trying to load backup")
+            with open(target, "rb") as fp:
+                return dill.load(fp)[0]
+        else:
+            raise e
+
+
+
 class Session:
     """A session represents some work that needs to be done and saved, and possibly paused"""
     repo_dir = Path(os.path.dirname(os.path.abspath(__file__)))
@@ -81,7 +108,7 @@ class Session:
         """Checks if the there are uncommitted changes to the git head that should be committed before session start"""
         d = Dir(self.repo.working_dir, exclude_file=self.ignore_file)
 
-        changed_files = [i.a_path for i in self.repo.index.diff(None) if
+        changed_files = [i.a_path for i in self.repo.index.diff(self.repo.head.commit) if
                          not d.is_excluded(Path(self.repo.working_dir) / i.a_path)]
         untracked_files = [f for f in self.repo.untracked_files if not d.is_excluded(Path(self.repo.working_dir) / f)]
         dirty_files = changed_files + untracked_files

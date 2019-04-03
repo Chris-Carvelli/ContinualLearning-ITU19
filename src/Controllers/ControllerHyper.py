@@ -27,15 +27,17 @@ class Controller:
             fps=fps
         )
 
+    # tiling not supported (but it should be a bit faster, performance gain unclear)
     def _update_weights(self):
-        z_chunk = 0
+        weights = self.hnn()
+        i = 0
         for name, param in self.pnn.named_parameters():
             if 'weight' in name:
-                param.data = self._get_weights(z_chunk, param.shape).data
-                z_chunk += 1
+                param.data = self._shape_w(weights[i], param.shape).data
+                i += 1
 
-    def _get_weights(self, layer_index, layer_shape):
-        w = self.hnn(layer_index)
+    def _shape_w(self, w, layer_shape):
+        w = torch.Tensor(w)
         w = torch.narrow(w, 0, 0, reduce((lambda x, y: x * y), layer_shape))
         w = w.view(layer_shape)
 
