@@ -15,7 +15,6 @@ from src.utils import add_min_prob, parameter_stats
 class TMazeNTMModule(NTM):
     reward_inputs = 1
 
-
     def __init__(self, memory_unit_size, max_memory=1, reward_inputs=1):
         super().__init__(memory_unit_size, max_memory=max_memory, overwrite_mode=True)
 
@@ -31,26 +30,26 @@ class TMazeNTMModule(NTM):
             )
         else:
             output_size = 8
-            # self.image_conv = nn.Sequential(
-            #     nn.Conv2d(3, 16, (2, 2)),
-            #     nn.Sigmoid(),
-            #     nn.MaxPool2d((2, 2)),
-            #     nn.Conv2d(16, 32, (2, 2)),
-            #     nn.Sigmoid(),
-            #     nn.Conv2d(32, output_size, (2, 2)),
-            #     nn.Sigmoid(),
-            #     # nn.Linear(64, 6),
-            #     # nn.Sigmoid(),
-            # )
             self.image_conv = nn.Sequential(
-                nn.Conv2d(3, 8, (2, 2)),
+                nn.Conv2d(3, 16, (2, 2)),
                 nn.Sigmoid(),
                 nn.MaxPool2d((2, 2)),
-                nn.Conv2d(8, 16, (2, 2)),
+                nn.Conv2d(16, 32, (2, 2)),
                 nn.Sigmoid(),
-                nn.Conv2d(16, output_size, (2, 2)),
+                nn.Conv2d(32, output_size, (2, 2)),
                 nn.Sigmoid(),
+                # nn.Linear(64, 6),
+                # nn.Sigmoid(),
             )
+            # self.image_conv = nn.Sequential(
+            #     nn.Conv2d(3, 8, (2, 2)),
+            #     nn.Sigmoid(),
+            #     nn.MaxPool2d((2, 2)),
+            #     nn.Conv2d(8, 16, (2, 2)),
+            #     nn.Sigmoid(),
+            #     nn.Conv2d(16, output_size, (2, 2)),
+            #     nn.Sigmoid(),
+            # )
 
             self.nn = nn.Sequential(
                 nn.Linear(output_size + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
@@ -81,7 +80,7 @@ class TMazeNTMModule(NTM):
             evolve_nn = .333 <= r <= 1
         for name, tensor in sorted(named_params):
             is_vision = name.startswith("conv")
-            if is_vision and evolve_vision or (not is_vision and evolve_nn):
+            if (is_vision and evolve_vision) or (not is_vision and evolve_nn):
                 to_add = self.add_tensors[name]
                 to_add.normal_(0.0, sigma)
                 tensor.data.add_(to_add)
@@ -97,7 +96,7 @@ class TMazeNTMModule(NTM):
             if 'weight' in name:
                 tensor.data.zero_()
             else:
-                nn.init.normal_(tensor, .5)
+                nn.init.normal_(tensor)
                 # nn.init.kaiming_normal_(tensor)
                 # if name.startswith("conv"):
                 #     nn.init.xavier_normal(tensor)
@@ -153,17 +152,18 @@ if __name__ == '__main__':
 
     ntm = TMazeNTMModule(1)
     ntm.init()
-    ntm.divergence = 1
+    # ntm.divergence = 1
 
     params = torch.nn.utils.parameters_to_vector(ntm.parameters()).detach().numpy()
     print(len(params))
-    print(list(map(lambda t: "conv" in t[0], ntm.named_parameters())))
-    print(any(map(lambda t: "conv" in t[0], ntm.named_parameters())))
 
-    # while True:
-    #     print(ntm.evaluate(env, 1000, render=True, fps=10, show_action_frequency=True))
+    while True:
+        r, n_eval = ntm.evaluate(env, 1000, render=False, fps=10, show_action_frequency=False)
+        if r > 0:
+            # ntm.evaluate(env, 1000, render=False, fps=10, show_action_frequency=True)
+            print(r, n_eval),
         # ntm.evaluate(env, 1000, render=False, fps=10)
-        # ntm.evolve(.5)
+        ntm.evolve(.1)
         # parameter_stats(ntm, False)
 
     # while ntm.evaluate(env, 30)[0] <= 0.5:

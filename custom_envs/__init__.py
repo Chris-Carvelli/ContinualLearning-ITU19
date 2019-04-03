@@ -45,12 +45,20 @@ for rounds in (1, 2, 5, 10, 20, 50, 100, 200, 500, 1000):
             entry_point='custom_envs.envs:TMaze',
             kwargs=dict(corridor_length=length, rounds_pr_side=rounds)
         )
+        for v in [3, 5]:
+            register(
+                id=f"TMaze-{length}x{rounds}-viewsize_{v}-v0",
+                entry_point='custom_envs.envs:TMaze',
+                kwargs=dict(corridor_length=length, rounds_pr_side=rounds, view_size=v)
+            )
         for max_steps in [6, 12, 20, 50]:
             register(
                 id=f"TMaze-{length}x{rounds}x{max_steps}-v0",
                 entry_point='custom_envs.envs:TMaze',
                 kwargs=dict(corridor_length=length, rounds_pr_side=rounds, max_steps=max_steps)
             )
+
+
 
 register(
     id=f"SingleTMaze-v0",

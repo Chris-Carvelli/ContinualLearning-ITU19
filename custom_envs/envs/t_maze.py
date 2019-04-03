@@ -10,8 +10,10 @@ import gym_minigrid.minigrid as minigrid
 class SingleTMaze(MiniGridEnv):
     is_double = False
     reward_values = dict(goal=1, fake_goal=0.1)
+    view_size: int = None
 
-    def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False):
+    def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False, view_size=None):
+        self.view_size = view_size
         self.is_double = is_double
         self.reward_position = reward_position
         self.corridor_length = corridor_length
@@ -57,6 +59,23 @@ class SingleTMaze(MiniGridEnv):
         reward_positions = self._reward_positions(width, height)
         self._gen_rewards(reward_positions)
 
+    def _adjust_viewsize(self, state):
+        if self.view_size and self.view_size < minigrid.AGENT_VIEW_SIZE:
+            assert self.view_size % 2 == 1
+            offset = (minigrid.AGENT_VIEW_SIZE - self.view_size) // 2
+            state["image"] = state["image"][offset:-offset, offset:-offset, :]
+        return state
+
+    def step(self, action):
+        obs, score, done, info = super().step(action)
+        obs = self._adjust_viewsize(obs)
+        return obs, score, done, info
+
+
+    def reset(self):
+        state = super().reset()
+        return self._adjust_viewsize(state)
+
     def _reward_positions(self, width, height):
         reward_positions = [
             (1, 1),
@@ -100,17 +119,19 @@ class TMaze(MultiEnv):
     cyclic_order = True
     print_render_buffer = ""
     explored_corners: List[Tuple[int, int]] = None
-    view_size = None
+
+    @property
+    def view_size(self):
+        return self.env.view_size
 
     def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=False, cyclic_order=True,
                  view_size=None):
         self.cyclic_order = cyclic_order
-        envs = [SingleTMaze(corridor_length, 0, max_steps),
-                SingleTMaze(corridor_length, 1, max_steps)]
+        envs = [SingleTMaze(corridor_length, 0, max_steps, view_size=view_size),
+                SingleTMaze(corridor_length, 1, max_steps, view_size=view_size)]
         self.rnd_order = rnd_order
         if self.rnd_order:
             random.shuffle(envs)
-        self.view_size = view_size
         super().__init__(envs, rounds_pr_side)
 
     def reset(self):
@@ -223,7 +244,9 @@ def test_tmaze():
 if __name__ == '__main__':
     # test_one_shot_tmaze()
     # test_tmaze()
-    env = TMaze()
+    env = TMaze(view_size=3)
+    # env.view_size =
+
     # state, reward, done, info = env.step(2)
-    state = env.reset()
-    print(state)
+    s = env.reset()
+    print(s["image"].shape)

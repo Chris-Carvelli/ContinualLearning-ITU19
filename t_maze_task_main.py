@@ -14,21 +14,21 @@ from src.utils import parameter_stats, model_diff
 from tests.minigrid.utils import lowpriority, plot
 from src.ga import GA
 
-numpy.set_printoptions(threshold=sys.maxsize)
+numpy.set_printoptions(threshold=sys.maxsize, linewidth=200)
 
-minigrid.AGENT_VIEW_SIZE = 7
-minigrid.OBS_ARRAY_SIZE = (minigrid.AGENT_VIEW_SIZE, minigrid.AGENT_VIEW_SIZE, 3)
+# minigrid.AGENT_VIEW_SIZE = 7
+# minigrid.OBS_ARRAY_SIZE = (minigrid.AGENT_VIEW_SIZE, minigrid.AGENT_VIEW_SIZE, 3)
 
-seed = 3
+seed = 2
 
-data_nr = 17
+data_nr = 18
 # sigma_strategy = "half-life-10"
 sigma_strategy = "cyclic1000-0.01"
 population = 500
-sigma = .1
+sigma = .3
 
 config = "config_ntm_default"
-length = 3
+length = 2
 rounds = 5
 memory_unit_size = 2
 r_inputs = 1
@@ -51,7 +51,7 @@ def main():
             sigma=sigma,
             trials=2,
             elite_trials=0,
-            truncation=-1,
+            truncation=20,
             n_elites=10,
             sigma_strategy=sigma_strategy
             )
@@ -84,8 +84,11 @@ def plot_results():
     # ga = load_session(f"Experiments/TMaze-3x5-v0-0017-config_ntm_default-300_0.1_2_1_linear1000-0.01_RESTART.ses")
     ga = load_session(f"Experiments/{name}.ses")
 
+    print("Lead generation scores")
+    print([ga.results[-1][-1][i][1] for i in range(len(ga.results[-1][-1]))])
     print("Lead generation parameter standard deviation")
-    # model_diff([ga.results[-1][-1][i][0].nn for i in range(len(ga.results[-1][-1]))])
+    model_diff([ga.results[-1][-1][i][0].nn for i in range(len(ga.results[-1][-1]))])
+
     plot(ga)
     # sys.exit()
 
@@ -106,10 +109,14 @@ def plot_results():
         if hasattr(module, "history"):
             parameter_stats(module, False)
             module.history = defaultdict(list)
-        res = champ.evaluate(env, 100000, render=True, fps=6, mode="print")
+        res = champ.evaluate(env, 100000, render=True, fps=6)
         print(res)
-        res = champ.evaluate(env, 100000, render=True, fps=6, mode="print")
+        res = champ.evaluate(env, 100000, render=True, fps=6)
         print(res)
+        # res = champ.evaluate(env, 100000, render=True, fps=10000, mode="print")
+        # print(res)
+        # res = champ.evaluate(env, 100000, render=True, fps=10000, mode="print")
+        # print(res)
         if hasattr(module, "history"):
             module.plot_history(vmin=0, vmax=1)
         if hasattr(champ, "nn") and isinstance(champ.nn, type(NTM_Module)):

@@ -269,14 +269,15 @@ class GA:
     # @profile
     def _reproduce(self, scored_parents):
         # Elitism
-        self.models = [p for p, _ in scored_parents[:self.n_elites]]
-
+        self.models = []
         sigma = self.sigma_strategy(self)
         for individual in range(self.population - self.n_elites):
             random_choice = random.choice(scored_parents)
             cpy = copy.deepcopy(random_choice)[0]
             self.models.append(cpy)
+            assert cpy == self.models[-1]
             self.models[-1].evolve(sigma)
+        self.models += [p for p, _ in scored_parents[:self.n_elites]]
 
     def init_models(self):
         if not self.scored_parents:
