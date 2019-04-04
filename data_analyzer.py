@@ -4,37 +4,44 @@ from tkinter import filedialog
 import os
 from sessions.session import load_session
 import sessions.session
+import seaborn as sns
+import matplotlib.pyplot as plt
+import scripts.evaluate
 
 pandas.set_option('display.max_columns', 20)
 pandas.set_option('display.width', 1000)
 
 
 
-def get_results_from_session():
+def get_results_from_session(use_explorer):
     experiments_folder = "Experiments"
-    #root = tk.Tk()
-    #root.withdraw()
-    #file_path = filedialog.askdirectory(initialdir=os.getcwd(), title='Session Folder (.ses)')
-    session_directories = []
-    for file in os.listdir(experiments_folder):
-        path = experiments_folder+"\\"+file
-        if os.path.isdir(path):
-            session_directories.append(path)
 
-    print_possible_folders(session_directories)
+    if use_explorer:
+        root = tk.Tk()
+        root.withdraw()
+        file_path = filedialog.askdirectory(initialdir=os.getcwd(), title='Session Folder (.ses)')
+        return load_session(file_path)
+    else:
+        session_directories = []
+        for file in os.listdir(experiments_folder):
+            path = experiments_folder+"\\"+file
+            if os.path.isdir(path):
+                session_directories.append(path)
 
-    while True:
-        try:
-            index = int(input("Select folder by providing index (int) :"))
-        except ValueError:
-            print("Not an integer! Try again.")
-            continue
-        else:
-            if index >= len(session_directories):
-                print("Index too large")
+        print_possible_folders(session_directories)
+
+        while True:
+            try:
+                index = int(input("Select folder by providing index (int) :"))
+            except ValueError:
+                print("Not an integer! Try again.")
+                continue
             else:
-                return load_session(os.getcwd() + "\\" + session_directories[index])
-                break
+                if index >= len(session_directories) and index >= 0:
+                    print("Index too large")
+                else:
+                    return load_session(os.getcwd() + "\\" + session_directories[index])
+                    break
 
 def print_possible_folders(directories_list):
     print("Results folders: ")
@@ -63,3 +70,31 @@ def results_to_dataframe(results):
         experiment_id = experiment_id + 1
     df = pandas.DataFrame(d)
     return df
+
+def get_ppo_results(path_to_log):
+    df2 = pandas.read_csv(path_to_log+"\\log.csv")
+    return df2
+
+
+
+# Get results from selected session
+# True -> Use explorer
+# False -> Use terminal
+res = get_results_from_session(False)
+df = results_to_dataframe(res)
+
+# Get results as dataframe from minigrid_rl. You need to provide the path of the log
+df2 = get_ppo_results("C:\\Users\\Luka\\Documents\\Python\\minigrid_rl\\torch-rl\\storage\\DoorKey")
+#print(df2.columns.values)
+print(df.columns.values)
+print(df2.columns.values)
+#print(df2)
+
+df = df.set_index('generation').join(df2.set_index('update'))
+print(df)
+#sns.lineplot(x='generation', y='max_score', hue='run', data=df2, err_style="bars", ci='run')
+sns.lineplot(data=df[['return_max', 'max_score']])
+
+plt.legend()
+
+plt.show()
