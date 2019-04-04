@@ -101,3 +101,4 @@ class TMazeRLModule(nn.Module, torch_rl.RecurrentACModel):
         value = x.squeeze(1)
 
         return dist, value, memory
+

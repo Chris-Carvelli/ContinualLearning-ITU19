@@ -15,6 +15,9 @@ from src.utils import model_diff
 termination_strategies = \
     {
         'all_generations': lambda ga_instance: ga_instance.g < ga_instance.max_generations,
+        'max_gen_or_reward': lambda ga: not (ga.g >= ga.max_generations or
+                                              (len(ga.results) > 0 and ga.max_reward is not None
+                                               and ga.results[-1][2] >= ga.max_reward)),
     }
 model_library = \
     {
@@ -52,6 +55,7 @@ class GA:
                  model_builder=None,
                  max_generations=None,
                  max_evals=None,
+                 max_reward=None,
                  max_episode_eval=None,
                  sigma=None,
                  truncation=None,
@@ -130,13 +134,21 @@ class GA:
             self.env_key = env_key
 
         if sigma_strategy is None:
-            self.sigma_strategy = sigma_strategies["constant"]
+            if "sigma_strategy" in config["Strategies"]:
+                self.sigma_strategy = sigma_strategies[str(config["Strategies"]["sigma_strategy"])]
+            else:
+                self.sigma_strategy = sigma_strategies["constant"]
         elif isinstance(sigma_strategy, str):
             self.sigma_strategy = sigma_strategies[sigma_strategy]
         else:
             self.sigma_strategy = sigma_strategy
 
-        print(self.env_key)
+        if max_reward is None:
+            self.max_reward = None
+            if "max_reward" in config["HyperParameters"]:
+                self.max_reward = int(config["HyperParameters"]["max_reward"])
+        else:
+            self.max_reward = max_reward
 
         self.scored_parents = None
         self.models = self.init_models()
@@ -208,6 +220,7 @@ class GA:
         else:
             raise StopIteration()
 
+
     # @profile
     def evolve_iter(self):
         # print(f'[gen {self.g}] get best Controllers')
@@ -247,8 +260,8 @@ class GA:
 
         ret = (median_score, mean_score, max_score, self.evaluations_used, self.scored_parents)
         self.results.append(ret)
-
         return ret
+
 
     def get_best_models(self, models=None, trials=None):
         if models is None:
