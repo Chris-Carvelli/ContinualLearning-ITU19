@@ -6,7 +6,6 @@ from sessions.session import load_session
 import sessions.session
 import seaborn as sns
 import matplotlib.pyplot as plt
-import scripts.evaluate
 
 pandas.set_option('display.max_columns', 20)
 pandas.set_option('display.width', 1000)
