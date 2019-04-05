@@ -113,8 +113,6 @@ class MinigridRNNModule(nn.Module, torch_rl.RecurrentACModel):
             if name not in self.add_tensors:
                 self.add_tensors[name] = torch.Tensor(tensor.size())
 
-
-
     def evaluate(self, env, max_eval, render=False, fps=60, show_action_frequency=False, argmax=True):
         """
         :param argmax: If True always use propabilty with highest chance as action. Other selected one at random
@@ -129,7 +127,7 @@ class MinigridRNNModule(nn.Module, torch_rl.RecurrentACModel):
         n_eval = 0
         action_freq = np.zeros([7])
         while not is_done and n_eval < max_eval:
-            obs = dist, value, memory = self(state, memory)
+            dist, value, memory = self(state, memory)
             if argmax:
                 action = dist.probs.max(1, keepdim=True)[1]
             else:

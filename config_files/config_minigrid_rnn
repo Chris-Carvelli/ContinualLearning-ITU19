@@ -1,7 +1,7 @@
 [HyperParameters]
 population = 500
 max_generations = 10000
-max_evals = 1000
+max_evals = 30
 max_reward = 1
 max_episode_eval = 100
 sigma = 0.1

@@ -19,8 +19,8 @@ numpy.set_printoptions(threshold=sys.maxsize, linewidth=200)
 
 seed = 0
 data_nr = 1
-# config = "config_minigrid_rnn_fast"
-config = "config_minigrid_rnn"
+config = "config_minigrid_rnn_fast"
+# config = "config_minigrid_rnn"
 env_key = f"MiniGrid-DoorKey-5x5-v0"
 name = f"{env_key}-{data_nr:04d}-{seed}-{config}"
 
