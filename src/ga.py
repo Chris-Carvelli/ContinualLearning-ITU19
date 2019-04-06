@@ -67,8 +67,8 @@ class GA:
                  ):
         config = ConfigParser()
         if config_file_path is not None:
-            config.read(config_file_path)
-            print("NON DEFAULT")
+            read_ok = config.read(config_file_path)
+            print(f"using config: {read_ok}")
         else:
             config.read('config_files/config_default')
             print("DEFAULT CONFIG")

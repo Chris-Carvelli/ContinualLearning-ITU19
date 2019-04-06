@@ -4,7 +4,7 @@ import torch
 
 from custom_envs import *
 from sessions.session import Session
-from src.ControllerFactory import builder_ntm
+from src.modules.CopyNTM import CopyNTM
 from tests.minigrid.utils import lowpriority
 from src.ga import GA
 
@@ -12,24 +12,20 @@ from src.ga import GA
 def main():
     lowpriority()
 
-    copy_size = 2
+    data_nr = 1
+    copy_size = 4
     seed = 3
     torch.manual_seed(seed)
     numpy.random.seed(seed)
     random.seed(seed)
 
     env_key = f"CopyRnd-{copy_size}-v0"
+    config = "config_ntm_copy"
+    config = "config_ntm_copy_small"
 
-    ga = GA(env_key, 100, model_builder=lambda: builder_ntm(copy_size),
-            max_generations=5000,
-            sigma=0.5,
-            truncation=10,
-            trials=50,
-            elite_trials=50,
-            n_elites=5,
-            )
+    ga = GA("config_files/" + config, env_key=env_key, model_builder=lambda: CopyNTM(copy_size))
+    name = f"{env_key}-{data_nr:04d}-{seed}-{config}"
 
-    name = f"{env_key}-01_{ga.population}_{ga.sigma}_{ga.n_elites}"
     session = Session(ga, name)
 
     session.start()
