@@ -1,23 +1,23 @@
 [HyperParameters]
-population = 100
-max_generations = 200000
+population = 500
+max_generations = 1000
 max_evals = 1000
 max_reward = 1
 max_episode_eval = 100
 sigma = 0.5
 truncation = 20
-trials = 50
-elite_trials = 50
+trials = 30
+elite_trials = 100
 n_elites = 5
 hyper_mode = 0
 
 [EnvironmentSettings]
-env_key = CopyRnd-8-v0
+env_key = CopyRnd-2-v0
 
 [Strategies]
 elite_selection = elites
 termination = max_gen_or_reward
-sigma_strategy = linear10000-0.001
+sigma_strategy = constant
 
 [Utility]
 networked = 0
@@ -27,5 +27,5 @@ module = CopyNTM
 model_builder = base
 
 [NTM]
-copy_size = 8
-memory_unit_size = 20
+copy_size = 2
+memory_unit_size = 4

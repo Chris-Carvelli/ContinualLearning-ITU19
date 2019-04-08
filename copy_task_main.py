@@ -16,7 +16,7 @@ from src.ga import GA
 def main():
     lowpriority()
 
-    config_name = "config_ntm_copy_2"
+    config_name = "config_ntm_copy"
     config_file = "config_files/copy/" + config_name
     config = ConfigParser()
     read_ok = config.read(config_file)

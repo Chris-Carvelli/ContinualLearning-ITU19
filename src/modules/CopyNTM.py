@@ -5,7 +5,7 @@ from src.modules.NTM_Module import NTM
 
 
 class CopyNTM(NTM):
-    def __init__(self, copy_size, max_memory=10000, memory_unit_size=None):
+    def __init__(self, copy_size=None, max_memory=10000, memory_unit_size=None):
         if memory_unit_size is None:
             memory_unit_size = copy_size + 2
         super().__init__(memory_unit_size, max_memory=max_memory)

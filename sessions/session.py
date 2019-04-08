@@ -92,6 +92,8 @@ class Session:
             if not os.path.exists(self.save_folder):
                 os.makedirs(self.save_folder)
         self.save_folder = Path(self.save_folder) / (self.name + ".ses")
+        if not os.path.exists(self.save_folder):
+            os.makedirs(self.save_folder)
 
     def _session_data(self):
         return self.worker, self.repo.head.commit.hexsha, self.is_finished, self.runtime
@@ -172,7 +174,7 @@ class Session:
                     return
         if not os.path.exists(self.save_folder):
             os.makedirs(self.save_folder)
-        else:
+        if os.path.exists(self.save_folder / "session.dill"):
             print(f"The save folder already exists. (Path: {self.save_folder})")
             if self.ignore_warnings:
                 print(f"Loading session {self.name}")
