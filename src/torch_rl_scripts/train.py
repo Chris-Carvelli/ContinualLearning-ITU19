@@ -9,18 +9,17 @@ import torch
 import torch_rl
 import sys
 
-from gym_minigrid import minigrid
-
 from src.modules.RL_TMazeModule import TMazeRLModule
+# from src.torch_rl_scripts.model import ACModel
 
 try:
     import gym_minigrid
+    from gym_minigrid import minigrid
     from custom_envs import *
 except ImportError:
     pass
 
-import utils
-# from src.torch_rl_scripts.model import ACModel
+from src.torch_rl_scripts import utils
 
 if __name__ == '__main__':
 
@@ -78,7 +77,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     args.mem = args.recurrence > 1
 
-    if args.view_size:
+    if args.view_size and args.view_size < minigrid.AGENT_VIEW_SIZE:
         args.env = args.env.replace("-v0", f"-viewsize_{args.view_size}-v0")
     # Define run dir
 
@@ -93,6 +92,7 @@ if __name__ == '__main__':
     csv_file, csv_writer = utils.get_csv_writer(model_dir)
     if args.tb:
         from tensorboardX import SummaryWriter
+
         tb_writer = SummaryWriter(model_dir)
 
     # Log command and all script arguments
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     envs = []
     for i in range(args.procs):
         env = gym.make(args.env)
-        env.seed(args.seed + 10000*i)
+        env.seed(args.seed + 10000 * i)
         envs.append(env)
 
     # Define obss preprocessor
@@ -126,25 +126,26 @@ if __name__ == '__main__':
     # Define actor-critic model
 
     try:
-        acmodel = utils.load_model(model_dir)
+        model = utils.load_model(model_dir)
         logger.info("Model successfully loaded\n")
     except OSError:
-        acmodel = TMazeRLModule(obs_space, envs[0].action_space, view_size=args.view_size)
+        model = TMazeRLModule(obs_space, envs[0].action_space, view_size=args.view_size, recurrent=args.mem)
+        # acmodel = ACModel(obs_space, envs[0].action_space, args.mem, args.text)
         logger.info("Model successfully created\n")
-    logger.info("{}\n".format(acmodel))
+    logger.info("{}\n".format(model))
 
     if torch.cuda.is_available():
-        acmodel.cuda()
+        model.cuda()
     logger.info("CUDA available: {}\n".format(torch.cuda.is_available()))
 
     # Define actor-critic algo
 
     if args.algo == "a2c":
-        algo = torch_rl.A2CAlgo(envs, acmodel, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
+        algo = torch_rl.A2CAlgo(envs, model, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
                                 args.entropy_coef, args.value_loss_coef, args.max_grad_norm, args.recurrence,
                                 args.optim_alpha, args.optim_eps, preprocess_obss)
     elif args.algo == "ppo":
-        algo = torch_rl.PPOAlgo(envs, acmodel, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
+        algo = torch_rl.PPOAlgo(envs, model, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
                                 args.entropy_coef, args.value_loss_coef, args.max_grad_norm, args.recurrence,
                                 args.optim_eps, args.clip_eps, args.epochs, args.batch_size, preprocess_obss)
     else:
@@ -169,7 +170,7 @@ if __name__ == '__main__':
         # Print logs
 
         if update % args.log_interval == 0:
-            fps = logs["num_frames"]/(update_end_time - update_start_time)
+            fps = logs["num_frames"] / (update_end_time - update_start_time)
             duration = int(time.time() - total_start_time)
             return_per_episode = utils.synthesize(logs["return_per_episode"])
             rreturn_per_episode = utils.synthesize(logs["reshaped_return_per_episode"])
@@ -186,7 +187,7 @@ if __name__ == '__main__':
 
             logger.info(
                 "U {} | F {:06} | FPS {:04.0f} | D {} | rR:usmM {:.2f} {:.2f} {:.2f} {:.2f} | F:usmM {:.1f} {:.1f} {} {} | H {:.3f} | V {:.3f} | pL {:.3f} | vL {:.3f} | V {:.3f}"
-                .format(*data))
+                    .format(*data))
 
             header += ["return_" + key for key in return_per_episode.keys()]
             data += return_per_episode.values()
@@ -208,10 +209,10 @@ if __name__ == '__main__':
             preprocess_obss.vocab.save()
 
             if torch.cuda.is_available():
-                acmodel.cpu()
-            utils.save_model(acmodel, model_dir)
+                model.cpu()
+            utils.save_model(model, model_dir)
             logger.info("Model successfully saved")
             if torch.cuda.is_available():
-                acmodel.cuda()
+                model.cuda()
 
             utils.save_status(status, model_dir)

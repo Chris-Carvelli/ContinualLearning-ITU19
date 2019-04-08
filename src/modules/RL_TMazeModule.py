@@ -16,12 +16,17 @@ def initialize_parameters(m):
         if m.bias is not None:
             m.bias.data.fill_(0)
 
+
 def _unity(x):
     return x
 
+
 class TMazeRLModule(nn.Module, torch_rl.RecurrentACModel):
-    def __init__(self, obs_space, action_space, view_size=None):
+    def __init__(self, obs_space, action_space, view_size=None, recurrent=True):
         super().__init__()
+
+        self.recurrent = recurrent
+
 
         if view_size is None:
             view_size = minigrid.AGENT_VIEW_SIZE
@@ -45,7 +50,8 @@ class TMazeRLModule(nn.Module, torch_rl.RecurrentACModel):
         m = obs_space["image"][1]
         self.image_embedding_size = ((n - 1) // 2 - 2) * ((m - 1) // 2 - 2) * nn_input
 
-        self.memory_rnn = nn.LSTMCell(self.image_embedding_size, self.semi_memory_size)
+        if self.recurrent:
+            self.memory_rnn = nn.LSTMCell(self.image_embedding_size, self.semi_memory_size)
 
         # Resize image embedding
         self.embedding_size = self.semi_memory_size
@@ -88,11 +94,13 @@ class TMazeRLModule(nn.Module, torch_rl.RecurrentACModel):
         if x.is_cuda: r = r.cuda()
         x = torch.cat((r, x), 1)
 
-        # apply memory
-        hidden = (memory[:, :self.semi_memory_size], memory[:, self.semi_memory_size:])
-        hidden = self.memory_rnn(x, hidden)
-        embedding = hidden[0]
-        memory = torch.cat(hidden, dim=1)
+        if self.recurrent:
+            hidden = (memory[:, :self.semi_memory_size], memory[:, self.semi_memory_size:])
+            hidden = self.memory_rnn(x, hidden)
+            embedding = hidden[0]
+            memory = torch.cat(hidden, dim=1)
+        else:
+            embedding = x
 
         x = self.actor(embedding)
         dist = Categorical(logits=F.log_softmax(x, dim=1))
@@ -101,4 +109,3 @@ class TMazeRLModule(nn.Module, torch_rl.RecurrentACModel):
         value = x.squeeze(1)
 
         return dist, value, memory
-

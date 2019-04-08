@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.distributions.categorical import Categorical
 import torch_rl
 import gym
-import utils
+from src.torch_rl_scripts import utils
 import numpy as np
 
 

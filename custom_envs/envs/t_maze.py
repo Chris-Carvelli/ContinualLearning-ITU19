@@ -1,4 +1,5 @@
 import random
+import time
 from typing import List, Tuple
 from gym_minigrid.minigrid import *
 from gym_minigrid.minigrid import Grid
@@ -63,14 +64,13 @@ class SingleTMaze(MiniGridEnv):
         if self.view_size and self.view_size < minigrid.AGENT_VIEW_SIZE:
             assert self.view_size % 2 == 1
             offset = (minigrid.AGENT_VIEW_SIZE - self.view_size) // 2
-            state["image"] = state["image"][offset:-offset, offset:-offset, :]
+            state["image"] = state["image"][offset:-offset, -self.view_size:, :]
         return state
 
     def step(self, action):
         obs, score, done, info = super().step(action)
         obs = self._adjust_viewsize(obs)
         return obs, score, done, info
-
 
     def reset(self):
         state = super().reset()
@@ -111,8 +111,9 @@ class SingleTMaze(MiniGridEnv):
         assert goal.is_goal
         start_color = goal.color
         goal.color = 'blue'
-        super().render(mode, close, **kwargs)
+        ret = super().render(mode, close, **kwargs)
         goal.color = start_color
+        return ret
 
 
 class TMaze(MultiEnv):
@@ -146,7 +147,12 @@ class TMaze(MultiEnv):
         current_round = int(self.round)
         obs, score, done, info = super().step(action)
 
-        if obs["reward"] != 0:
+        if obs["reward"] == 0:
+            obs["reward"] = 0.5
+        if obs["reward"] == self.env.reward_values["fake_goal"]:
+            obs["reward"] = 0
+
+        if obs["reward"] != 0.5:
             if not self.print_render_buffer.endswith("["):
                 self.print_render_buffer += f' ,{obs["reward"]}'
             else:
@@ -181,7 +187,7 @@ class TMaze(MultiEnv):
             if self.print_render_buffer.endswith("<END>"):
                 print(self.print_render_buffer.rstrip("<END>"))
         else:
-            super().render(mode, **kwargs)
+            return super().render(mode, **kwargs)
 
 
 def test_one_shot_tmaze():
@@ -244,9 +250,15 @@ def test_tmaze():
 if __name__ == '__main__':
     # test_one_shot_tmaze()
     # test_tmaze()
-    env = TMaze(view_size=3)
+    env = TMaze(view_size=3, corridor_length=1)
     # env.view_size =
 
     # state, reward, done, info = env.step(2)
     s = env.reset()
-    print(s["image"].shape)
+    i = 0
+    print(s["image"][:, :, i])
+    # env.render("human")
+
+    for action in [2, 0, 2]:
+        obs, score, done, info = env.step(action)
+        print(obs["image"][:, :, i])

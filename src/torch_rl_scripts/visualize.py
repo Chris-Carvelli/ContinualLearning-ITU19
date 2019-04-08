@@ -10,7 +10,7 @@ try:
 except ImportError:
     pass
 
-import utils
+from src.torch_rl_scripts import utils
 
 if __name__ == '__main__':
 
@@ -25,7 +25,7 @@ if __name__ == '__main__':
                         help="random seed (default: 0)")
     parser.add_argument("--shift", type=int, default=0,
                         help="number of times the environment is reset at the beginning (default: 0)")
-    parser.add_argument("--argmax", action="store_true", default=False,
+    parser.add_argument("--argmax", action="store_true", default=True,
                         help="select the action with highest probability")
     parser.add_argument("--pause", type=float, default=0.1,
                         help="pause duration between two consequent actions of the agent")
@@ -62,5 +62,5 @@ if __name__ == '__main__':
         obs, reward, done, _ = env.step(action)
         agent.analyze_feedback(reward, done)
 
-        # if renderer.window is None:
-        #     break
+        if renderer.window is None:
+            break

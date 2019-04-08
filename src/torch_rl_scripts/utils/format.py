@@ -6,7 +6,8 @@ import torch
 import torch_rl
 import gym
 
-import utils
+from src.torch_rl_scripts import utils
+
 
 def get_obss_preprocessor(env_id, obs_space, model_dir):
     # Check if it is a MiniGrid environment

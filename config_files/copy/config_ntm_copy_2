@@ -6,7 +6,7 @@ max_reward = 1
 max_episode_eval = 100
 sigma = 0.5
 truncation = 20
-trials = 20
+trials = 50
 elite_trials = 50
 n_elites = 5
 hyper_mode = 0
@@ -17,10 +17,14 @@ env_key = TMaze-1x10-v0
 [Strategies]
 elite_selection = elites
 termination = max_gen_or_reward
-sigma_strategy = cyclic1000-0.01
+sigma_strategy = linear10000-0.001
 
 [Utility]
 networked = 0
 
 [Controller]
 model_builder = base
+
+[NTM]
+copy_size = 8
+memory_unit_size = 20

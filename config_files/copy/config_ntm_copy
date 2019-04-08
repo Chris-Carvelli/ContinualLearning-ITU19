@@ -6,7 +6,7 @@ max_reward = 1
 max_episode_eval = 100
 sigma = 0.5
 truncation = 20
-trials = 20
+trials = 50
 elite_trials = 50
 n_elites = 5
 hyper_mode = 0
@@ -24,3 +24,7 @@ networked = 0
 
 [Controller]
 model_builder = base
+
+[NTM]
+copy_size = 8
+memory_unit_size = 10

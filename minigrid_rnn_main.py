@@ -1,19 +1,14 @@
 import random
 import sys
-from collections import defaultdict
 
-import gym
 import numpy
 import torch
-from gym_minigrid import minigrid
 
-from custom_envs import *
 from sessions.session import Session, load_session
 from src.modules.MinigridRecurrentModule import MinigridRNNModule
-from src.utils import parameter_stats, model_diff
+from src.utils import model_diff
 from tests.minigrid.utils import lowpriority, plot
 from src.ga import GA
-import utils
 
 numpy.set_printoptions(threshold=sys.maxsize, linewidth=200)
 

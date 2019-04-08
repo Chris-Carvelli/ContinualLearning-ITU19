@@ -12,7 +12,7 @@ try:
 except ImportError:
     pass
 
-import utils
+from src.torch_rl_scripts import utils
 
 if __name__ == '__main__':
     # Parse arguments
