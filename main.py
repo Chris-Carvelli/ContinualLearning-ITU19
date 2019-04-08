@@ -22,8 +22,8 @@ from src.ga import GA
 @click.option('--session_name', default=None, type=str, help='Session name. Default/None means same as config_file')
 @click.option('--multi_session', default=1, help='Repeat experiment as a multi-session n times if n > 1')
 def run(config_name, config_folder, session_name, multi_session):
-    if session_name == None:
-        session_name = config_name
+    if session_name is None:
+        session_name = config_name if multi_session <= 1 else f"{config_name}-x{multi_session}"
 
     # Load config
     config = ConfigParser()
