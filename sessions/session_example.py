@@ -3,7 +3,7 @@ This is a test document to test out the possibility of using git commits when sa
 the experiments can be re-run with the same settings/code as they the data was generated
 """
 import os
-from pathlib import Path
+from pathlib import PurePath as Path
 
 from sessions.session import *
 

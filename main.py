@@ -3,7 +3,7 @@ import random
 import click
 import sys
 from configparser import ConfigParser
-from pathlib import Path
+from pathlib import PurePath as Path
 
 import numpy
 import torch

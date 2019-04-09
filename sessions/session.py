@@ -12,7 +12,7 @@ import traceback
 
 from sessions.dirtools import Dir
 from git import Repo
-from pathlib import Path
+from pathlib import PurePath as Path
 
 
 def get_input(valid_inputs=("y", "n")):
