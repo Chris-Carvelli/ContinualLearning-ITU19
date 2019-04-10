@@ -12,13 +12,14 @@ from configparser import ConfigParser
 from pathlib import Path
 from sessions.session import Session, MultiSession
 from src.modules.CopyNTM import CopyNTM
+from src.modules.NTM_TMazeModule import TMazeNTMModule
 from tests.minigrid.utils import lowpriority
 from src.ga import GA
 
 
 @click.command()
 @click.option('--config_name', default="config_ntm_copy_2", help="Name of the config file")
-@click.option('--config_folder', default="config_files/", help="folder where the config file is located")
+@click.option('--config_folder', default="config_files/copy", help="folder where the config file is located")
 @click.option('--session_name', default=None, type=str, help='Session name. Default/None means same as config_file')
 @click.option('--multi_session', default=1, help='Repeat experiment as a multi-session n times if n > 1')
 def run(config_name, config_folder, session_name, multi_session):
@@ -29,18 +30,22 @@ def run(config_name, config_folder, session_name, multi_session):
     # Load config
     config = ConfigParser()
     read_ok = config.read(f"{config_folder}/{config_name}")
-    assert len(read_ok) > 0
+    assert len(read_ok) > 0, f"Failed to read config file: {Path(config_folder) / config_name}"
 
     def config_get(section, key, default=None):
         return config[section][key] if section in config and key in config[section] else default
 
     # Define modules here
-    if config_get("Controller", "module") == "CopyNTM":
-        kwargs = dict([(key, int(value)) for key, value in config["NTM"].items()])
-        model_builder = lambda: CopyNTM(**kwargs)
+    module = config_get("Controller", "module")
+    if module == "CopyNTM":
+        model_builder = lambda: CopyNTM(**dict([(key, int(value)) for key, value in config["NTM"].items()]))
+    elif module == "TMazeNTMModule":
+        model_builder = lambda: TMazeNTMModule(**dict([(k, int(v)) for k, v in config["ModelParameters"].items()]))
+    else:
+        raise AssertionError(f"Unknown module specification: {module}")
 
     # Set seed
-    seed = config_get("HyperParameters", "seed")
+    seed = int(config_get("HyperParameters", "seed"))
     if seed:
         torch.manual_seed(seed)
         numpy.random.seed(seed)
@@ -116,7 +121,6 @@ def main():
 
 main.add_command(run)
 main.add_command(plot)
-# main.add_command(da.analyze_data)
 
 if __name__ == '__main__':
     main()

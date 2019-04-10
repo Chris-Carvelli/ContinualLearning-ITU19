@@ -277,5 +277,6 @@ class MultiSession(Session):
             except Exception as e:
                 print(f"Error in worker ({self.current_worker})")
                 traceback.print_exc()
+                self.current_worker += 1
         else:
             raise StopIteration()

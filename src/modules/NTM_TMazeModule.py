@@ -15,12 +15,12 @@ from src.utils import add_min_prob, parameter_stats
 class TMazeNTMModule(NTM):
     reward_inputs = 1
 
-    def __init__(self, memory_unit_size, max_memory=1, reward_inputs=1):
+    def __init__(self, memory_unit_size=2, max_memory=1, reward_inputs=1, view_size: int = None):
         super().__init__(memory_unit_size, max_memory=max_memory, overwrite_mode=True)
 
         self.reward_inputs = reward_inputs
-        view_size = minigrid.AGENT_VIEW_SIZE
-
+        if view_size is None:
+            view_size = minigrid.AGENT_VIEW_SIZE
         if view_size <= 3:
             self.image_conv = lambda x: x.unsqueeze(0)
             self.nn = nn.Sequential(
@@ -55,8 +55,6 @@ class TMazeNTMModule(NTM):
                 nn.Linear(output_size + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
                 nn.Sigmoid(),
             )
-
-
 
         self.add_tensors = {}
         self.init()
