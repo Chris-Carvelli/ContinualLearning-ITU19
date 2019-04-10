@@ -35,7 +35,6 @@ class PolicyNN(nn.Module):
         for name, tensor in sorted(params):
             to_add = self.add_tensors[tensor.size()]
             to_add.normal_(0.0, sigma)
-
             tensor.data.add_(to_add)
 
     def init(self):

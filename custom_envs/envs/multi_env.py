@@ -57,10 +57,10 @@ class MultiEnv(gym.Env):
         return obs, score, done, info
 
     def reset(self):
-        self.i: int = 0
+        self.i = 0
         self._set_env(self.schedule[self.i][0])
         self.rewards = []
-        self.round: int = 0
+        self.round = 0
         state = self.env.reset()
         obs = self._get_obs(state)
         return obs

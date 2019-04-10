@@ -1,15 +1,20 @@
 import random
+import time
 from typing import List, Tuple
 from gym_minigrid.minigrid import *
 from gym_minigrid.minigrid import Grid
 
 from custom_envs.envs.multi_env import MultiEnv
+import gym_minigrid.minigrid as minigrid
 
 
 class SingleTMaze(MiniGridEnv):
     is_double = False
+    reward_values = dict(goal=1, fake_goal=0.1)
+    view_size: int = None
 
-    def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False):
+    def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False, view_size=None):
+        self.view_size = view_size
         self.is_double = is_double
         self.reward_position = reward_position
         self.corridor_length = corridor_length
@@ -26,6 +31,7 @@ class SingleTMaze(MiniGridEnv):
             max_steps=max_steps,
             see_through_walls=True  # True for maximum performance
         )
+        self.reward_range = (min(self.reward_values["fake_goal"], 0), self.reward_values["goal"])
 
     def _gen_grid(self, width, height):
         # Create an empty grid
@@ -54,6 +60,22 @@ class SingleTMaze(MiniGridEnv):
         reward_positions = self._reward_positions(width, height)
         self._gen_rewards(reward_positions)
 
+    def _adjust_viewsize(self, state):
+        if self.view_size and self.view_size < minigrid.AGENT_VIEW_SIZE:
+            assert self.view_size % 2 == 1
+            offset = (minigrid.AGENT_VIEW_SIZE - self.view_size) // 2
+            state["image"] = state["image"][offset:-offset, -self.view_size:, :]
+        return state
+
+    def step(self, action):
+        obs, score, done, info = super().step(action)
+        obs = self._adjust_viewsize(obs)
+        return obs, score, done, info
+
+    def reset(self):
+        state = super().reset()
+        return self._adjust_viewsize(state)
+
     def _reward_positions(self, width, height):
         reward_positions = [
             (1, 1),
@@ -69,11 +91,11 @@ class SingleTMaze(MiniGridEnv):
         min_steps = (1 + 2 * self.corridor_length)
         redundant_steps = max(0, self.step_count - min_steps)
         max_steps = self.max_steps - min_steps + 1
-        max_reward = 0.1
         cell = self.grid.get(self.agent_pos[0], self.agent_pos[1])
+        max_reward = self.reward_values["fake_goal"]
         if hasattr(cell, "is_goal") and cell.is_goal:
-            max_reward = 0.9
-        return max_reward * (1 - min(1, (redundant_steps / max_steps)))
+            max_reward = self.reward_values["goal"]
+        return min(max_reward, max_reward * (1 - min(1, (redundant_steps / max_steps))))
 
     def _gen_rewards(self, rewards_pos: List[Tuple[int, int]]):
         for i, (x, y) in enumerate(rewards_pos):
@@ -89,24 +111,29 @@ class SingleTMaze(MiniGridEnv):
         assert goal.is_goal
         start_color = goal.color
         goal.color = 'blue'
-        super().render(mode, close, **kwargs)
+        ret = super().render(mode, close, **kwargs)
         goal.color = start_color
+        return ret
 
 
 class TMaze(MultiEnv):
     cyclic_order = True
     print_render_buffer = ""
+    explored_corners: List[Tuple[int, int]] = None
 
-    def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=False, cyclic_order=True):
+    @property
+    def view_size(self):
+        return self.env.view_size
+
+    def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=False, cyclic_order=True,
+                 view_size=None):
         self.cyclic_order = cyclic_order
-        envs = [SingleTMaze(corridor_length, 0, max_steps),
-                SingleTMaze(corridor_length, 1, max_steps)]
+        envs = [SingleTMaze(corridor_length, 0, max_steps, view_size=view_size),
+                SingleTMaze(corridor_length, 1, max_steps, view_size=view_size)]
         self.rnd_order = rnd_order
         if self.rnd_order:
             random.shuffle(envs)
-
         super().__init__(envs, rounds_pr_side)
-        self.total_rounds = self.total_rounds - 2
 
     def reset(self):
         if self.rnd_order:
@@ -117,7 +144,9 @@ class TMaze(MultiEnv):
         return super().reset()
 
     def step(self, action):
+        current_round = int(self.round)
         obs, score, done, info = super().step(action)
+
         if obs["reward"] != 0:
             if not self.print_render_buffer.endswith("["):
                 self.print_render_buffer += f' ,{obs["reward"]}'
@@ -128,12 +157,18 @@ class TMaze(MultiEnv):
             if not done:
                 self.print_render_buffer += f"{self.env.mission}: Rewards=["
         if done:
-            self.print_render_buffer +="<END>"
+            self.print_render_buffer += "<END>"
+
+        if current_round == 0:
+            score = 0
+        else:
+            score = score * self.total_rounds / (self.total_rounds - 2)
         return obs, score, done, info
 
     def on_env_change(self):
         if self.i == 0 and self.round == 0:
             self.print_render_buffer += f"{self.env.mission}: Rewards=["
+        self.explored_corners = []
 
     def seed(self, seed=None):
         if self.rnd_order:
@@ -147,7 +182,7 @@ class TMaze(MultiEnv):
             if self.print_render_buffer.endswith("<END>"):
                 print(self.print_render_buffer.rstrip("<END>"))
         else:
-            super().render(mode, **kwargs)
+            return super().render(mode, **kwargs)
 
 
 def test_one_shot_tmaze():
@@ -174,8 +209,8 @@ def test_one_shot_tmaze():
 
 def test_tmaze():
     import time
-    rounds = 2
-    length = 1
+    rounds = 3
+    length = 10
     env = TMaze(length, rounds)
     env.seed(1)
     state = env.reset()
@@ -187,24 +222,38 @@ def test_tmaze():
     # right = 1
     # forward = 2
     # toggle = 5
-    actions = [2] * length + [1] + [2] * length + \
-              ([2] * length + [0] + [2] * length) * rounds + \
-              ([2] * length + [1] + [2] * length) * (rounds - 1) \
-        # + ([2] * length + [1] + [2] * length)
+    actions = ([2] * length + [0] + [2] * length) * rounds * 2
+    # actions = [2] * length + [1] + [2] * length + \
+    #           ([2] * length + [0] + [2] * length) * rounds + \
+    #           ([2] * length + [1] + [2] * length) * (rounds - 1) \
+    # + ([2] * length + [1] + [2] * length)
     # env.render()
     total_reward = 0
     for a in actions:
         state, reward, done, info = env.step(a)
-        # time.sleep(.5)
-        env.render("print")
+        # env.render("print")
+        env.render()
+        time.sleep(.5)
         total_reward += reward
         del state["image"]
         print(reward, done, state)
-        if done:
-            assert total_reward >= 1
+    print(total_reward)
+    assert total_reward >= 1
     time.sleep(1)
 
 
 if __name__ == '__main__':
     # test_one_shot_tmaze()
-    test_tmaze()
+    # test_tmaze()
+    env = TMaze(view_size=3, corridor_length=1)
+    # env.view_size =
+
+    # state, reward, done, info = env.step(2)
+    s = env.reset()
+    i = 0
+    print(s["image"][:, :, i])
+    # env.render("human")
+
+    for action in [2, 0, 2]:
+        obs, score, done, info = env.step(action)
+        print(obs["image"][:, :, i])

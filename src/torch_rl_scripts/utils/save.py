@@ -5,7 +5,8 @@ import json
 import logging
 import sys
 
-import utils as utils
+from src.torch_rl_scripts import utils
+
 
 def get_model_path(model_dir):
     return os.path.join(model_dir, "model.pt")

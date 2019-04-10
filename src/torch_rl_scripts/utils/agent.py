@@ -1,6 +1,7 @@
 import torch
 
-import utils as utils
+from src.torch_rl_scripts import utils
+
 
 class Agent:
     """An abstraction of the behavior of an agent. The agent is able:

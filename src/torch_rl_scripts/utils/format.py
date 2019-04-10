@@ -6,7 +6,8 @@ import torch
 import torch_rl
 import gym
 
-import utils as utils
+from src.torch_rl_scripts import utils
+
 
 def get_obss_preprocessor(env_id, obs_space, model_dir):
     # Check if it is a MiniGrid environment
@@ -18,6 +19,19 @@ def get_obss_preprocessor(env_id, obs_space, model_dir):
             return torch_rl.DictList({
                 "image": preprocess_images([obs["image"] for obs in obss], device=device),
                 "text": preprocess_texts([obs["mission"] for obs in obss], vocab, device=device)
+            })
+        preprocess_obss.vocab = vocab
+
+    elif re.match("TMaze-.*", env_id):
+        obs_space = {"image": obs_space.spaces['image'].shape, "text": 100}
+
+        vocab = Vocabulary(model_dir, obs_space["text"])
+
+        def preprocess_obss(obss, device=None):
+            return torch_rl.DictList({
+                "image": preprocess_images([obs["image"] for obs in obss], device=device),
+                "text": preprocess_texts([obs["mission"] for obs in obss], vocab, device=device),
+                "reward": preprocess_images([obs["reward"] for obs in obss], device=device),
             })
         preprocess_obss.vocab = vocab
 
