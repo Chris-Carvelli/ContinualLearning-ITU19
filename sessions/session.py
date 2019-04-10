@@ -10,6 +10,7 @@ import threading
 import time
 import traceback
 
+from threading import Thread
 from sessions.dirtools import Dir
 from git import Repo
 from pathlib import Path
@@ -279,4 +280,43 @@ class MultiSession(Session):
                 traceback.print_exc()
                 self.current_worker += 1
         else:
+            raise StopIteration()
+
+
+class MultiThreadedSession(Session):
+    """Works like a MultiSession except all workers work concurrently"""
+
+    def __init__(self, workers, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True):
+        self.workers = workers
+        self.status_done = [False] * len(workers)
+        self.status_error = [False] * len(workers)
+        super().__init__(None, name, save_folder=save_folder, repo_dir=repo_dir, ignore_file=ignore_file,
+                         ignore_warnings=ignore_warnings)
+        self.worker = self
+
+    def _iterate_thread(self, worker_id: int):
+        try:
+            self.workers[worker_id].iterate()
+        except StopIteration:
+            print(f"Finished worker ({worker_id})")
+            self.status_done[worker_id] = True
+        except Exception as e:
+            self.status_done[worker_id] = True
+            self.status_error[worker_id] = True
+            print(f"Error in worker ({worker_id})")
+            traceback.print_exc()
+
+    def iterate(self):
+        if not all(self.status_done):
+            threads = []
+            for id in range(len(self.workers)):
+                if not self.status_done[id]:
+                    threads.append(Thread(target=self._iterate_thread, args=[id]))
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+        else:
+            if any(self.status_error):
+                print(f"WARNING: Encountered errors in {sum(self.status_error)} workers")
             raise StopIteration()

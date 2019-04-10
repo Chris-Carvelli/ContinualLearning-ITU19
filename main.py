@@ -1,19 +1,16 @@
 import os
 import random
-import click
 import numpy
 import torch
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 from data_analyzer import *
 from custom_envs import *
 from configparser import ConfigParser
 from pathlib import Path
-from sessions.session import Session, MultiSession
+from sessions.session import Session, MultiSession, MultiThreadedSession
 from src.modules.CopyNTM import CopyNTM
 from src.modules.NTM_TMazeModule import TMazeNTMModule
-from tests.minigrid.utils import lowpriority
+from src.utils import lowpriority
 from src.ga import GA
 
 
@@ -22,7 +19,8 @@ from src.ga import GA
 @click.option('--config_folder', default="config_files/copy", help="folder where the config file is located")
 @click.option('--session_name', default=None, type=str, help='Session name. Default/None means same as config_file')
 @click.option('--multi_session', default=1, help='Repeat experiment as a multi-session n times if n > 1')
-def run(config_name, config_folder, session_name, multi_session):
+@click.option('--mt', is_flag=True, help='use multiple thread for multi-session')
+def run(config_name, config_folder, session_name, multi_session, mt):
     lowpriority()
     if session_name is None:
         session_name = config_name if multi_session <= 1 else f"{config_name}-x{multi_session}"
@@ -45,8 +43,9 @@ def run(config_name, config_folder, session_name, multi_session):
         raise AssertionError(f"Unknown module specification: {module}")
 
     # Set seed
-    seed = int(config_get("HyperParameters", "seed"))
+    seed = config_get("HyperParameters", "seed")
     if seed:
+        seed = int(seed)
         torch.manual_seed(seed)
         numpy.random.seed(seed)
         random.seed(seed)
@@ -56,7 +55,10 @@ def run(config_name, config_folder, session_name, multi_session):
     for i in range(max(1, multi_session)):
         workers.append(GA(f"{config_folder}/{config_name}", model_builder=model_builder))
     if multi_session > 1:
-        session = MultiSession(workers, session_name)
+        if mt:
+            session = MultiThreadedSession(workers, session_name)
+        else:
+            session = MultiSession(workers, session_name)
     else:
         session = Session(workers[0], session_name)
 
