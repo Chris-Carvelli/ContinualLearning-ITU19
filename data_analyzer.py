@@ -7,6 +7,7 @@ import sessions.session
 import seaborn as sns
 import matplotlib.pyplot as plt
 import click
+from src.ga import GA
 
 pandas.set_option('display.max_columns', 20)
 pandas.set_option('display.width', 1000)
@@ -43,9 +44,6 @@ def get_results_from_session(use_explorer):
                     return os.getcwd() + "\\" + session_directories[index]
                     break
 
-def get_session(path):
-    return load_session(path)
-
 def print_possible_folders(directories_list):
     print("Results folders: ")
     i = 0
@@ -54,12 +52,14 @@ def print_possible_folders(directories_list):
         i = i + 1
 
 def results_to_dataframe(results):
+    print(results)
     if isinstance(results, sessions.session.MultiSession):
         workers = results.workers
-    elif isinstance(results, sessions.session.Session):
-        workers = results.worker
+        is_single = False
     else:
+        print("ERROR! Something is weird")
         workers = [results]
+        is_single = True
 
     d = []
     # ret = (median_score, mean_score, max_score, self.evaluations_used, self.scored_parents)
@@ -72,7 +72,7 @@ def results_to_dataframe(results):
             gen = gen + 1
         experiment_id = experiment_id + 1
     df = pandas.DataFrame(d)
-    return df
+    return df, is_single
 
 def get_ppo_results(path_to_log):
     df2 = pandas.read_csv(path_to_log+"\\log.csv")
@@ -92,12 +92,13 @@ def analyze_data(ppo_results, session_results):
         res_path = session_results
 
     # Get session and put the data in data frame
-    result_session = get_session(res_path)
-    df = results_to_dataframe(result_session)
+    result_session = load_session(res_path)
+    df, is_single = results_to_dataframe(result_session)
 
-    # Plot runs against each other
-    sns.lineplot(x="generation", y="max_score", hue="run", data=df).set_title("Max Score per run")
-    plt.show()
+    # Plot runs against each other if it's a multi-session
+    if not is_single:
+        sns.lineplot(x="generation", y="max_score", hue="run", data=df).set_title("Max Score per run")
+        plt.show()
 
     # ppo_results = "C:\\Users\\Luka\\Documents\\Python\\minigrid_rl\\torch-rl\\storage\\DoorKey"
     # Get results as dataframe from minigrid_rl. You need to provide the path of the log
@@ -110,8 +111,9 @@ def analyze_data(ppo_results, session_results):
         print(df2)
         # df = df.set_index('generation').join(df2.set_index('update'))
 
-    # Combine all runs into one and do an average of the results
-    df = df.groupby('generation').mean()
+    # Combine all runs into one and do an average of the results if is multisession
+    if not is_single:
+        df = df.groupby('generation').mean()
     # Plot combined data
     joined_data = [df['mean_score'], df['max_score'], df['median_score']]
     joined_data_plot = sns.lineplot(data=joined_data).set_title("Max, Mean and Median Score Averaged over all runs")
