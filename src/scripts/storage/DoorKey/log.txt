@@ -1,0 +1,4 @@
+C:/Users/Luka/Documents/Python/ContinualLearning-ITU19/src/scripts/train.py --algo ppo --env MiniGrid-DoorKey-5x5-v0 --model DoorKey --save-interval 10
+
+Namespace(algo='ppo', batch_size=256, clip_eps=0.2, discount=0.99, entropy_coef=0.01, env='MiniGrid-DoorKey-5x5-v0', epochs=4, frames=10000000, frames_per_proc=None, gae_lambda=0.95, log_interval=1, lr=0.0007, max_grad_norm=0.5, mem=False, model='DoorKey', optim_alpha=0.99, optim_eps=1e-05, procs=16, recurrence=1, save_interval=10, seed=1, tb=False, text=False, value_loss_coef=0.5)
+

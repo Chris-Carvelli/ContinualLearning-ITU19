@@ -3,10 +3,10 @@ import random
 import click
 import numpy
 import torch
-import data_analyzer as da
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from data_analyzer import *
 from custom_envs import *
 from configparser import ConfigParser
 from pathlib import Path
@@ -64,15 +64,47 @@ def run(config_name, config_folder, session_name, multi_session):
 
 
 @click.command()
-def plot():
-    while True:
-        res = da.get_results_from_session()
-        df = da.results_to_dataframe(res)
-        print(df)
-        sns.lineplot(x='generation', y='max_score', hue='run', data=df,
-                     err_style="bars", ci='run')
-        plt.legend()
-        plt.show()
+@click.option('--ppo_results', default='', help='Path to .csv file containing results of PPO')
+@click.option('--session_results', default='', help='Path to .ses folder to analyze')
+def plot(ppo_results, session_results):
+    # Get path to session
+    # If not provided as argument propmt the user
+    if not session_results:
+        # True -> Use explorer
+        # False -> Use terminal
+        res_path = get_path_to_session(False)
+    else:
+        res_path = session_results
+
+    # Get session and put the data in data frame
+    result_session = get_session(res_path)
+    df = results_to_dataframe(result_session)
+
+    # Plot runs against each other
+    sns.lineplot(x="generation", y="max_score", hue="run", data=df).set_title("Max Score per run")
+    plt.show()
+
+    # ppo_results = "C:\\Users\\Luka\\Documents\\Python\\minigrid_rl\\torch-rl\\storage\\DoorKey"
+    # Get results as dataframe from minigrid_rl. You need to provide the path of the log
+    if ppo_results:
+        df2 = get_ppo_results(ppo_results)
+        # print(df2.columns.values)
+        print(df.columns.values)
+        print(df2.columns.values)
+        # print(df2)
+        print(df2)
+        # df = df.set_index('generation').join(df2.set_index('update'))
+
+    # Combine all runs into one and do an average of the results
+    df = df.groupby('generation').mean()
+    # Plot combined data
+    joined_data = [df['mean_score'], df['max_score'], df['median_score']]
+    joined_data_plot = sns.lineplot(data=joined_data).set_title("Max, Mean and Median Score Averaged over all runs")
+    plt.xlabel('Generations')
+    plt.ylabel('Score')
+    plt.legend(['mean', 'max', 'median'])
+
+    plt.show()
 
 
 @click.group()
@@ -82,6 +114,7 @@ def main():
 
 main.add_command(run)
 main.add_command(plot)
+# main.add_command(da.analyze_data)
 
 if __name__ == '__main__':
     main()

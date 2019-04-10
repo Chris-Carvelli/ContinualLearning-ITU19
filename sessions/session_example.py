@@ -17,6 +17,8 @@ class MyExperiment:
             raise StopIteration()
         self.current += [x for x in range(1000)]
         self.count += 1
+        print(self.count)
+        time.sleep(0.1)
         return sum(self.current)
 
 
