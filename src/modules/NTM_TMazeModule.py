@@ -183,7 +183,7 @@ if __name__ == '__main__':
     # Test dill serialization
     # import dill
     # import sys
-    # from pathlib import PurePath as Path
+    # from pathlib import Path
     # dill.dump(ntm, open(Path(sys.argv[0]).parent / "test.dill", "wb"))
     # ntm2 = dill.load(open(Path(sys.argv[0]).parent / "test.dill", "rb"))
     # print(ntm)

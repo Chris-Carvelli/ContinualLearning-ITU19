@@ -147,12 +147,7 @@ class TMaze(MultiEnv):
         current_round = int(self.round)
         obs, score, done, info = super().step(action)
 
-        if obs["reward"] == 0:
-            obs["reward"] = 0.5
-        if obs["reward"] == self.env.reward_values["fake_goal"]:
-            obs["reward"] = 0
-
-        if obs["reward"] != 0.5:
+        if obs["reward"] != 0:
             if not self.print_render_buffer.endswith("["):
                 self.print_render_buffer += f' ,{obs["reward"]}'
             else:

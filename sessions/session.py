@@ -12,7 +12,7 @@ import traceback
 
 from sessions.dirtools import Dir
 from git import Repo
-from pathlib import PurePath as Path
+from pathlib import Path
 
 
 def get_input(valid_inputs=("y", "n")):
@@ -56,10 +56,10 @@ def load_session(path, use_backup=True):
 
 class Session:
     """A session represents some work that needs to be done and saved, and possibly paused"""
-    repo_dir = Path(os.path.dirname(os.path.abspath(__file__)))
     is_finished = False  # True when the session has finished all the work
     ignore_uncommited_changes_to_main = True
     runtime = datetime.timedelta()
+    _repo_dir = Path(os.path.dirname(os.path.abspath(__file__)))
 
     def __init__(self, worker, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True):
         """
@@ -75,25 +75,29 @@ class Session:
         self.ignore_warnings = ignore_warnings
         self.terminate = False
         if repo_dir is not None:
-            self.repo_dir = repo_dir
+            self._repo_dir = str(repo_dir)
         while ".git" not in os.listdir(self.repo_dir):
             if self.repo_dir == self.repo_dir.parent:
                 raise Exception(f"Could not find a .git folder while searching the directory tree")
-            self.repo_dir = self.repo_dir.parent
-
+            self._repo_dir = str(self.repo_dir.parent)
         self.repo = Repo(self.repo_dir)
 
         self.worker = worker
         self.name = name
         self.ignore_file = ignore_file
-        self.save_folder = save_folder
-        if self.save_folder is None:
-            self.save_folder = Path(os.path.dirname(sys.argv[0])) / "Experiments"
-            if not os.path.exists(self.save_folder):
-                os.makedirs(self.save_folder)
-        self.save_folder = Path(self.save_folder) / (self.name + ".ses")
-        if not os.path.exists(self.save_folder):
-            os.makedirs(self.save_folder)
+        if save_folder is None:
+            self._save_folder = f"Experiments/"
+        else:
+            self._save_folder = str(Path("Experiments") / save_folder)
+        os.makedirs(self.save_folder, exist_ok=True)
+
+    @property
+    def repo_dir(self):
+        return Path(self._repo_dir)
+
+    @property
+    def save_folder(self):
+        return Path(os.path.dirname(sys.argv[0])) / self._save_folder / (self.name + ".ses")
 
     def _session_data(self):
         return self.worker, self.repo.head.commit.hexsha, self.is_finished, self.runtime
