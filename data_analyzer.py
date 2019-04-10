@@ -6,6 +6,7 @@ from sessions.session import load_session
 import sessions.session
 import seaborn as sns
 import matplotlib.pyplot as plt
+import click
 
 pandas.set_option('display.max_columns', 20)
 pandas.set_option('display.width', 1000)
@@ -39,8 +40,11 @@ def get_results_from_session(use_explorer):
                 if index >= len(session_directories) and index >= 0:
                     print("Index too large")
                 else:
-                    return load_session(os.getcwd() + "\\" + session_directories[index])
+                    return os.getcwd() + "\\" + session_directories[index]
                     break
+
+def get_session(path):
+    return load_session(path)
 
 def print_possible_folders(directories_list):
     print("Results folders: ")
@@ -74,26 +78,49 @@ def get_ppo_results(path_to_log):
     df2 = pandas.read_csv(path_to_log+"\\log.csv")
     return df2
 
+@click.command()
+@click.option('--ppo_results', default='', help='Path to .csv file containing results of PPO')
+@click.option('--session_results', default='', help='Path to .ses folder to analyze')
+def analyze_data(ppo_results, session_results):
+    # Get path to session
+    # If not provided as argument propmt the user
+    if not session_results:
+        # True -> Use explorer
+        # False -> Use terminal
+        res_path = get_results_from_session(False)
+    else:
+        res_path = session_results
 
+    # Get session and put the data in data frame
+    result_session = get_session(res_path)
+    df = results_to_dataframe(result_session)
 
-# Get results from selected session
-# True -> Use explorer
-# False -> Use terminal
-res = get_results_from_session(False)
-df = results_to_dataframe(res)
+    # Plot runs against each other
+    sns.lineplot(x="generation", y="max_score", hue="run", data=df).set_title("Max Score per run")
+    plt.show()
 
-# Get results as dataframe from minigrid_rl. You need to provide the path of the log
-df2 = get_ppo_results("C:\\Users\\Luka\\Documents\\Python\\minigrid_rl\\torch-rl\\storage\\DoorKey")
-#print(df2.columns.values)
-print(df.columns.values)
-print(df2.columns.values)
-#print(df2)
+    # ppo_results = "C:\\Users\\Luka\\Documents\\Python\\minigrid_rl\\torch-rl\\storage\\DoorKey"
+    # Get results as dataframe from minigrid_rl. You need to provide the path of the log
+    if ppo_results:
+        df2 = get_ppo_results(ppo_results)
+        # print(df2.columns.values)
+        print(df.columns.values)
+        print(df2.columns.values)
+        # print(df2)
+        print(df2)
+        # df = df.set_index('generation').join(df2.set_index('update'))
 
-df = df.set_index('generation').join(df2.set_index('update'))
-print(df)
-#sns.lineplot(x='generation', y='max_score', hue='run', data=df2, err_style="bars", ci='run')
-sns.lineplot(data=df[['return_max', 'max_score']])
+    # Combine all runs into one and do an average of the results
+    df = df.groupby('generation').mean()
+    # Plot combined data
+    joined_data = [df['mean_score'], df['max_score'], df['median_score']]
+    joined_data_plot = sns.lineplot(data=joined_data).set_title("Max, Mean and Median Score Averaged over all runs")
+    plt.xlabel('Generations')
+    plt.ylabel('Score')
+    plt.legend(['mean', 'max', 'median'])
 
-plt.legend()
+    plt.show()
 
-plt.show()
+if __name__ == "__main__":
+    analyze_data()
+
