@@ -1,18 +1,15 @@
 import os
 import random
 import click
-import sys
-from configparser import ConfigParser
-from pathlib import Path
-
 import numpy
 import torch
-
 import data_analyzer as da
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 from custom_envs import *
+from configparser import ConfigParser
+from pathlib import Path
 from sessions.session import Session, MultiSession
 from src.modules.CopyNTM import CopyNTM
 from tests.minigrid.utils import lowpriority
@@ -25,6 +22,7 @@ from src.ga import GA
 @click.option('--session_name', default=None, type=str, help='Session name. Default/None means same as config_file')
 @click.option('--multi_session', default=1, help='Repeat experiment as a multi-session n times if n > 1')
 def run(config_name, config_folder, session_name, multi_session):
+    lowpriority()
     if session_name is None:
         session_name = config_name if multi_session <= 1 else f"{config_name}-x{multi_session}"
 
@@ -34,33 +32,34 @@ def run(config_name, config_folder, session_name, multi_session):
     assert len(read_ok) > 0
 
     def config_get(section, key, default=None):
-        if section in config and key in config[section]:
-            return config[section][key]
-        return default
+        return config[section][key] if section in config and key in config[section] else default
 
+    # Define modules here
     if config_get("Controller", "module") == "CopyNTM":
         kwargs = dict([(key, int(value)) for key, value in config["NTM"].items()])
         model_builder = lambda: CopyNTM(**kwargs)
 
-    lowpriority()
+    # Set seed
     seed = config_get("HyperParameters", "seed")
     if seed:
         torch.manual_seed(seed)
         numpy.random.seed(seed)
         random.seed(seed)
 
+    # Create worker(s) and session
     workers = []
     for i in range(max(1, multi_session)):
         workers.append(GA(f"{config_folder}/{config_name}", model_builder=model_builder))
-
     if multi_session > 1:
         session = MultiSession(workers, session_name)
     else:
         session = Session(workers[0], session_name)
 
+    # Copy config file to session folder
     if not os.path.isfile(Path(session.save_folder) / "config"):
         with open(Path(session.save_folder) / "config", "a") as fp:
             config.write(fp)
+
     session.start()
 
 
