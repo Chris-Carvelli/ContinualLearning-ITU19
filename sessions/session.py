@@ -1,19 +1,42 @@
 import datetime
 import os
-# import pickle
+import sys
 from typing import Callable
 
 import dill
 import shutil
 import sys
-import threading
 import time
 import traceback
+import multiprocessing
 
-from threading import Thread
+from multiprocessing import Process, Queue
+
 from sessions.dirtools import Dir
 from git import Repo
 from pathlib import Path
+
+
+class Logger:
+    """Copies terminal output to a file"""
+
+    def __init__(self, filepath: str):
+        self.terminal = sys.stdout
+        target = Path(filepath)
+        self.log = open(target, "a")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def stop(self):
+        sys.stdout = self.terminal
+
+    def start(self):
+        sys.stdout = self
+
+    def flush(self):
+        self.terminal.flush()
 
 
 def get_input(valid_inputs=("y", "n")):
@@ -91,6 +114,7 @@ class Session:
         else:
             self._save_folder = str(Path("Experiments") / save_folder)
         os.makedirs(self.save_folder, exist_ok=True)
+        self.logger = Logger(self.save_folder / "log.txt")
 
     @property
     def repo_dir(self):
@@ -168,6 +192,8 @@ class Session:
     def start(self, on_load: Callable[['Session'], None] = None):
         """Starts the session. It will guide the user throug a series of questions about choices for the session
         regarding git status and restarting/overwriting previous sessions"""
+        self.logger.start()
+        print(f"--- {self.name} ---")
         status = self.check_git_status()
         if not status:
             if self.ignore_warnings:
@@ -256,6 +282,14 @@ class Session:
         self.is_finished = True
         self.save_data("session", self._session_data())
         print(f"Session done ({self.name}) in total time: {self.runtime}")
+        self.logger.stop()
+
+    # serialization
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        if "logger" in state:
+            del state['logger']
+        return state
 
 
 class MultiSession(Session):
@@ -286,37 +320,78 @@ class MultiSession(Session):
 class MultiThreadedSession(Session):
     """Works like a MultiSession except all workers work concurrently"""
 
-    def __init__(self, workers, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True):
+    def __init__(self, workers, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True,
+                 thread_count: int = None):
         self.workers = workers
         self.status_done = [False] * len(workers)
         self.status_error = [False] * len(workers)
+        self.status_working = [False] * len(workers)
         super().__init__(None, name, save_folder=save_folder, repo_dir=repo_dir, ignore_file=ignore_file,
                          ignore_warnings=ignore_warnings)
         self.worker = self
+        self.i = 0
 
-    def _iterate_thread(self, worker_id: int):
+        self._thread_count = thread_count
+
+    @property
+    def thread_count(self):
+        return min(len(self.workers),
+                   self._thread_count if self._thread_count is not None else multiprocessing.cpu_count())
+
+    def _get_next_worker(self):
+        i = int(self.i)
+        self.i = (self.i + 1) % len(self.workers)
+        for _ in range(len(self.workers)):
+            if not self.status_done[i] and not self.status_working[i]:
+                return i, self.workers[i]
+            i = (i + 1) % len(self.workers)
+
+    def _run(self):
+        """Don't call explicitly. Instead use start()
+                Lets the worker (continue) work until interrupted or finished
+                """
+        queue = Queue()
+
+        for i in range(self.thread_count):
+            res = self._get_next_worker()
+            if res:
+                i, worker = res
+                self.status_working[i] = True
+                p = Process(target=self._process_worker, args=(i, worker, queue))
+                p.start()
+
+        while any(self.status_working):
+            i, worker, done, error, runtime = queue.get()
+
+            self.workers[i] = worker
+            self.status_error[i] = error
+            self.status_done[i] = done
+            self.status_working[i] = False
+            self.runtime += runtime
+
+            res = self._get_next_worker()
+            if res:
+                i, worker = res
+                self.status_working[i] = True
+                p = Process(target=self._process_worker, args=(i, worker, queue))
+                p.start()
+        self.is_finished = True
+        self.save_data("session", self._session_data())
+
+        print(f"Session done ({self.name}) in total time: {self.runtime}")
+        self.logger.stop()
+
+    def _process_worker(self, worker_id: int, worker, queue: Queue):
+        done, error = False, False
+        starttime = datetime.datetime.now()
         try:
-            self.workers[worker_id].iterate()
+            worker.iterate()
         except StopIteration:
             print(f"Finished worker ({worker_id})")
-            self.status_done[worker_id] = True
+            done = True
         except Exception as e:
-            self.status_done[worker_id] = True
-            self.status_error[worker_id] = True
+            done, error = True, True
             print(f"Error in worker ({worker_id})")
             traceback.print_exc()
-
-    def iterate(self):
-        if not all(self.status_done):
-            threads = []
-            for id in range(len(self.workers)):
-                if not self.status_done[id]:
-                    threads.append(Thread(target=self._iterate_thread, args=[id]))
-            for t in threads:
-                t.start()
-            for t in threads:
-                t.join()
-        else:
-            if any(self.status_error):
-                print(f"WARNING: Encountered errors in {sum(self.status_error)} workers")
-            raise StopIteration()
+        runtime = (datetime.datetime.now() - starttime)
+        queue.put((worker_id, worker, done, error, runtime))

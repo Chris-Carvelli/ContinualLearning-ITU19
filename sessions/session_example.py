@@ -13,24 +13,30 @@ class MyExperiment:
         self.count = 0
 
     def iterate(self):
-        if self.count >= 10:
+        if self.count >= 3:
             raise StopIteration()
         self.current += [x for x in range(100)]
+        # if self.count > 2:
+        #     s = 0
+        #     while True:
+        #         s += 1
         self.count += 1
         print(self.count)
-        time.sleep(0.05)
+        time.sleep(1)
         return sum(self.current)
 
+if __name__ == '__main__':
 
-# S = Session(MyExperiment(), "TestSession")
-# S.start()
-#
-# # Example of MultiSession
-# ms = MultiSession([MyExperiment(), MyExperiment(), MyExperiment()], "TestSessions")
-# ms.start()
 
-# Example of MultiSession
-mts = MultiThreadedSession([MyExperiment(), MyExperiment(), MyExperiment(), MyExperiment(), MyExperiment()], "MTS")
-mts.start()
+    # S = Session(MyExperiment(), "TestSession")
+    # S.start()
+
+    # # Example of MultiSession
+    # ms = MultiSession([MyExperiment(), MyExperiment(), MyExperiment()], "TestSessions")
+    # ms.start()
+
+    # Example of MultiSession
+    mts = MultiThreadedSession([MyExperiment(), MyExperiment(), MyExperiment(), MyExperiment(), MyExperiment()], "MTS")
+    mts.start()
 
 

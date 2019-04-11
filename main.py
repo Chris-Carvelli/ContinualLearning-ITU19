@@ -56,7 +56,8 @@ def run(config_name, config_folder, session_name, multi_session, mt):
         workers.append(GA(f"{config_folder}/{config_name}", model_builder=model_builder))
     if multi_session > 1:
         if mt:
-            session = MultiThreadedSession(workers, session_name)
+            raise NotImplementedError("MultiThreadedSessin not yet implemented")
+            # session = MultiThreadedSession(workers, session_name)
         else:
             session = MultiSession(workers, session_name)
     else:
