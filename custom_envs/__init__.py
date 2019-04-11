@@ -40,6 +40,11 @@ def _register_envs():
             entry_point='custom_envs.envs:RandomCopy',
             kwargs=dict(height=h)
         )
+        register(
+            id=f"CopyRnd-{h}-10-v0",
+            entry_point='custom_envs.envs:RandomCopy',
+            kwargs=dict(height=h, min_length=1, max_length=12)
+        )
     for rounds in (1, 2, 5, 10, 20, 50, 100, 200, 500, 1000):
         for length in (1,2,3,4,5,6):
             register(

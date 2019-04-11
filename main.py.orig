@@ -2,7 +2,12 @@ import os
 import random
 import numpy
 import torch
+<<<<<<< HEAD
+import seaborn as sns
+import matplotlib.pyplot as plt
 import pandas as pd
+=======
+>>>>>>> 39fd0b390a95f34c3938ed82406c05328c07cc45
 
 from data_analyzer import *
 from custom_envs import *
@@ -35,7 +40,11 @@ class SessionResult:
 
 @click.command()
 @click.option('--config_name', default="config_ntm_copy_2", help="Name of the config file")
+<<<<<<< HEAD
+@click.option('--config_folder', default="config_files/copy/", help="folder where the config file is located")
+=======
 @click.option('--config_folder', default="config_files/copy", help="folder where the config file is located")
+>>>>>>> 39fd0b390a95f34c3938ed82406c05328c07cc45
 @click.option('--session_name', default=None, type=str, help='Session name. Default/None means same as config_file')
 @click.option('--multi_session', default=1, help='Repeat experiment as a multi-session n times if n > 1')
 @click.option('--mt', is_flag=True, help='use multiple thread for multi-session')

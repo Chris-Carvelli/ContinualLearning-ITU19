@@ -1,3 +1,5 @@
+import os
+import traceback
 from typing import List
 
 import dill
@@ -105,3 +107,27 @@ def model_diff(models: List[nn.Module], models2: List[nn.Module] = None, verbose
     if verbose:
         print(np.round(std_array, 2))
     return std_array
+
+
+def lowpriority():
+    """ Set the priority of the process to below-normal. Ispired by
+    https://stackoverflow.com/questions/1023038/change-process-priority-in-python-cross-platform"""
+
+    import sys
+    try:
+        sys.getwindowsversion()
+    except AttributeError:
+        is_windows = False
+    else:
+        is_windows = True
+
+    try:
+        if is_windows:
+            import psutil
+            p = psutil.Process(os.getpid())
+            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+        else:
+            os.nice(1)
+    except Exception as e:
+        print("Failed to save cpy priority to low. Reason:")
+        traceback.print_exc()
