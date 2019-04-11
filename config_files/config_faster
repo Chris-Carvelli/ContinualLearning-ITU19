@@ -16,9 +16,15 @@ env_key = MiniGrid-Empty-Noise-8x8-v0
 [Strategies]
 elite_selection = elites
 termination = all_generations
+sigma_strategy = linear10000-0.001
 
 [Utility]
 networked = 0
 
 [Controller]
+module = CopyNTM
 model_builder = base
+
+[NTM]
+copy_size = 8
+memory_unit_size = 20

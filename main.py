@@ -5,6 +5,7 @@ import numpy
 import torch
 import seaborn as sns
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from data_analyzer import *
 from custom_envs import *
@@ -15,10 +16,28 @@ from src.modules.CopyNTM import CopyNTM
 from tests.minigrid.utils import lowpriority
 from src.ga import GA
 
+class SessionResult:
+    def __init__(self, _path, _df=None, _name="NoName", _is_single=True):
+        self.split_df = None
+        self.session_path = _path
+        self.is_single = _is_single
+        if _df is None:
+            self.load_data()
+        else:
+            self.df = _df
+        self.name = _name
+
+    def load_data(self):
+        df, is_single = results_to_dataframe(load_session(self.session_path))
+        self.df = df
+        self.is_single = is_single
+        if not self.is_single:
+            self.split_df = self.df
+            self.df = self.df.groupby('generation').mean()
 
 @click.command()
 @click.option('--config_name', default="config_ntm_copy_2", help="Name of the config file")
-@click.option('--config_folder', default="config_files/", help="folder where the config file is located")
+@click.option('--config_folder', default="config_files/copy/", help="folder where the config file is located")
 @click.option('--session_name', default=None, type=str, help='Session name. Default/None means same as config_file')
 @click.option('--multi_session', default=1, help='Repeat experiment as a multi-session n times if n > 1')
 def run(config_name, config_folder, session_name, multi_session):
@@ -65,49 +84,76 @@ def run(config_name, config_folder, session_name, multi_session):
 
 @click.command()
 @click.option('--ppo_results', default='', help='Path to .csv file containing results of PPO')
-@click.option('--session_results', default='', help='Path to .ses folder to analyze')
-def plot(ppo_results, session_results):
+@click.option('--sessions_folder', default='', help='Path to folder containing session results')
+@click.option('--sessions_to_load', default='', help='name of session folder(s) (.ses); if you want multiple, separate with comma')
+def plot(ppo_results, sessions_folder, sessions_to_load):
+    # Get all sessions needed
+    session_names = sessions_to_load.replace(" ", "")
+    session_names = session_names.split(",")
+
+    results_objects = []
     # Get path to session
     # If not provided as argument propmt the user
-    if not session_results:
+    if not sessions_folder or not sessions_to_load:
         # True -> Use explorer
         # False -> Use terminal
         res_path = get_path_to_session(False)
+
+        results_objects.append(SessionResult(_path=res_path))
+
     else:
-        res_path = session_results
+        for name in session_names:
+            results_objects.append(SessionResult(_path=sessions_folder+name, _name=name))
+
 
     # Get session and put the data in data frame
-    result_session = load_session(res_path)
-    df, is_single = results_to_dataframe(result_session)
+    # result_session = load_session(res_path)
+    # df, is_single = results_to_dataframe(result_session)
 
     # Plot runs against each other if it's a multi-session
-    if not is_single:
-        sns.lineplot(x="generation", y="max_score", hue="run", data=df).set_title("Max Score per run")
-        plt.show()
+    for result in results_objects:
+        if not result.is_single:
+            sns.lineplot(x="generation", y="max_score", hue="run", data=result.split_df).set_title("Max Score per run")
+            plt.show()
 
+    # TODO: Make data comparable to PPO
     # ppo_results = "C:\\Users\\Luka\\Documents\\Python\\minigrid_rl\\torch-rl\\storage\\DoorKey"
     # Get results as dataframe from minigrid_rl. You need to provide the path of the log
     if ppo_results:
         df2 = get_ppo_results(ppo_results)
         # print(df2.columns.values)
-        print(df.columns.values)
+    #    print(df.columns.values)
         print(df2.columns.values)
         # print(df2)
         print(df2)
         # df = df.set_index('generation').join(df2.set_index('update'))
 
     # Combine all runs into one and do an average of the results if is multisession
-    if not is_single:
-        df = df.groupby('generation').mean()
-    # Plot combined data
-    joined_data = [df['mean_score'], df['max_score'], df['median_score']]
-    joined_data_plot = sns.lineplot(data=joined_data).set_title("Max, Mean and Median Score Averaged over all runs")
-    plt.xlabel('Generations')
-    plt.ylabel('Score')
-    plt.legend(['mean', 'max', 'median'])
+    #if not is_single:
+    #    df = df.groupby('generation').mean()
+    for result in results_objects:
+        joined_data = [result.df['mean_score'], result.df['max_score'], result.df['median_score']]
+        joined_data_plot = sns.lineplot(data=joined_data).set_title(result.name)
+        plt.xlabel('Generations')
+        plt.ylabel('Score')
+        plt.legend(['mean', 'max', 'median'])
+        plt.show()
 
+    mean_df = pd.DataFrame()
+    max_df = pd.DataFrame()
+    median_df = pd.DataFrame()
+
+    for result in results_objects:
+        mean_df[result.name] = result.df['mean_score']
+        max_df[result.name] = result.df['max_score']
+        median_df[result.name] = result.df['median_score']
+
+    sns.lineplot(data=mean_df).set_title("Mean")
     plt.show()
-
+    sns.lineplot(data=max_df).set_title("Max")
+    plt.show()
+    sns.lineplot(data=median_df).set_title("Median")
+    plt.show()
 
 @click.group()
 def main():
