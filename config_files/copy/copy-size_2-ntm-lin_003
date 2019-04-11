@@ -1,6 +1,6 @@
 [HyperParameters]
 population = 300
-max_generations = 10000
+max_generations = 1000
 max_evals = 1000
 max_reward = 1
 max_episode_eval = 100
@@ -12,7 +12,7 @@ n_elites = 5
 hyper_mode = 0
 
 [EnvironmentSettings]
-env_key = CopyRnd-1-10-v0
+env_key = CopyRnd-2-10-v0
 
 [Strategies]
 elite_selection = elites

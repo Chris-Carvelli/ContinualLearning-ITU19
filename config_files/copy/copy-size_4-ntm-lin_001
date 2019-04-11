@@ -12,12 +12,12 @@ n_elites = 5
 hyper_mode = 0
 
 [EnvironmentSettings]
-env_key = CopyRnd-1-10-v0
+env_key = CopyRnd-4-10-v0
 
 [Strategies]
 elite_selection = elites
 termination = max_gen_or_reward
-sigma_strategy = constant
+sigma_strategy = linear1000-0.1
 
 [Utility]
 networked = 0
@@ -27,5 +27,5 @@ module = CopyNTM
 model_builder = base
 
 [NTM]
-copy_size = 1
-memory_unit_size = 2
+copy_size = 4
+memory_unit_size = 8
