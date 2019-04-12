@@ -5,10 +5,13 @@ from src.modules.NTM_Module import NTM
 
 
 class CopyNTM(NTM):
-    def __init__(self, copy_size=None, max_memory=10000, memory_unit_size=None):
+    clip: float = None
+
+    def __init__(self, copy_size=None, max_memory=10000, memory_unit_size=None, clip=None):
         if memory_unit_size is None:
             memory_unit_size = copy_size + 2
         super().__init__(memory_unit_size, max_memory=max_memory)
+        self.clip = clip
         self.in_size = copy_size + 2
         self.out_size = copy_size
         hidden_size = 100
@@ -27,6 +30,11 @@ class CopyNTM(NTM):
             to_add = self.add_tensors[tensor.size()]
             to_add.normal_(0.0, sigma)
             tensor.data.add_(to_add)
+            if self.clip:
+                if ".bias" in name:
+                    tensor.data.clamp_(-3*self.clip, 3*self.clip)
+                else:
+                    tensor.data.clamp_(-self.clip, self.clip)
 
     def init(self):
         for name, tensor in self.named_parameters():
