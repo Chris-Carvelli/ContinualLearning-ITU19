@@ -20,7 +20,7 @@ class TMazeNTMModule(NTM):
 
         self.reward_inputs = reward_inputs
         if view_size is None:
-            view_size = minigrid.AGENT_VIEW_SIZE
+            view_size = 7
         if view_size <= 3:
             self.image_conv = lambda x: x.unsqueeze(0)
             self.nn = nn.Sequential(

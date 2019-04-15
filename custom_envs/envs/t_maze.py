@@ -29,7 +29,8 @@ class SingleTMaze(MiniGridEnv):
         super().__init__(
             grid_size=3 + 2 * corridor_length,
             max_steps=max_steps,
-            see_through_walls=True  # True for maximum performance
+            see_through_walls=True,  # True for maximum performance
+            agent_view_size=view_size,
         )
         self.reward_range = (min(self.reward_values["fake_goal"], 0), self.reward_values["goal"])
 
@@ -59,22 +60,6 @@ class SingleTMaze(MiniGridEnv):
         # Create rewards
         reward_positions = self._reward_positions(width, height)
         self._gen_rewards(reward_positions)
-
-    def _adjust_viewsize(self, state):
-        if self.view_size and self.view_size < minigrid.AGENT_VIEW_SIZE:
-            assert self.view_size % 2 == 1
-            offset = (minigrid.AGENT_VIEW_SIZE - self.view_size) // 2
-            state["image"] = state["image"][offset:-offset, -self.view_size:, :]
-        return state
-
-    def step(self, action):
-        obs, score, done, info = super().step(action)
-        obs = self._adjust_viewsize(obs)
-        return obs, score, done, info
-
-    def reset(self):
-        state = super().reset()
-        return self._adjust_viewsize(state)
 
     def _reward_positions(self, width, height):
         reward_positions = [
