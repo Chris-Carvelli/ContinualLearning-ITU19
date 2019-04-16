@@ -39,7 +39,8 @@ class SessionResult:
 @click.option('--session_name', default=None, type=str, help='Session name. Default/None means same as config_file')
 @click.option('--multi_session', default=1, help='Repeat experiment as a multi-session n times if n > 1')
 @click.option('--mt', is_flag=True, help='use multiple thread for multi-session')
-def run(config_name, config_folder, session_name, multi_session, mt):
+@click.option('--pe', is_flag=True, help='Parallel (sequential) execution for multi-session')
+def run(config_name, config_folder, session_name, multi_session, mt, pe):
     lowpriority()
     if session_name is None:
         session_name = config_name if multi_session <= 1 else f"{config_name}-x{multi_session}"
@@ -78,7 +79,7 @@ def run(config_name, config_folder, session_name, multi_session, mt):
             raise NotImplementedError("MultiThreadedSessin not yet implemented")
             # session = MultiThreadedSession(workers, session_name)
         else:
-            session = MultiSession(workers, session_name)
+            session = MultiSession(workers, session_name, parallel_execution=pe)
     else:
         session = Session(workers[0], session_name)
 
