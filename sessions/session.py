@@ -28,6 +28,7 @@ class Logger:
     def write(self, message):
         self.terminal.write(message)
         self.log.write(message)
+        self.log.flush()
 
     def stop(self):
         sys.stdout = self.terminal
@@ -192,6 +193,8 @@ class Session:
     def start(self, on_load: Callable[['Session'], None] = None):
         """Starts the session. It will guide the user throug a series of questions about choices for the session
         regarding git status and restarting/overwriting previous sessions"""
+        if not os.path.exists(self.save_folder):
+            os.makedirs(self.save_folder)
         self.logger.start()
         print(f"--- {self.name} ---")
         status = self.check_git_status()
@@ -203,8 +206,7 @@ class Session:
                 response = get_input(valid_inputs=("y", "n"))
                 if response == "n":
                     return
-        if not os.path.exists(self.save_folder):
-            os.makedirs(self.save_folder)
+
         if os.path.exists(self.save_folder / "session.dill"):
             print(f"The save folder already exists. (Path: {self.save_folder})")
             if self.ignore_warnings:
@@ -219,8 +221,8 @@ class Session:
                 if len(data) == 3:
                     (worker, repo, is_finished) = data
                 elif len(data) == 4:
-                    (worker, repo, is_finished, datetime) = data
-                    self.runtime = datetime
+                    (worker, repo, is_finished, runtime) = data
+                    self.runtime = runtime
                 else:
                     raise AssertionError()
 
@@ -264,6 +266,7 @@ class Session:
         print(f"Starting session: {self.name}")
         self._run()
 
+
     def _run(self):
         """Don't call explicitly. Instead use start()
         Lets the worker (continue) work until interrupted or finished
@@ -271,7 +274,7 @@ class Session:
         while True:
             try:
                 starttime = datetime.datetime.now()
-                i = self.worker.iterate()
+                self.worker.iterate()
                 self.runtime += (datetime.datetime.now() - starttime)
                 self.save_data("session", self._session_data())
                 if self.terminate:
@@ -295,25 +298,46 @@ class Session:
 class MultiSession(Session):
     """Works like a session except it accepts a list of workers and executes them sequentially"""
 
-    def __init__(self, workers, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True):
+    def __init__(self, workers, name, save_folder=None, repo_dir=None, ignore_file='.ignore',
+                 ignore_warnings=True, parallel_execution=False):
         self.workers = workers
         self.current_worker = 0
-        super().__init__(None, name, save_folder=save_folder, repo_dir=repo_dir, ignore_file=ignore_file,
+        super().__init__(self, name, save_folder=save_folder, repo_dir=repo_dir, ignore_file=ignore_file,
                          ignore_warnings=ignore_warnings)
-        self.worker = self
+        self.parallel_execution = parallel_execution
+        self.completed = [False] * len(self.workers)
+        self.errors = [False] * len(self.workers)
+
+    def _work(self):
+        try:
+            self.workers[self.current_worker].iterate()
+        except StopIteration:
+            print(f"Finished worker ({self.current_worker})")
+            self.completed[self.current_worker] = True
+        except Exception as e:
+            print(f"Error in worker ({self.current_worker})")
+            traceback.print_exc()
+            self.completed[self.current_worker] = True
+            self.errors[self.current_worker] = True
+        return self.completed[self.current_worker]
 
     def iterate(self):
-        if self.current_worker < len(self.workers):
-            try:
-                self.workers[self.current_worker].iterate()
-            except StopIteration:
-                print(f"Finished worker ({self.current_worker})")
-                self.current_worker += 1
-            except Exception as e:
-                print(f"Error in worker ({self.current_worker})")
-                traceback.print_exc()
-                self.current_worker += 1
+        if not all(self.completed):
+            if self.parallel_execution:
+                for _ in range(len(self.workers)):
+                    if not self.completed[self.current_worker]:
+                        break
+                self._work()
+                self.current_worker = (self.current_worker + 1) % len(self.workers)
+            else:
+                done = self._work()
+                if done:
+                    self.current_worker += 1
+
         else:
+            if any(self.errors):
+                error_idx = [i for i, err in enumerate(self.errors) if err]
+                print(f"WARNING: Unhandled exceptions occurred in thread {error_idx}")
             raise StopIteration()
 
 
@@ -330,8 +354,8 @@ class MultiThreadedSession(Session):
                          ignore_warnings=ignore_warnings)
         self.worker = self
         self.i = 0
-
         self._thread_count = thread_count
+        # raise NotImplementedError("Does not currently work")
 
     @property
     def thread_count(self):

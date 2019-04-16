@@ -49,7 +49,7 @@ sigma_strategies = {
 
 
 class GA:
-    sigma_strategy: Callable[['GA'], float] = lambda self: self.sigma
+    sigma_strategy = lambda self: self.sigma
 
     def __init__(self, config_file_path=None,
                  env_key=None,

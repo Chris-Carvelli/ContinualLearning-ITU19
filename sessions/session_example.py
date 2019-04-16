@@ -13,7 +13,7 @@ class MyExperiment:
         self.count = 0
 
     def iterate(self):
-        if self.count >= 3:
+        if self.count >= 5:
             raise StopIteration()
         self.current += [x for x in range(100)]
         # if self.count > 2:
@@ -21,8 +21,10 @@ class MyExperiment:
         #     while True:
         #         s += 1
         self.count += 1
+        # if self.count > 1:
+        #     raise AssertionError()
         print(self.count)
-        time.sleep(1)
+        time.sleep(0.2)
         return sum(self.current)
 
 if __name__ == '__main__':
@@ -32,11 +34,11 @@ if __name__ == '__main__':
     # S.start()
 
     # # Example of MultiSession
-    # ms = MultiSession([MyExperiment(), MyExperiment(), MyExperiment()], "TestSessions")
-    # ms.start()
+    ms = MultiSession([MyExperiment(), MyExperiment(), MyExperiment()], "TestSessions", parallel_execution=False)
+    ms.start()
 
     # Example of MultiSession
-    mts = MultiThreadedSession([MyExperiment(), MyExperiment(), MyExperiment(), MyExperiment(), MyExperiment()], "MTS")
-    mts.start()
+    # mts = MultiThreadedSession([MyExperiment(), MyExperiment(), MyExperiment(), MyExperiment(), MyExperiment()], "MTS")
+    # mts.start()
 
 
