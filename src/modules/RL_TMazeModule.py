@@ -29,7 +29,7 @@ class TMazeRLModule(nn.Module, torch_rl.RecurrentACModel):
 
 
         if view_size is None:
-            view_size = minigrid.AGENT_VIEW_SIZE
+            view_size = 7
         if view_size <= 3:
             self.image_conv = _unity
             nn_input = view_size * view_size * 3 + 1

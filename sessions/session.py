@@ -304,7 +304,7 @@ class MultiSession(Session):
         self.current_worker = 0
         super().__init__(self, name, save_folder=save_folder, repo_dir=repo_dir, ignore_file=ignore_file,
                          ignore_warnings=ignore_warnings)
-        self.parallel_execution = parallel_execution
+        self.parallel_execution = parallel_execution    # TODO: This implementation is quick and dirty hand has potential problems for speical uses
         self.completed = [False] * len(self.workers)
         self.errors = [False] * len(self.workers)
 
@@ -327,12 +327,13 @@ class MultiSession(Session):
                 for _ in range(len(self.workers)):
                     if not self.completed[self.current_worker]:
                         break
+                    self.current_worker = (self.current_worker + 1) % len(self.workers)
                 self._work()
                 self.current_worker = (self.current_worker + 1) % len(self.workers)
             else:
                 done = self._work()
                 if done:
-                    self.current_worker += 1
+                    self.current_worker = (self.current_worker + 1) % len(self.workers)
 
         else:
             if any(self.errors):

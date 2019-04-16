@@ -108,7 +108,7 @@ class TMaze(MultiEnv):
 
     @property
     def view_size(self):
-        return self.env.view_size
+        return self.env.agent_view_size
 
     def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=False, cyclic_order=True,
                  view_size=None):
@@ -232,6 +232,8 @@ if __name__ == '__main__':
     # test_tmaze()
     env = TMaze(view_size=3, corridor_length=1)
     # env.view_size =
+
+
 
     # state, reward, done, info = env.step(2)
     s = env.reset()

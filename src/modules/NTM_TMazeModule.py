@@ -78,7 +78,7 @@ class TMazeNTMModule(NTM):
             evolve_nn = .333 <= r <= 1
         for name, tensor in sorted(named_params):
             is_vision = name.startswith("conv")
-            if (is_vision and evolve_vision) or (not is_vision and evolve_nn):
+            if (is_vision and evolve_vision) or (is_vision and evolve_nn):
                 to_add = self.add_tensors[name]
                 to_add.normal_(0.0, sigma)
                 tensor.data.add_(to_add)
@@ -94,7 +94,7 @@ class TMazeNTMModule(NTM):
             if 'weight' in name:
                 tensor.data.zero_()
             else:
-                nn.init.normal_(tensor)
+                nn.init.normal_(tensor, .5)
                 # nn.init.kaiming_normal_(tensor)
                 # if name.startswith("conv"):
                 #     nn.init.xavier_normal(tensor)
