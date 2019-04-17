@@ -20,21 +20,39 @@ from pathlib import Path
 class Logger:
     """Copies terminal output to a file"""
 
-    def __init__(self, filepath: str):
-        self.terminal = sys.stdout
+    def __init__(self, filepath: str,  stderr=False):
+
+        self.stderr = stderr
+        if self.stderr:
+            self.terminal = sys.stderr
+        else:
+            self.terminal = sys.stdout
         target = Path(filepath)
         self.log = open(target, "a")
 
     def write(self, message):
-        self.terminal.write(message)
+        if self.stderr:
+            self.terminal.write('\033[91m' + message + '\033[0m')
+        else:
+            self.terminal.write(message)
         self.log.write(message)
         self.log.flush()
 
+    def __del__(self):
+        self.stop()
+        self.log.close()
+
     def stop(self):
-        sys.stdout = self.terminal
+        if self.stderr:
+            sys.stderr = self.terminal
+        else:
+            sys.stdout = self.terminal
 
     def start(self):
-        sys.stdout = self
+        if self.stderr:
+            sys.stderr = self
+        else:
+            sys.stdout = self
 
     def flush(self):
         self.terminal.flush()
@@ -115,7 +133,7 @@ class Session:
         else:
             self._save_folder = str(Path("Experiments") / save_folder)
         os.makedirs(self.save_folder, exist_ok=True)
-        self.logger = Logger(self.save_folder / "log.txt")
+        self.loggers = [Logger(self.save_folder / "log.txt"), Logger(self.save_folder / "log.txt", stderr=True)]
 
     @property
     def repo_dir(self):
@@ -195,7 +213,8 @@ class Session:
         regarding git status and restarting/overwriting previous sessions"""
         if not os.path.exists(self.save_folder):
             os.makedirs(self.save_folder)
-        self.logger.start()
+        for logger in self.loggers:
+            logger.start()
         print(f"--- {self.name} ---")
         status = self.check_git_status()
         if not status:
@@ -266,7 +285,6 @@ class Session:
         print(f"Starting session: {self.name}")
         self._run()
 
-
     def _run(self):
         """Don't call explicitly. Instead use start()
         Lets the worker (continue) work until interrupted or finished
@@ -285,7 +303,8 @@ class Session:
         self.is_finished = True
         self.save_data("session", self._session_data())
         print(f"Session done ({self.name}) in total time: {self.runtime}")
-        self.logger.stop()
+        for logger in self.loggers:
+            logger.stop()
 
     # serialization
     def __getstate__(self):
@@ -304,7 +323,7 @@ class MultiSession(Session):
         self.current_worker = 0
         super().__init__(self, name, save_folder=save_folder, repo_dir=repo_dir, ignore_file=ignore_file,
                          ignore_warnings=ignore_warnings)
-        self.parallel_execution = parallel_execution    # TODO: This implementation is quick and dirty hand has potential problems for speical uses
+        self.parallel_execution = parallel_execution  # TODO: This implementation is quick and dirty hand has potential problems for speical uses
         self.completed = [False] * len(self.workers)
         self.errors = [False] * len(self.workers)
 

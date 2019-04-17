@@ -94,13 +94,13 @@ class TMazeNTMModule(NTM):
             if 'weight' in name:
                 tensor.data.zero_()
             else:
-                nn.init.normal_(tensor, .5)
+                nn.init.normal_(tensor, std=.5)
                 # nn.init.kaiming_normal_(tensor)
-                # if name.startswith("conv"):
-                #     nn.init.xavier_normal(tensor)
-                #     # nn.init.kaiming_normal_(tensor)
-                # else:
-                #     nn.init.normal_(tensor)
+                #                 # if name.startswith("conv"):
+                #                 #     nn.init.xavier_normal(tensor)
+                #                 #     # nn.init.kaiming_normal_(tensor)
+                #                 # else:
+                #                 #     nn.init.normal_(tensor)
 
     def evaluate(self, env, max_eval, render=False, fps=60, show_action_frequency=False, random_actions=False,
                  mode="human"):

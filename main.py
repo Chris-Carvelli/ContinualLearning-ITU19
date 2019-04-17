@@ -10,9 +10,11 @@ from configparser import ConfigParser
 from pathlib import Path
 from sessions.session import Session, MultiSession, MultiThreadedSession
 from src.modules.CopyNTM import CopyNTM
+from src.modules.NTM_Module import NTM
 from src.modules.NTM_TMazeModule import TMazeNTMModule
 from src.utils import lowpriority
 from src.ga import GA
+
 
 class SessionResult:
     def __init__(self, _path, _df=None, _name="NoName", _is_single=True):
@@ -32,6 +34,7 @@ class SessionResult:
         if not self.is_single:
             self.split_df = self.df
             self.df = self.df.groupby('generation').mean()
+
 
 @click.command()
 @click.option('--config_name', default="config_ntm_copy_2", help="Name of the config file")
@@ -94,9 +97,10 @@ def run(config_name, config_folder, session_name, multi_session, mt, pe):
 @click.command()
 @click.option('--ppo_results', default='', help='Path to .csv file containing results of PPO')
 @click.option('--sessions_folder', default='', help='Path to folder containing session results')
-@click.option('--sessions_to_load', default='', help='name of session folder(s) (.ses); if you want multiple, separate with comma')
-def plot(ppo_results, sessions_folder, sessions_to_load):
-    while not (sessions_folder or sessions_to_load):
+@click.option('--sessions_to_load', default='',
+              help='name of session folder(s) (.ses); if you want multiple, separate with comma')
+@click.option('--hide_indv', is_flag=True, help="hides individual max, mean, median plots")
+def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv):
         # Get all sessions needed
         session_names = sessions_to_load.replace(" ", "")
         session_names = session_names.split(",")
@@ -111,10 +115,11 @@ def plot(ppo_results, sessions_folder, sessions_to_load):
 
             results_objects.append(SessionResult(_path=res_path))
 
+
+
         else:
             for name in session_names:
-                results_objects.append(SessionResult(_path=sessions_folder+name, _name=name))
-
+                results_objects.append(SessionResult(_path=sessions_folder + name, _name=name))
 
         # Get session and put the data in data frame
         # result_session = load_session(res_path)
@@ -123,7 +128,8 @@ def plot(ppo_results, sessions_folder, sessions_to_load):
         # Plot runs against each other if it's a multi-session
         for result in results_objects:
             if not result.is_single:
-                sns.lineplot(x="generation", y="max_score", hue="run", data=result.split_df).set_title("Max Score per run")
+                sns.lineplot(x="generation", y="max_score", hue="run", data=result.split_df).set_title(
+                    "Max Score per run")
                 plt.show()
 
         # TODO: Make data comparable to PPO
@@ -132,14 +138,14 @@ def plot(ppo_results, sessions_folder, sessions_to_load):
         if ppo_results:
             df2 = get_ppo_results(ppo_results)
             # print(df2.columns.values)
-        #    print(df.columns.values)
+            #    print(df.columns.values)
             print(df2.columns.values)
             # print(df2)
             print(df2)
             # df = df.set_index('generation').join(df2.set_index('update'))
 
         # Combine all runs into one and do an average of the results if is multisession
-        #if not is_single:
+        # if not is_single:
         #    df = df.groupby('generation').mean()
         for result in results_objects:
             joined_data = [result.df['mean_score'], result.df['max_score'], result.df['median_score']]
@@ -158,12 +164,42 @@ def plot(ppo_results, sessions_folder, sessions_to_load):
             max_df[result.name] = result.df['max_score']
             median_df[result.name] = result.df['median_score']
 
-        # sns.lineplot(data=mean_df).set_title("Mean")
-        # plt.show()
-        # sns.lineplot(data=max_df).set_title("Max")
-        # plt.show()
-        # sns.lineplot(data=median_df).set_title("Median")
-        # plt.show()
+        if not hide_indv:
+            sns.lineplot(data=mean_df).set_title("Mean")
+            plt.show()
+            sns.lineplot(data=max_df).set_title("Max")
+            plt.show()
+            sns.lineplot(data=median_df).set_title("Median")
+            plt.show()
+
+        if not (sessions_folder or sessions_to_load):
+            plot(ppo_results, sessions_folder, sessions_to_load)
+
+
+@click.command()
+@click.option("--max_eval", default="100", help='max number of evaluations')
+@click.option("--render/--no-render", default=True, help="rendeing or no rendering")
+@click.option("--fps", default="60", help="frames per second")
+def evaluate(max_eval, render, fps):
+    max_eval = int(max_eval)
+    fps = int(fps)
+    while True:
+        res_path = get_path_to_session(False)
+        session = load_session(res_path)
+        if isinstance(session, MultiSession):
+            worker = session.workers[0]
+        else:
+            worker = session.worker
+        if isinstance(worker, GA):
+            env = worker.env
+            nn, max_score = worker.results[-1][-1][0]
+            print(max_score)
+            if isinstance(nn, NTM):
+                nn.start_history()
+            nn.evaluate(env, int(max_eval), render=render, fps=int(fps))
+            if isinstance(nn, NTM):
+                nn.plot_history()
+
 
 @click.group()
 def main():
@@ -172,6 +208,7 @@ def main():
 
 main.add_command(run)
 main.add_command(plot)
+main.add_command(evaluate)
 
 if __name__ == '__main__':
     main()

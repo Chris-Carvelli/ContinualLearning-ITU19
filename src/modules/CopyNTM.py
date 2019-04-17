@@ -7,7 +7,7 @@ from src.modules.NTM_Module import NTM
 class CopyNTM(NTM):
     clip: float = None
 
-    def __init__(self, copy_size=None, max_memory=10000, memory_unit_size=None, clip=None):
+    def __init__(self, copy_size=None, max_memory=10000, memory_unit_size=None, clip=None, layers=1):
         if memory_unit_size is None:
             memory_unit_size = copy_size + 2
         super().__init__(memory_unit_size, max_memory=max_memory)
@@ -15,13 +15,13 @@ class CopyNTM(NTM):
         self.in_size = copy_size + 2
         self.out_size = copy_size
         hidden_size = 100
+        assert layers >= 1
 
-        self.nn = nn.Sequential(
-            nn.Linear(self.in_size + self.memory_unit_size, hidden_size),
-            nn.Sigmoid(),
-            nn.Linear(hidden_size, self.out_size + self.update_size()),
-            nn.Sigmoid(),
-        )
+        args = [nn.Linear(self.in_size + self.memory_unit_size, hidden_size), nn.Sigmoid()]
+        for _ in range(layers - 1):
+            args += [nn.Linear(hidden_size, hidden_size), nn.Sigmoid()]
+        args += [nn.Linear(hidden_size, self.out_size + self.update_size()), nn.Sigmoid()]
+        self.nn = nn.Sequential(*args)
         self.add_tensors = {}
         self.init()
 
@@ -41,8 +41,8 @@ class CopyNTM(NTM):
             if tensor.size() not in self.add_tensors:
                 self.add_tensors[tensor.size()] = torch.Tensor(tensor.size())
             if 'weight' in name:
-                # nn.init.xavier_normal_(tensor)
-                nn.init.normal_(tensor)
+                nn.init.xavier_normal_(tensor)
+                # nn.init.normal_(tensor, std=self.init_sigma)
             else:
                 tensor.data.zero_()
 

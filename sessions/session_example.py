@@ -25,8 +25,7 @@ class MyExperiment:
         #     while True:
         #         s += 1
         self.count += 1
-        # if self.count > 1:
-        #     raise AssertionError()
+        # if self.coumasertionError()
         print(f"{self.name}: {self.count}")
         time.sleep(0.2)
         return sum(self.current)
