@@ -1,5 +1,7 @@
 import os
 import random
+import re
+
 import numpy
 import torch
 import pandas as pd
@@ -47,6 +49,7 @@ def run(config_name, config_folder, session_name, multi_session, mt, pe):
     lowpriority()
     if session_name is None:
         session_name = config_name if multi_session <= 1 else f"{config_name}-x{multi_session}"
+        session_name = session_name.replace(".ini", "")
 
     # Load config
     config = ConfigParser()
@@ -173,7 +176,7 @@ def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv):
             plt.show()
 
         if not (sessions_folder or sessions_to_load):
-            plot(ppo_results, sessions_folder, sessions_to_load)
+            plot(ppo_results, sessions_folder, sessions_to_load, hide_indv)
 
 
 @click.command()
