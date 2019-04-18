@@ -194,9 +194,10 @@ def test_one_shot_tmaze():
 
 def test_tmaze():
     import time
-    rounds = 3
-    length = 10
-    env = TMaze(length, rounds)
+    rounds = 5
+    length = 3
+    # env = TMaze(length, rounds)
+    env: TMaze = gym.make(F"TMaze-{length}x{rounds}-viewsize_3-v0")
     env.seed(1)
     state = env.reset()
     del state["image"]
@@ -207,18 +208,18 @@ def test_tmaze():
     # right = 1
     # forward = 2
     # toggle = 5
-    actions = ([2] * length + [0] + [2] * length) * rounds * 2
-    # actions = [2] * length + [1] + [2] * length + \
-    #           ([2] * length + [0] + [2] * length) * rounds + \
-    #           ([2] * length + [1] + [2] * length) * (rounds - 1) \
-    # + ([2] * length + [1] + [2] * length)
+    # actions = ([2] * length + [0] + [2] * length) * rounds * 2
+    actions = [2] * length + [1] + [2] * length + \
+              ([2] * length + [0] + [2] * length) * rounds + \
+              ([2] * length + [1] + [2] * length) * (rounds - 1) \
+    + ([2] * length + [1] + [2] * length)
     # env.render()
     total_reward = 0
     for a in actions:
         state, reward, done, info = env.step(a)
         # env.render("print")
         env.render()
-        time.sleep(.5)
+        time.sleep(.2)
         total_reward += reward
         del state["image"]
         print(reward, done, state)
@@ -229,18 +230,17 @@ def test_tmaze():
 
 if __name__ == '__main__':
     # test_one_shot_tmaze()
-    # test_tmaze()
-    env = TMaze(view_size=3, corridor_length=1)
+    test_tmaze()
+    # env = TMaze(view_size=3, corridor_length=1)
+    # env: TMaze = gym.make("TMaze-3x5-viewsize_3-v0")
     # env.view_size =
 
-
-
     # state, reward, done, info = env.step(2)
-    s = env.reset()
-    i = 0
-    print(s["image"][:, :, i])
-    # env.render("human")
-
-    for action in [2, 0, 2]:
-        obs, score, done, info = env.step(action)
-        print(obs["image"][:, :, i])
+    # s = env.reset()
+    # i = 0
+    # print(s["image"][:, :, i])
+    # # env.render("human")
+    #
+    # for action in [2, 0, 2]:
+    #     obs, score, done, info = env.step(action)
+    #     print(obs["image"][:, :, i])
