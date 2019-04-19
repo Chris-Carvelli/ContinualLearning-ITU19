@@ -103,7 +103,8 @@ def run(config_name, config_folder, session_name, multi_session, mt, pe):
 @click.option('--sessions_to_load', default='',
               help='name of session folder(s) (.ses); if you want multiple, separate with comma')
 @click.option('--hide_indv', is_flag=True, help="hides individual max, mean, median plots")
-def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv):
+@click.option('--hide_merged', is_flag=True, help="hides individual averaged result of all runs for multi session")
+def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv, hide_merged):
         # Get all sessions needed
         session_names = sessions_to_load.replace(" ", "")
         session_names = session_names.split(",")
@@ -147,27 +148,27 @@ def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv):
             print(df2)
             # df = df.set_index('generation').join(df2.set_index('update'))
 
-        # Combine all runs into one and do an average of the results if is multisession
-        # if not is_single:
-        #    df = df.groupby('generation').mean()
-        for result in results_objects:
-            joined_data = [result.df['mean_score'], result.df['max_score'], result.df['median_score']]
-            joined_data_plot = sns.lineplot(data=joined_data).set_title(result.name)
-            plt.xlabel('Generations')
-            plt.ylabel('Score')
-            plt.legend(['mean', 'max', 'median'])
-            plt.show()
-
-        mean_df = pd.DataFrame()
-        max_df = pd.DataFrame()
-        median_df = pd.DataFrame()
-
-        for result in results_objects:
-            mean_df[result.name] = result.df['mean_score']
-            max_df[result.name] = result.df['max_score']
-            median_df[result.name] = result.df['median_score']
+        if not hide_merged:
+            # Combine all runs into one and do an average of the results if is multisession
+            # if not is_single:
+            #    df = df.groupby('generation').mean()
+            for result in results_objects:
+                joined_data = [result.df['mean_score'], result.df['max_score'], result.df['median_score']]
+                joined_data_plot = sns.lineplot(data=joined_data).set_title(result.name)
+                plt.xlabel('Generations')
+                plt.ylabel('Score')
+                plt.legend(['mean', 'max', 'median'])
+                plt.show()
 
         if not hide_indv:
+            mean_df = pd.DataFrame()
+            max_df = pd.DataFrame()
+            median_df = pd.DataFrame()
+
+            for result in results_objects:
+                mean_df[result.name] = result.df['mean_score']
+                max_df[result.name] = result.df['max_score']
+                median_df[result.name] = result.df['median_score']
             sns.lineplot(data=mean_df).set_title("Mean")
             plt.show()
             sns.lineplot(data=max_df).set_title("Max")
@@ -176,12 +177,12 @@ def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv):
             plt.show()
 
         if not (sessions_folder or sessions_to_load):
-            plot(ppo_results, sessions_folder, sessions_to_load, hide_indv)
+            main()
 
 
 @click.command()
 @click.option("--max_eval", default="100", help='max number of evaluations')
-@click.option("--render/--no-render", default=True, help="rendeing or no rendering")
+@click.option("--render/--no-render", default=False, help="rendeing or no rendering")
 @click.option("--fps", default="60", help="frames per second")
 def evaluate(max_eval, render, fps):
     max_eval = int(max_eval)
@@ -195,11 +196,13 @@ def evaluate(max_eval, render, fps):
             worker = session.worker
         if isinstance(worker, GA):
             env = worker.env
+            # import gym
+            # env = gym.make(f"TMaze-{2}x{5}-viewsize_{3}-v0")
             nn, max_score = worker.results[-1][-1][0]
-            print(max_score)
             if isinstance(nn, NTM):
                 nn.start_history()
-            nn.evaluate(env, int(max_eval), render=render, fps=int(fps))
+            tot_reward, n_eval = nn.evaluate(env, int(max_eval), render=render, fps=int(fps))
+            print(f"Evaluates to reward: {tot_reward}")
             if isinstance(nn, NTM):
                 nn.plot_history()
 

@@ -1,8 +1,11 @@
+import os
 from typing import Any, Callable
 
 import gym
 import copy
 import random
+
+import numpy
 import numpy as np
 from torch import nn
 
@@ -11,6 +14,7 @@ from configparser import ConfigParser
 from src.ControllerFactory import *
 from custom_envs import *
 from src.utils import model_diff
+
 
 termination_strategies = \
     {
@@ -42,9 +46,9 @@ sigma_strategies = {
     'decay5': lambda self: self.sigma * 5 / (5 + self.g),
     'decay1': lambda self: self.sigma * 1 / (1 + self.g),
     'cyclic1000-0.01': lambda self: self.sigma * (0.01 + 1 - (self.g % 1000) / 1000),
-    'linear1000-0.1': lambda self: self.sigma * (0.1 + max(0, 1 - self.g / 1000)),
-    'linear1000-0.01': lambda self: self.sigma * (0.01 + max(0, 1 - self.g / 1000)),
-    'linear10000-0.001': lambda self: self.sigma * (0.001 + max(0, 1 - self.g / 10000)),
+    'linear1000-0.1': lambda self: self.sigma * (max(0.1, 1 + self.g * (0.1 - 1) / 1000)),
+    'linear1000-0.01': lambda self: self.sigma * (max(0.01, 1 + self.g * (0.01 - 1) / 1000)),
+    'linear10000-0.001': lambda self: self.sigma * (max(0.001, 1 + self.g * (0.001 - 1) / 10000)),
 }
 
 
@@ -68,12 +72,13 @@ class GA:
                  sigma_strategy=None,
                  ):
         config = ConfigParser()
-        if config_file_path is not None:
-            read_ok = config.read(config_file_path)
-            print(f"using config: {read_ok}")
-        else:
-            config.read('config_files/config_default')
-            print("DEFAULT CONFIG")
+        if config_file_path is None:
+            from pathlib import Path
+            config_file_path = Path(os.path.realpath(__file__)).parent.parent / 'config_files/config_default'
+            print("USING DEFAULT CONFIG")
+
+        read_ok = config.read(config_file_path)
+        assert len(read_ok) == 1, "could not find config file: " + config_file_path
 
         if model_builder is None:
             self.model_builder = model_library[config["Controller"]["model_builder"]]
@@ -325,3 +330,30 @@ class GA:
 
         self.models = None
         self.init_models()
+
+if __name__ == '__main__':
+    # plot sigma_strategies
+    class A:
+        def __init__(self, g):
+            self.g = g
+            self.sigma = 1
+
+    import matplotlib.pyplot as plt
+    n = 2000
+    objs = [A(g) for g in range(n)]
+    x = numpy.array([i for i in range(n)])
+    plot_names = [
+        "cyclic1000-0.01",
+        'linear1000-0.1',
+        'linear1000-0.01',
+        # 'linear10000-0.001',
+    ]
+
+    for name, f in sigma_strategies.items():
+        if name not in plot_names:
+            continue
+        y = numpy.array([f(obj) for obj in objs])
+        plt.plot(x, y)
+
+        plt.ylabel('name')
+    plt.show()

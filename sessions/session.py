@@ -133,7 +133,14 @@ class Session:
         else:
             self._save_folder = str(Path("Experiments") / save_folder)
         os.makedirs(self.save_folder, exist_ok=True)
-        self.loggers = [Logger(self.save_folder / "log.txt"), Logger(self.save_folder / "log.txt", stderr=True)]
+        self._loggers = [Logger(self.save_folder / "log.txt"), Logger(self.save_folder / "log.txt", stderr=True)]
+
+
+    @property
+    def loggers(self):
+        if not hasattr(self, "_loggers"):
+            self._loggers = [Logger(self.save_folder / "log.txt"), Logger(self.save_folder / "log.txt", stderr=True)]
+        return self._loggers
 
     @property
     def repo_dir(self):
@@ -309,9 +316,10 @@ class Session:
     # serialization
     def __getstate__(self):
         state = self.__dict__.copy()
-        if "logger" in state:
-            del state['logger']
+        if "_loggers" in state:
+            del state['_loggers']
         return state
+
 
 
 class MultiSession(Session):
@@ -367,6 +375,7 @@ class MultiThreadedSession(Session):
     def __init__(self, workers, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True,
                  thread_count: int = None):
         self.workers = workers
+
         self.status_done = [False] * len(workers)
         self.status_error = [False] * len(workers)
         self.status_working = [False] * len(workers)
@@ -423,7 +432,8 @@ class MultiThreadedSession(Session):
         self.save_data("session", self._session_data())
 
         print(f"Session done ({self.name}) in total time: {self.runtime}")
-        self.logger.stop()
+        for logger in self.loggers:
+            logger.stop()
 
     def _process_worker(self, worker_id: int, worker, queue: Queue):
         done, error = False, False
