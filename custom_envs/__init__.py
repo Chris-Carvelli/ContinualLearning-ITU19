@@ -45,6 +45,12 @@ def _register_envs():
             entry_point='custom_envs.envs:RandomCopy',
             kwargs=dict(height=h, min_length=1, max_length=12)
         )
+
+    register(
+        id=f"TMaze-rnd-1-viewsize-3-v0",
+        entry_point='custom_envs.envs:TMaze',
+        kwargs=dict(corridor_length=[2, 4], rounds_pr_side=[2, 10], view_size=3)
+    )
     for rounds in (1, 2, 5, 10, 20, 50, 100, 200, 500, 1000):
         for length in (1,2,3,4,5,6):
             register(

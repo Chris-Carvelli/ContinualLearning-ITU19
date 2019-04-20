@@ -196,8 +196,8 @@ def evaluate(max_eval, render, fps):
             worker = session.worker
         if isinstance(worker, GA):
             env = worker.env
-            # import gym
-            # env = gym.make(f"TMaze-{2}x{5}-viewsize_{3}-v0")
+            import gym
+            env = gym.make(f"TMaze-{2}x{5}-viewsize_{3}-v0")
             nn, max_score = worker.results[-1][-1][0]
             if isinstance(nn, NTM):
                 nn.start_history()

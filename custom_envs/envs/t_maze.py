@@ -113,14 +113,26 @@ class TMaze(MultiEnv):
     def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=False, cyclic_order=True,
                  view_size=None):
         self.cyclic_order = cyclic_order
-        envs = [SingleTMaze(corridor_length, 0, max_steps, view_size=view_size),
-                SingleTMaze(corridor_length, 1, max_steps, view_size=view_size)]
+        self.max_steps = max_steps
         self.rnd_order = rnd_order
+        self._length_rng = tuple(corridor_length) if hasattr(corridor_length, '__iter__') else (corridor_length,)
+        self._rounds_rng = tuple(rounds_pr_side) if hasattr(rounds_pr_side, '__iter__') else (rounds_pr_side,)
+        envs = [SingleTMaze(self._length_rng[0], 0, max_steps, view_size=view_size),
+                SingleTMaze(self._length_rng[0], 1, max_steps, view_size=view_size)]
         if self.rnd_order:
             random.shuffle(envs)
-        super().__init__(envs, rounds_pr_side)
+        super().__init__(envs, self._rounds_rng[0])
 
     def reset(self):
+        if len(self._length_rng) > 1 or len(self._rounds_rng) > 1:
+            if not self.cyclic_order or self.schedule[0][1] == 0:  # Only change setup at the stat of cycle
+                l = random.choice(self._length_rng)
+                r = random.choice(self._rounds_rng)
+                envs = [SingleTMaze(l, 0, self.max_steps, view_size=self.view_size),
+                        SingleTMaze(l, 1, self.max_steps, view_size=self.view_size)]
+                if self.rnd_order:
+                    random.shuffle(envs)
+                super().__init__(envs, r)
         if self.rnd_order:
             random.shuffle(self.schedule)
         elif self.cyclic_order:
@@ -156,8 +168,8 @@ class TMaze(MultiEnv):
         self.explored_corners = []
 
     def seed(self, seed=None):
+        random.seed(seed)
         if self.rnd_order:
-            random.seed(seed)
             if self.round == 0 and self.i == 0:
                 random.shuffle(self.schedule)
         super().seed(seed)
@@ -194,7 +206,7 @@ def test_one_shot_tmaze():
 
 def test_tmaze():
     import time
-    rounds = 5
+    rounds = 3
     length = 3
     # env = TMaze(length, rounds)
     env: TMaze = gym.make(F"TMaze-{length}x{rounds}-viewsize_3-v0")
@@ -212,7 +224,7 @@ def test_tmaze():
     actions = [2] * length + [1] + [2] * length + \
               ([2] * length + [0] + [2] * length) * rounds + \
               ([2] * length + [1] + [2] * length) * (rounds - 1) \
-    + ([2] * length + [1] + [2] * length)
+              + ([2] * length + [1] + [2] * length)
     # env.render()
     total_reward = 0
     for a in actions:
@@ -230,9 +242,23 @@ def test_tmaze():
 
 if __name__ == '__main__':
     # test_one_shot_tmaze()
-    test_tmaze()
+    # test_tmaze()
     # env = TMaze(view_size=3, corridor_length=1)
-    # env: TMaze = gym.make("TMaze-3x5-viewsize_3-v0")
+    env: TMaze = gym.make("TMaze-rnd-1-viewsize-3-v0")
+
+    while True:
+        action = random.choice([0, 1, 2])
+        env.render("print")
+        env.render("human")
+        time.sleep(1/30)
+        obs, score, done, info = env.step(action)
+        if done:
+            env.render("print")
+            print("done")
+            env.reset()
+
+
+
     # env.view_size =
 
     # state, reward, done, info = env.step(2)
