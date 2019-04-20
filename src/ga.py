@@ -153,7 +153,7 @@ class GA:
         if max_reward is None:
             self.max_reward = None
             if "max_reward" in config["HyperParameters"]:
-                self.max_reward = int(config["HyperParameters"]["max_reward"])
+                self.max_reward = float(config["HyperParameters"]["max_reward"])
         else:
             self.max_reward = max_reward
 

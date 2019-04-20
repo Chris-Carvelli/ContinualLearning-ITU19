@@ -131,3 +131,9 @@ def lowpriority():
     except Exception as e:
         print("Failed to save cpy priority to low. Reason:")
         traceback.print_exc()
+
+def int_or_float(value):
+    try:
+        return int(value)
+    except ValueError:
+        return float(value)

@@ -14,7 +14,7 @@ from sessions.session import Session, MultiSession, MultiThreadedSession
 from src.modules.CopyNTM import CopyNTM
 from src.modules.NTM_Module import NTM
 from src.modules.NTM_TMazeModule import TMazeNTMModule
-from src.utils import lowpriority
+from src.utils import lowpriority, int_or_float
 from src.ga import GA
 
 
@@ -36,12 +36,6 @@ class SessionResult:
         if not self.is_single:
             self.split_df = self.df
             self.df = self.df.groupby('generation').mean()
-
-def int_or_float(value):
-    try:
-        return int(value)
-    except ValueError:
-        return float(value)
 
 @click.command()
 @click.option('--config_name', default="config_ntm_copy_2", help="Name of the config file")
@@ -67,9 +61,9 @@ def run(config_name, config_folder, session_name, multi_session, mt, pe):
     # Define modules here
     module = config_get("Controller", "module")
     if module == "CopyNTM":
-        model_builder = lambda: CopyNTM(**dict([(key, int_or_float(value)) for key, value in config["NTM"].items()]))
+        model_builder = lambda: CopyNTM(**dict([(key, int(value)) for key, value in config["NTM"].items()]))
     elif module == "TMazeNTMModule":
-        model_builder = lambda: TMazeNTMModule(**dict([(k, int_or_float(v)) for k, v in config["ModelParameters"].items()]))
+        model_builder = lambda: TMazeNTMModule(**dict([(k, int(v)) for k, v in config["ModelParameters"].items()]))
     else:
         raise AssertionError(f"Unknown module specification: {module}")
 
