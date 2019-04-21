@@ -103,22 +103,23 @@ def run(config_name, config_folder, session_name, multi_session, mt, pe):
               help='name of session folder(s) (.ses); if you want multiple, separate with comma')
 @click.option('--hide_indv', is_flag=True, help="hides individual max, mean, median plots")
 @click.option('--hide_merged', is_flag=True, help="hides individual averaged result of all runs for multi session")
-def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv, hide_merged):
+@click.option('--hide_merged', is_flag=True, help="hides individual averaged result of all runs for multi session")
+@click.option('--use_explorer', is_flag=True, prompt='Use explorer?')
+def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv, hide_merged, use_explorer):
         # Get all sessions needed
         session_names = sessions_to_load.replace(" ", "")
         session_names = session_names.split(",")
-
         results_objects = []
         # Get path to session
         # If not provided as argument propmt the user
         if not sessions_folder or not sessions_to_load:
             # True -> Use explorer
             # False -> Use terminal
-            res_path = get_path_to_session(False)
-
+            res_path = get_path_to_session(use_explorer)
             results_objects.append(SessionResult(_path=res_path))
 
-
+            session_names = [Path(res_path).name]
+            print(f"Plotting: {session_names[0]}")
 
         else:
             for name in session_names:
@@ -129,10 +130,10 @@ def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv, hide_merged)
         # df, is_single = results_to_dataframe(result_session)
 
         # Plot runs against each other if it's a multi-session
-        for result in results_objects:
+        for result, name in zip(results_objects, session_names):
             if not result.is_single:
                 sns.lineplot(x="generation", y="max_score", hue="run", data=result.split_df).set_title(
-                    "Max Score per run")
+                    f"Max Scores : {name}")
                 plt.show()
 
         # TODO: Make data comparable to PPO

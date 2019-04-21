@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas
 import tkinter as tk
 from tkinter import filedialog
@@ -21,7 +23,7 @@ def get_path_to_session(use_explorer):
     if use_explorer:
         root = tk.Tk()
         root.withdraw()
-        file_path = filedialog.askdirectory(initialdir=os.getcwd(), title='Session Folder (.ses)')
+        file_path = filedialog.askdirectory(initialdir=Path(os.getcwd()) / "Experiments", title='Session Folder (.ses)')
         return file_path
     else:
         session_directories = []
