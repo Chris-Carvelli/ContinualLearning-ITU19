@@ -89,6 +89,9 @@ class MultiEnv(gym.Env):
         return self.env.render(mode, **kwargs)
 
     def close(self):
+        for e in self.to_close_list:
+            e.close()
+        self.to_close_list = []
         self.env.close()
 
     def seed(self, seed=None):

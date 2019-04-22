@@ -1,11 +1,11 @@
 import random
+import sys
 import time
+import gym
 from typing import List, Tuple
-from gym_minigrid.minigrid import *
-from gym_minigrid.minigrid import Grid
 
+from gym_minigrid.minigrid import Grid, MiniGridEnv, Wall, Goal
 from custom_envs.envs.multi_env import MultiEnv
-import gym_minigrid.minigrid as minigrid
 
 
 class SingleTMaze(MiniGridEnv):
@@ -13,8 +13,12 @@ class SingleTMaze(MiniGridEnv):
     reward_values = dict(goal=1, fake_goal=0.1)
     view_size: int = None
 
-    def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False, view_size=None):
-        self.view_size = view_size
+    def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False, view_size=None,
+                 max_corridor_length=None):
+        if max_corridor_length is None:
+            max_corridor_length = corridor_length
+        self.max_corridor_length = max_corridor_length
+        self.view_size = view_size if view_size is not None else 7
         self.is_double = is_double
         self.reward_position = reward_position
         self.corridor_length = corridor_length
@@ -27,10 +31,10 @@ class SingleTMaze(MiniGridEnv):
         self.mission = f"Goal is {goals[self.reward_position]}"
 
         super().__init__(
-            grid_size=3 + 2 * corridor_length,
+            grid_size=3 + 2 * self.max_corridor_length,
             max_steps=max_steps,
             see_through_walls=True,  # True for maximum performance
-            agent_view_size=view_size,
+            agent_view_size=self.view_size,
         )
         self.reward_range = (min(self.reward_values["fake_goal"], 0), self.reward_values["goal"])
 
@@ -38,24 +42,27 @@ class SingleTMaze(MiniGridEnv):
         # Create an empty grid
         self.grid = Grid(width, height)
 
-        # Generate the surrounding walls
-        self.grid.wall_rect(0, 0, width, height)
-
         # Place the agent in the top-left corner
         self.start_pos = (int(width / 2), int(height / 2))
         self.start_dir = 3
 
         # Create walls
-        for y in range(2, height - 2):
-            for x in range(1, width - 1):
-
-                if x == int(width / 2):
-                    continue
+        for x in range(0, width):
+            for y in range(0, height):
                 self.grid.set(x, y, Wall())
-        if not self.is_double:
-            for y in range(int(height / 2) + 1, height - 1):
-                for x in range(1, width - 1):
-                    self.grid.set(x, y, Wall())
+
+        # Create paths
+        if self.is_double:
+            for y in range(height // 2 - self.corridor_length, height // 2 + self.corridor_length + 1):
+                self.grid.set(width // 2, y, None)
+            for x in range(width // 2 - self.corridor_length, width // 2 + self.corridor_length + 1):
+                self.grid.set(x, height // 2 - self.corridor_length, None)
+                self.grid.set(x, height // 2 + self.corridor_length, None)
+        else:
+            for y in range(height // 2 - self.corridor_length, height // 2 + 1):
+                self.grid.set(width // 2, y, None)
+            for x in range(width // 2 - self.corridor_length, width // 2 + self.corridor_length + 1):
+                self.grid.set(x, height // 2 - self.corridor_length, None)
 
         # Create rewards
         reward_positions = self._reward_positions(width, height)
@@ -63,10 +70,10 @@ class SingleTMaze(MiniGridEnv):
 
     def _reward_positions(self, width, height):
         reward_positions = [
-            (1, 1),
-            (width - 2, 1),
-            (width - 2, height - 2),
-            (1, height - 2),
+            (width // 2 - self.corridor_length, height // 2 - self.corridor_length),
+            (width // 2 + self.corridor_length, height // 2 - self.corridor_length),
+            (width // 2 + self.corridor_length, height // 2 + self.corridor_length),
+            (width // 2 - self.corridor_length, height // 2 + self.corridor_length),
         ]
         if not self.is_double:
             reward_positions = reward_positions[:2]
@@ -100,6 +107,10 @@ class SingleTMaze(MiniGridEnv):
         goal.color = start_color
         return ret
 
+    def close(self):
+        if self.grid_render:
+            self.grid_render = None
+
 
 class TMaze(MultiEnv):
     cyclic_order = True
@@ -117,26 +128,26 @@ class TMaze(MultiEnv):
         self.rnd_order = rnd_order
         self._length_rng = tuple(corridor_length) if hasattr(corridor_length, '__iter__') else (corridor_length,)
         self._rounds_rng = tuple(rounds_pr_side) if hasattr(rounds_pr_side, '__iter__') else (rounds_pr_side,)
-        envs = [SingleTMaze(self._length_rng[0], 0, max_steps, view_size=view_size),
-                SingleTMaze(self._length_rng[0], 1, max_steps, view_size=view_size)]
+
+        l = random.choice(self._length_rng)
+        envs = [SingleTMaze(l, 0, max_steps, view_size=view_size, max_corridor_length=max(self._length_rng)),
+                SingleTMaze(l, 1, max_steps, view_size=view_size, max_corridor_length=max(self._length_rng))]
         if self.rnd_order:
             random.shuffle(envs)
-        super().__init__(envs, self._rounds_rng[0])
+        super().__init__(envs, random.choice(self._rounds_rng))
 
     def reset(self):
-        if len(self._length_rng) > 1 or len(self._rounds_rng) > 1:
-            if not self.cyclic_order or self.schedule[0][1] == 0:  # Only change setup at the stat of cycle
-                l = random.choice(self._length_rng)
-                r = random.choice(self._rounds_rng)
-                envs = [SingleTMaze(l, 0, self.max_steps, view_size=self.view_size),
-                        SingleTMaze(l, 1, self.max_steps, view_size=self.view_size)]
-                if self.rnd_order:
-                    random.shuffle(envs)
-                super().__init__(envs, r)
         if self.rnd_order:
             random.shuffle(self.schedule)
         elif self.cyclic_order:
             self.schedule = [self.schedule[(i + 1) % len(self.schedule)] for i in range(len(self.schedule))]
+        if len(self._length_rng) > 1 or len(self._rounds_rng) > 1:
+            if not self.cyclic_order or self.schedule[0][0].reward_position == 0:  # Only change setup at the start of cycle
+                l = random.choice(self._length_rng)
+                r = random.choice(self._rounds_rng)
+                for i, (env, _) in enumerate(self.schedule):
+                    env.corridor_length = l
+                    self.schedule[i] = (env, r)
         self.print_render_buffer = ""
         return super().reset()
 
@@ -208,8 +219,8 @@ def test_tmaze():
     import time
     rounds = 3
     length = 3
-    # env = TMaze(length, rounds)
-    env: TMaze = gym.make(F"TMaze-{length}x{rounds}-viewsize_3-v0")
+    env = TMaze(length, rounds)
+    # env: TMaze = gym.make(F"TMaze-{length}x{rounds}-viewsize_3-v0")
     env.seed(1)
     state = env.reset()
     del state["image"]
@@ -243,19 +254,30 @@ def test_tmaze():
 if __name__ == '__main__':
     # test_one_shot_tmaze()
     # test_tmaze()
-    # env = TMaze(view_size=3, corridor_length=1)
-    env: TMaze = gym.make("TMaze-rnd-1-viewsize-3-v0")
+    # env = SingleTMaze(view_size=3, corridor_length=1, max_corridor_length=None, is_double=False)
+    # env.render()
+    # obs, score, done, info = env.step(random.choice([0, 1, 2]))
+    # env.render()
+    # time.sleep(10)
 
+    env: TMaze = gym.make("TMazeRnd-2.4-2.10-3-v0")
+    env.reset()
+    rounds = 0
     while True:
         action = random.choice([0, 1, 2])
-        env.render("print")
+        # env.render("print")
         env.render("human")
-        time.sleep(1/30)
+        # time.sleep(1/20)
         obs, score, done, info = env.step(action)
+        if obs["round_done"]:
+            rounds += 1
         if done:
-            env.render("print")
-            print("done")
+            # env.render("print")
+            print(f"done. Rounds = {rounds}")
             env.reset()
+            rounds = 0
+                # break
+            print(f"Round: r={env.schedule[0][1]}, g={env.env.grid.width},{env.env.grid.height}")
 
 
 
