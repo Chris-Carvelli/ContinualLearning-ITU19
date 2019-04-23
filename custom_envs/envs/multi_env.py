@@ -10,10 +10,14 @@ class MultiEnv(gym.Env):
         self.i: int = None
         self.env: gym.Env = None
         self.rewards: List[float] = None
-        self.total_rounds = len(envs) * rounds
+
         self.round: int = None
         self.to_close_list: List[gym.Env] = []   # List of previous env to close before rendering next
         self.reset()
+
+    @property
+    def total_rounds(self):
+        return sum(map(lambda x: x[1], self.schedule))
 
     def _set_env(self, env):
         """Sets the current env"""

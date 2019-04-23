@@ -182,7 +182,7 @@ def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv, hide_merged,
 
 @click.command()
 @click.option("--max_eval", default="100", help='max number of evaluations')
-@click.option("--render/--no-render", default=False, help="rendeing or no rendering")
+@click.option("--render/--no-render", default=True, help="rendeing or no rendering")
 @click.option("--fps", default="60", help="frames per second")
 def evaluate(max_eval, render, fps):
     max_eval = int(max_eval)
@@ -197,7 +197,7 @@ def evaluate(max_eval, render, fps):
         if isinstance(worker, GA):
             env = worker.env
             import gym
-            env = gym.make(f"TMaze-{2}x{5}-viewsize_{3}-v0")
+            env = gym.make(f"TMaze-{6}x{2}-viewsize_{3}-v0")
             nn, max_score = worker.results[-1][-1][0]
             if isinstance(nn, NTM):
                 nn.start_history()
