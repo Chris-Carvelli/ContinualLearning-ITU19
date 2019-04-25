@@ -71,7 +71,8 @@ class NTM(nn.Module):
         be created
         """
         start_pos = self._relative_head_pos()
-        shift = int(s * 3 * self.shift_length - 0.000000001) - int(3 * self.shift_length / 2)
+        l = 1 + 2 * self.shift_length
+        shift = int(s * l - 0.000000001) - int(l / 2)
         for s in range(abs(shift)):
             if shift > 0:
                 if self.head_pos == len(self.memory) - 1 and len(self.memory) < self.max_memory:

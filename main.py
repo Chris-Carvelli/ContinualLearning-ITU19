@@ -191,13 +191,13 @@ def evaluate(max_eval, render, fps):
         res_path = get_path_to_session(False)
         session = load_session(res_path)
         if isinstance(session, MultiSession):
-            worker = session.workers[0]
+            worker = session.workers[3]
         else:
             worker = session.worker
         if isinstance(worker, GA):
             env = worker.env
             import gym
-            env = gym.make(f"TMaze-{6}x{2}-viewsize_{3}-v0")
+            env = gym.make(f"TMaze-{4}x{5}-viewsize_{3}-v0")
             nn, max_score = worker.results[-1][-1][0]
             if isinstance(nn, NTM):
                 nn.start_history()
