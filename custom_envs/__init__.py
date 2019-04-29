@@ -57,6 +57,11 @@ def _register_envs():
         entry_point='custom_envs.envs:TMaze',
         kwargs=dict(corridor_length=range(2, 3+1), rounds_pr_side=range(4, 6 + 1), view_size=3)
     )
+    register(
+        id=f"TMaze-2x4-3-UnevenRounds-v0",
+        entry_point='custom_envs.envs:TMaze',
+        kwargs=dict(corridor_length=2, rounds_pr_side=4, view_size=3, uneven_rounds=True)
+    )
 
     for rounds in (1, 2, 3, 4, 5, 6, 10, 20, 50, 100, 200, 500, 1000):
         for length in (1,2,3,4,5,6):

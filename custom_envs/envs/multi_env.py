@@ -1,3 +1,5 @@
+import time
+
 import gym
 from typing import List
 
@@ -84,12 +86,12 @@ class MultiEnv(gym.Env):
         return obs
 
     def render(self, mode='human', **kwargs):
-
         for e in self.to_close_list:
             e.close()
         self.to_close_list = []
+
         if self.i > 0 and self.round == 0:
-            return self.schedule[(self.i - 1) % len(self.schedule)][0].render(mode, **kwargs)
+            self.schedule[(self.i - 1) % len(self.schedule)][0].render(mode, **kwargs)
         return self.env.render(mode, **kwargs)
 
     def close(self):
