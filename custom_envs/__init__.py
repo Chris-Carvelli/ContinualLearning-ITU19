@@ -29,7 +29,7 @@ def _register_envs():
     )
 
     for h in (1, 2, 4, 6, 8, 10, 12):
-        for l in (1, 2, 4, 6, 8, 12, 16, 20, 24):
+        for l in (1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 30, 40, 50, 100):
             register(
                 id=f"Copy-{h}x{l}-v0",
                 entry_point='custom_envs.envs:Copy',
@@ -46,6 +46,7 @@ def _register_envs():
             kwargs=dict(height=h, min_length=1, max_length=12)
         )
 
+
     for l1, l2, r1, r2 in [(2, 4, 2, 10), (2, 6, 2, 10)]:
         register(
             id=f"TMazeRnd-{l1}.{l2}-{r1}.{r2}-3-v0",
@@ -61,6 +62,11 @@ def _register_envs():
         id=f"TMaze-2x4-3-UnevenRounds-v0",
         entry_point='custom_envs.envs:TMaze',
         kwargs=dict(corridor_length=2, rounds_pr_side=4, view_size=3, uneven_rounds=True)
+    )
+    register(
+        id=f"TMaze-2x5-3-UnevenRounds-x2-v0",
+        entry_point='custom_envs.envs:TMaze',
+        kwargs=dict(corridor_length=2, rounds_pr_side=5, view_size=3, uneven_rounds=True, repeat=2)
     )
 
     for rounds in (1, 2, 3, 4, 5, 6, 10, 20, 50, 100, 200, 500, 1000):

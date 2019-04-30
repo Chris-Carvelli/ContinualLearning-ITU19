@@ -139,7 +139,6 @@ class Session:
         os.makedirs(self.save_folder, exist_ok=True)
         self._loggers = [Logger(self.save_folder / "log.txt"), Logger(self.save_folder / "log.txt", stderr=True)]
 
-
     @property
     def loggers(self):
         if not hasattr(self, "_loggers"):

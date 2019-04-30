@@ -1,41 +1,21 @@
-import os
 import random
-import re
 
 import numpy
 import torch
 import pandas as pd
 
 from data_analyzer import *
-from custom_envs import *
 from configparser import ConfigParser
 from pathlib import Path
-from sessions.session import Session, MultiSession, MultiThreadedSession
+
+from data_analyzer import SessionResult
+from sessions.session import Session, MultiSession
 from src.modules.CopyNTM import CopyNTM
 from src.modules.NTM_Module import NTM
 from src.modules.NTM_TMazeModule import TMazeNTMModule
-from src.utils import lowpriority, int_or_float
+from src.utils import lowpriority
 from src.ga import GA
 
-
-class SessionResult:
-    def __init__(self, _path, _df=None, _name="NoName", _is_single=True):
-        self.split_df = None
-        self.session_path = _path
-        self.is_single = _is_single
-        if _df is None:
-            self.load_data()
-        else:
-            self.df = _df
-        self.name = _name
-
-    def load_data(self):
-        df, is_single = results_to_dataframe(load_session(self.session_path))
-        self.df = df
-        self.is_single = is_single
-        if not self.is_single:
-            self.split_df = self.df
-            self.df = self.df.groupby('generation').mean()
 
 @click.command()
 @click.option('--config_name', default="config_ntm_copy_2", help="Name of the config file")
@@ -134,7 +114,7 @@ def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv, hide_merged,
             if not result.is_single:
                 sns.lineplot(x="generation", y="max_score", hue="run", data=result.split_df).set_title(
                     f"Max Scores : {name}")
-                plt.show()
+        plt.show()
 
         # TODO: Make data comparable to PPO
         # ppo_results = "C:\\Users\\Luka\\Documents\\Python\\minigrid_rl\\torch-rl\\storage\\DoorKey"
