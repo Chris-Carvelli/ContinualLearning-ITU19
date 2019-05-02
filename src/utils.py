@@ -1,5 +1,5 @@
 import dill
-
+import importlib
 import torch
 
 import matplotlib.pyplot as plt
@@ -7,6 +7,14 @@ import seaborn as sns
 import pandas as pd
 
 sns.set()
+
+
+def load(name):
+    mod_name, attr_name = name.split(":")
+    mod = importlib.import_module(mod_name)
+    fn = getattr(mod, attr_name)
+
+    return fn
 
 
 def random_z_v(z_dim, z_num):
