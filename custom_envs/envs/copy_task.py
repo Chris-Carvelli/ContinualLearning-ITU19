@@ -55,24 +55,13 @@ class Copy(gym.Env):
     def _reward(self, action, target):
         if not self.reward_precopy_bits and target[0] == 0.5:
             return 0
-        sim = 1 - np.abs(action - target)
-        # sim[sim < .25] = 0
+        # threshold = .25
+        # sim = 1.0 - np.min((np.full(target.shape, threshold), np.abs(target - action)), 0) / threshold
+        sim = 1 - np.abs(target - action)
         l = self.length
         if self.reward_precopy_bits:
             l = len(self.obs)
         return np.sum(sim) / (len(sim) * l)
-        # p = 1
-        #
-        # match = np.sum(1 - np.abs(action - target) ** p) / self.height
-        #
-        # # min_match = 1 - .5**p
-        # min_match = 0.25
-        # length = self.length
-        # if self.reward_precopy_bits:
-        #     length = len(self.obs)
-        # if match > min_match:
-        #     return (match - min_match) / ((1 - min_match) * length)
-        # return 0
 
     def reset(self):
         bits = np.random.randint(0, 2, (self.length, self.height))

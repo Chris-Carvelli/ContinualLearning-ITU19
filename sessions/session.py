@@ -1,15 +1,61 @@
+import datetime
 import os
-# import pickle
+import sys
+from typing import Callable
+
 import dill
 import shutil
 import sys
-import threading
 import time
 import traceback
+import multiprocessing
+
+from multiprocessing import Process, Queue
 
 from sessions.dirtools import Dir
 from git import Repo
 from pathlib import Path
+
+
+class Logger:
+    """Copies terminal output to a file"""
+
+    def __init__(self, filepath: str,  stderr=False):
+
+        self.stderr = stderr
+        if self.stderr:
+            self.terminal = sys.stderr
+        else:
+            self.terminal = sys.stdout
+        target = Path(filepath)
+        self.log = open(target, "a")
+
+    def write(self, message):
+        if self.stderr:
+            self.terminal.write('\033[91m' + message + '\033[0m')
+        else:
+            self.terminal.write(message)
+        self.log.write(message)
+        self.log.flush()
+
+    def __del__(self):
+        self.stop()
+        self.log.close()
+
+    def stop(self):
+        if self.stderr:
+            sys.stderr = self.terminal
+        else:
+            sys.stdout = self.terminal
+
+    def start(self):
+        if self.stderr:
+            sys.stderr = self
+        else:
+            sys.stdout = self
+
+    def flush(self):
+        self.terminal.flush()
 
 
 def get_input(valid_inputs=("y", "n")):
@@ -51,12 +97,12 @@ def load_session(path, use_backup=True):
             raise e
 
 
-
 class Session:
     """A session represents some work that needs to be done and saved, and possibly paused"""
-    repo_dir = Path(os.path.dirname(os.path.abspath(__file__)))
     is_finished = False  # True when the session has finished all the work
     ignore_uncommited_changes_to_main = True
+    runtime = datetime.timedelta()
+    _repo_dir = Path(os.path.dirname(os.path.abspath(__file__)))
 
     def __init__(self, worker, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True):
         """
@@ -72,26 +118,33 @@ class Session:
         self.ignore_warnings = ignore_warnings
         self.terminate = False
         if repo_dir is not None:
-            self.repo_dir = repo_dir
+            self._repo_dir = str(repo_dir)
         while ".git" not in os.listdir(self.repo_dir):
             if self.repo_dir == self.repo_dir.parent:
                 raise Exception(f"Could not find a .git folder while searching the directory tree")
-            self.repo_dir = self.repo_dir.parent
-
+            self._repo_dir = str(self.repo_dir.parent)
         self.repo = Repo(self.repo_dir)
 
         self.worker = worker
         self.name = name
         self.ignore_file = ignore_file
-        self.save_folder = save_folder
-        if self.save_folder is None:
-            self.save_folder = Path(os.path.dirname(sys.argv[0])) / "Experiments"
-            if not os.path.exists(self.save_folder):
-                os.makedirs(self.save_folder)
-        self.save_folder = Path(self.save_folder) / (self.name + ".ses")
+        if save_folder is None:
+            self._save_folder = f"Experiments/"
+        else:
+            self._save_folder = str(Path("Experiments") / save_folder)
+        os.makedirs(self.save_folder, exist_ok=True)
+        self.loggers = [Logger(self.save_folder / "log.txt"), Logger(self.save_folder / "log.txt", stderr=True)]
+
+    @property
+    def repo_dir(self):
+        return Path(self._repo_dir)
+
+    @property
+    def save_folder(self):
+        return Path(os.path.dirname(sys.argv[0])) / self._save_folder / (self.name + ".ses")
 
     def _session_data(self):
-        return self.worker, self.repo, self.is_finished
+        return self.worker, self.repo.head.commit.hexsha, self.is_finished, self.runtime
 
     def load_results(self):
         """This method is for loading session results after the session has finished"""
@@ -106,20 +159,26 @@ class Session:
 
     def check_git_status(self):
         """Checks if the there are uncommitted changes to the git head that should be committed before session start"""
-        d = Dir(self.repo.working_dir, exclude_file=self.ignore_file)
+        try:
+            d = Dir(self.repo.working_dir, exclude_file=self.ignore_file)
 
-        changed_files = [i.a_path for i in self.repo.index.diff(self.repo.head.commit) if
-                         not d.is_excluded(Path(self.repo.working_dir) / i.a_path)]
-        untracked_files = [f for f in self.repo.untracked_files if not d.is_excluded(Path(self.repo.working_dir) / f)]
-        dirty_files = changed_files + untracked_files
-        if self.ignore_uncommited_changes_to_main:
-            target = sys.argv[0].replace(Path(self.repo_dir).as_posix() + "/", "")
-            if target in dirty_files:
-                dirty_files.remove(target)
-        if len(dirty_files) > 0:
-            print("The following files were untracked or had uncommitted changes:")
-            for f in dirty_files:
-                print("- " + f)
+            changed_files = [i.a_path for i in self.repo.index.diff(self.repo.head.commit) if
+                             not d.is_excluded(Path(self.repo.working_dir) / i.a_path)]
+            untracked_files = [f for f in self.repo.untracked_files if
+                               not d.is_excluded(Path(self.repo.working_dir) / f)]
+            dirty_files = changed_files + untracked_files
+            if self.ignore_uncommited_changes_to_main:
+                target = sys.argv[0].replace(Path(self.repo_dir).as_posix() + "/", "")
+                if target in dirty_files:
+                    dirty_files.remove(target)
+            if len(dirty_files) > 0:
+                print("The following files were untracked or had uncommitted changes:")
+                for f in dirty_files:
+                    print("- " + f)
+                return False
+        except Exception as e:
+            print("Encountered exception while checking git status")
+            traceback.print_exc()
             return False
         return True
 
@@ -149,9 +208,14 @@ class Session:
             else:
                 raise e
 
-    def start(self):
+    def start(self, on_load: Callable[['Session'], None] = None):
         """Starts the session. It will guide the user throug a series of questions about choices for the session
         regarding git status and restarting/overwriting previous sessions"""
+        if not os.path.exists(self.save_folder):
+            os.makedirs(self.save_folder)
+        for logger in self.loggers:
+            logger.start()
+        print(f"--- {self.name} ---")
         status = self.check_git_status()
         if not status:
             if self.ignore_warnings:
@@ -161,9 +225,8 @@ class Session:
                 response = get_input(valid_inputs=("y", "n"))
                 if response == "n":
                     return
-        if not os.path.exists(self.save_folder):
-            os.makedirs(self.save_folder)
-        else:
+
+        if os.path.exists(self.save_folder / "session.dill"):
             print(f"The save folder already exists. (Path: {self.save_folder})")
             if self.ignore_warnings:
                 print(f"Loading session {self.name}")
@@ -173,20 +236,41 @@ class Session:
                 print(choices)
                 response = get_input(valid_inputs=("r", "l", "q"))
             if response == "l":
-                (worker, repo, is_finished) = self.load_data("session")
-                # if is_finished:
-                #     self.worker = worker
-                #     print("Loaded session is already finished.")
-                #     return
-                commit = repo.head.commit
-                if self.repo.head.commit != commit:
-                    print("The loaded session belonged to a different commit and cannot be loaded")
-                    print(f"Before rerunning script please checkout commit({commit}): {commit.message}")
-                    return
+                data = self.load_data("session")
+                if len(data) == 3:
+                    (worker, repo, is_finished) = data
+                elif len(data) == 4:
+                    (worker, repo, is_finished, runtime) = data
+                    self.runtime = runtime
                 else:
-                    self.worker = worker
-                    self._run()
-                    return
+                    raise AssertionError()
+
+                if isinstance(repo, Repo):
+
+                    try:
+                        hexsha = repo.head.commit.hexsha
+                    except ValueError:
+                        print("(Probably) got error when comparing loaded head with current. This most likely is an "
+                              "issue of data stored with an old version of session when loading data on a different PC")
+                        traceback.print_exc()
+                        hexsha = None
+                else:
+                    assert isinstance(repo, str)
+                    hexsha = repo
+                if self.repo.head.commit.hexsha != hexsha:
+                    print("WARNING: The loaded session belonged to a different commit and cannot be loaded")
+                    print(f"Consider rerunning script after checking out commit({hexsha})")
+                    if not self.ignore_warnings:
+                        print("Continue? (Y/N)")
+                        response = get_input(valid_inputs=("y", "n",))
+                        if response == "n":
+                            return
+                self.worker = worker
+                if on_load is not None:
+                    print(f"Calling on_load method: {on_load.__name__}")
+                    on_load(self)
+                self._run()
+                return
             elif response == "r":
                 print("Confirm (y/n)")
                 if get_input(("y", "n")) == "y":
@@ -207,7 +291,9 @@ class Session:
         """
         while True:
             try:
-                i = self.worker.iterate()
+                starttime = datetime.datetime.now()
+                self.worker.iterate()
+                self.runtime += (datetime.datetime.now() - starttime)
                 self.save_data("session", self._session_data())
                 if self.terminate:
                     print("Session terminated")
@@ -216,27 +302,140 @@ class Session:
                 break
         self.is_finished = True
         self.save_data("session", self._session_data())
-        print("Session done (" + self.name + ')')
+        print(f"Session done ({self.name}) in total time: {self.runtime}")
+        for logger in self.loggers:
+            logger.stop()
+
+    # serialization
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        if "logger" in state:
+            del state['logger']
+        return state
 
 
 class MultiSession(Session):
     """Works like a session except it accepts a list of workers and executes them sequentially"""
 
-    def __init__(self, workers, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True):
+    def __init__(self, workers, name, save_folder=None, repo_dir=None, ignore_file='.ignore',
+                 ignore_warnings=True, parallel_execution=False):
         self.workers = workers
         self.current_worker = 0
+        super().__init__(self, name, save_folder=save_folder, repo_dir=repo_dir, ignore_file=ignore_file,
+                         ignore_warnings=ignore_warnings)
+        self.parallel_execution = parallel_execution  # TODO: This implementation is quick and dirty hand has potential problems for speical uses
+        self.completed = [False] * len(self.workers)
+        self.errors = [False] * len(self.workers)
+
+    def _work(self):
+        try:
+            self.workers[self.current_worker].iterate()
+        except StopIteration:
+            print(f"Finished worker ({self.current_worker})")
+            self.completed[self.current_worker] = True
+        except Exception as e:
+            print(f"Error in worker ({self.current_worker})")
+            traceback.print_exc()
+            self.completed[self.current_worker] = True
+            self.errors[self.current_worker] = True
+        return self.completed[self.current_worker]
+
+    def iterate(self):
+        if not all(self.completed):
+            if self.parallel_execution:
+                for _ in range(len(self.workers)):
+                    if not self.completed[self.current_worker]:
+                        break
+                    self.current_worker = (self.current_worker + 1) % len(self.workers)
+                self._work()
+                self.current_worker = (self.current_worker + 1) % len(self.workers)
+            else:
+                done = self._work()
+                if done:
+                    self.current_worker = (self.current_worker + 1) % len(self.workers)
+
+        else:
+            if any(self.errors):
+                error_idx = [i for i, err in enumerate(self.errors) if err]
+                print(f"WARNING: Unhandled exceptions occurred in thread {error_idx}")
+            raise StopIteration()
+
+
+class MultiThreadedSession(Session):
+    """Works like a MultiSession except all workers work concurrently"""
+
+    def __init__(self, workers, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True,
+                 thread_count: int = None):
+        self.workers = workers
+        self.status_done = [False] * len(workers)
+        self.status_error = [False] * len(workers)
+        self.status_working = [False] * len(workers)
         super().__init__(None, name, save_folder=save_folder, repo_dir=repo_dir, ignore_file=ignore_file,
                          ignore_warnings=ignore_warnings)
         self.worker = self
+        self.i = 0
+        self._thread_count = thread_count
+        # raise NotImplementedError("Does not currently work")
 
-    def iterate(self):
-        while self.current_worker < len(self.workers):
-            try:
-                self.workers[self.current_worker].iterate()
-            except StopIteration:
-                print(f"Finished worker ({self.current_worker})")
-                self.current_worker += 1
-            except Exception as e:
-                print(f"Error in worker ({self.current_worker})")
-                traceback.print_exc()
-        raise StopIteration()
+    @property
+    def thread_count(self):
+        return min(len(self.workers),
+                   self._thread_count if self._thread_count is not None else multiprocessing.cpu_count())
+
+    def _get_next_worker(self):
+        i = int(self.i)
+        self.i = (self.i + 1) % len(self.workers)
+        for _ in range(len(self.workers)):
+            if not self.status_done[i] and not self.status_working[i]:
+                return i, self.workers[i]
+            i = (i + 1) % len(self.workers)
+
+    def _run(self):
+        """Don't call explicitly. Instead use start()
+                Lets the worker (continue) work until interrupted or finished
+                """
+        queue = Queue()
+
+        for i in range(self.thread_count):
+            res = self._get_next_worker()
+            if res:
+                i, worker = res
+                self.status_working[i] = True
+                p = Process(target=self._process_worker, args=(i, worker, queue))
+                p.start()
+
+        while any(self.status_working):
+            i, worker, done, error, runtime = queue.get()
+
+            self.workers[i] = worker
+            self.status_error[i] = error
+            self.status_done[i] = done
+            self.status_working[i] = False
+            self.runtime += runtime
+
+            res = self._get_next_worker()
+            if res:
+                i, worker = res
+                self.status_working[i] = True
+                p = Process(target=self._process_worker, args=(i, worker, queue))
+                p.start()
+        self.is_finished = True
+        self.save_data("session", self._session_data())
+
+        print(f"Session done ({self.name}) in total time: {self.runtime}")
+        self.logger.stop()
+
+    def _process_worker(self, worker_id: int, worker, queue: Queue):
+        done, error = False, False
+        starttime = datetime.datetime.now()
+        try:
+            worker.iterate()
+        except StopIteration:
+            print(f"Finished worker ({worker_id})")
+            done = True
+        except Exception as e:
+            done, error = True, True
+            print(f"Error in worker ({worker_id})")
+            traceback.print_exc()
+        runtime = (datetime.datetime.now() - starttime)
+        queue.put((worker_id, worker, done, error, runtime))

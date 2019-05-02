@@ -1,6 +1,5 @@
 from src.Controllers.ControllerHyper import Controller as HyperController
 from src.Controllers.ControllerBase import Controller as BaseController
-from src.Controllers.ControllerNTM import Controller as NTMController
 
 from src.modules.SimpleHyper import HyperNN
 from src.modules.MinigridPolicy import PolicyNN
@@ -23,7 +22,3 @@ def builder_hyper():
 def builder_base():
     return BaseController(PolicyNN())
 
-
-def builder_ntm(copy_size):
-    return NTMController(NTM(
-        copy_size=copy_size))
