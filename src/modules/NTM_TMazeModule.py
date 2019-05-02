@@ -8,6 +8,7 @@ from torch import nn
 import numpy as np
 from torch.autograd import Variable
 
+from custom_envs.envs import TMaze
 from src.modules.NTM_Module import NTM
 from src.utils import add_min_prob, parameter_stats
 
@@ -70,7 +71,7 @@ class TMazeNTMModule(NTM):
         return super().forward(x)
 
     def evolve(self, sigma):
-        named_params = self.named_parameters()
+        named_params = list(self.named_parameters())
         evolve_vision, evolve_nn = True, True
         if any(map(lambda t: "conv" in t[0], named_params)):
             r = random.random()
@@ -78,7 +79,7 @@ class TMazeNTMModule(NTM):
             evolve_nn = .333 <= r <= 1
         for name, tensor in sorted(named_params):
             is_vision = name.startswith("conv")
-            if (is_vision and evolve_vision) or (is_vision and evolve_nn):
+            if (is_vision and evolve_vision) or (not is_vision and evolve_nn):
                 to_add = self.add_tensors[name]
                 to_add.normal_(0.0, sigma)
                 tensor.data.add_(to_add)
@@ -146,20 +147,24 @@ if __name__ == '__main__':
     import gym
     import time
 
-    env = gym.make("TMaze-1x2x12-v0")
+    # env = gym.make("TMaze-1x2x12-v0")
+    env: TMaze = gym.make("TMaze-3x2-viewsize_3-v0")
 
-    ntm = TMazeNTMModule(1)
-    ntm.init()
+    ntm = TMazeNTMModule(memory_unit_size=2, max_memory=3, view_size=3)
     # ntm.divergence = 1
 
     params = torch.nn.utils.parameters_to_vector(ntm.parameters()).detach().numpy()
     print(len(params))
+    ntm.evolve(.1)
 
     while True:
-        r, n_eval = ntm.evaluate(env, 1000, render=False, fps=10, show_action_frequency=False)
+
+        ntm.start_history()
+        r, n_eval = ntm.evaluate(env, 1000, render=False, fps=30, show_action_frequency=False)
+        # ntm.plot_history(vmin=0, vmax=1)
         if r > 0:
-            # ntm.evaluate(env, 1000, render=False, fps=10, show_action_frequency=True)
             print(r, n_eval),
+            ntm.evaluate(env, 1000, render=True, fps=10, show_action_frequency=True)
         # ntm.evaluate(env, 1000, render=False, fps=10)
         ntm.evolve(.1)
         # parameter_stats(ntm, False)

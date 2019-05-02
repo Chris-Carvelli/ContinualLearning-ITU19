@@ -1,3 +1,5 @@
+import time
+
 import gym
 from typing import List
 
@@ -10,10 +12,14 @@ class MultiEnv(gym.Env):
         self.i: int = None
         self.env: gym.Env = None
         self.rewards: List[float] = None
-        self.total_rounds = len(envs) * rounds
+
         self.round: int = None
         self.to_close_list: List[gym.Env] = []   # List of previous env to close before rendering next
         self.reset()
+
+    @property
+    def total_rounds(self):
+        return sum(map(lambda x: x[1], self.schedule))
 
     def _set_env(self, env):
         """Sets the current env"""
@@ -29,13 +35,13 @@ class MultiEnv(gym.Env):
         self.round += 1
         env_change = False
         done = False
-        if self.round >= self.schedule[self.i][1]:
+        if self.round >= self.schedule[self.i % len(self.schedule)][1]:
             self.round = 0
-            self.i += 1
+            self.i = self.i + 1
             if self.i < len(self.schedule):
                 if self.close_prevous_env:
                     self.to_close_list.append(self.env)
-                self._set_env(self.schedule[self.i][0])
+                self._set_env(self.schedule[self.i % len(self.schedule)][0])
                 env_change = True
                 self.on_env_change()
             else:
@@ -52,7 +58,7 @@ class MultiEnv(gym.Env):
         if round_done:
             done, state = self._next_round()
         obs = self._get_obs(state, round_done, reward)
-        score = reward / max(2, self.total_rounds)
+        score = reward / max(1, self.total_rounds)
         return obs, score, done, info
 
     def reset(self):
@@ -82,9 +88,15 @@ class MultiEnv(gym.Env):
         for e in self.to_close_list:
             e.close()
         self.to_close_list = []
-        self.env.render(mode, **kwargs)
+
+        if self.i > 0 and self.round == 0:
+            self.schedule[(self.i - 1) % len(self.schedule)][0].render(mode, **kwargs)
+        return self.env.render(mode, **kwargs)
 
     def close(self):
+        for e in self.to_close_list:
+            e.close()
+        self.to_close_list = []
         self.env.close()
 
     def seed(self, seed=None):

@@ -1,11 +1,12 @@
 import random
+import sys
 import time
+import gym
 from typing import List, Tuple
-from gym_minigrid.minigrid import *
-from gym_minigrid.minigrid import Grid
 
+from gym_minigrid.minigrid import Grid, MiniGridEnv, Wall, Goal
 from custom_envs.envs.multi_env import MultiEnv
-import gym_minigrid.minigrid as minigrid
+from src.utils import split_permutations
 
 
 class SingleTMaze(MiniGridEnv):
@@ -13,8 +14,12 @@ class SingleTMaze(MiniGridEnv):
     reward_values = dict(goal=1, fake_goal=0.1)
     view_size: int = None
 
-    def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False, view_size=None):
-        self.view_size = view_size
+    def __init__(self, corridor_length=3, reward_position=0, max_steps=None, is_double=False, view_size=None,
+                 max_corridor_length=None):
+        if max_corridor_length is None:
+            max_corridor_length = corridor_length
+        self.max_corridor_length = max_corridor_length
+        self.view_size = view_size if view_size is not None else 7
         self.is_double = is_double
         self.reward_position = reward_position
         self.corridor_length = corridor_length
@@ -23,39 +28,44 @@ class SingleTMaze(MiniGridEnv):
         if max_steps is None:
             max_steps = 4 + 4 * corridor_length
 
-        goals = ["UPPER LEFT", "UPPER RIGHT", "LOWER RIGHT", "LOWER LEFT", ]
-        self.mission = f"Goal is {goals[self.reward_position]}"
-
         super().__init__(
-            grid_size=3 + 2 * corridor_length,
+            grid_size=3 + 2 * self.max_corridor_length,
             max_steps=max_steps,
             see_through_walls=True,  # True for maximum performance
-            agent_view_size=view_size,
+            agent_view_size=self.view_size,
         )
         self.reward_range = (min(self.reward_values["fake_goal"], 0), self.reward_values["goal"])
+
+    @property
+    def mission(self):
+        goals = ["UPPER LEFT", "UPPER RIGHT", "LOWER RIGHT", "LOWER LEFT"]
+        return f'Goal is {goals[self.reward_position]}'
 
     def _gen_grid(self, width, height):
         # Create an empty grid
         self.grid = Grid(width, height)
-
-        # Generate the surrounding walls
-        self.grid.wall_rect(0, 0, width, height)
 
         # Place the agent in the top-left corner
         self.start_pos = (int(width / 2), int(height / 2))
         self.start_dir = 3
 
         # Create walls
-        for y in range(2, height - 2):
-            for x in range(1, width - 1):
-
-                if x == int(width / 2):
-                    continue
+        for x in range(0, width):
+            for y in range(0, height):
                 self.grid.set(x, y, Wall())
-        if not self.is_double:
-            for y in range(int(height / 2) + 1, height - 1):
-                for x in range(1, width - 1):
-                    self.grid.set(x, y, Wall())
+
+        # Create paths
+        if self.is_double:
+            for y in range(height // 2 - self.corridor_length, height // 2 + self.corridor_length + 1):
+                self.grid.set(width // 2, y, None)
+            for x in range(width // 2 - self.corridor_length, width // 2 + self.corridor_length + 1):
+                self.grid.set(x, height // 2 - self.corridor_length, None)
+                self.grid.set(x, height // 2 + self.corridor_length, None)
+        else:
+            for y in range(height // 2 - self.corridor_length, height // 2 + 1):
+                self.grid.set(width // 2, y, None)
+            for x in range(width // 2 - self.corridor_length, width // 2 + self.corridor_length + 1):
+                self.grid.set(x, height // 2 - self.corridor_length, None)
 
         # Create rewards
         reward_positions = self._reward_positions(width, height)
@@ -63,10 +73,10 @@ class SingleTMaze(MiniGridEnv):
 
     def _reward_positions(self, width, height):
         reward_positions = [
-            (1, 1),
-            (width - 2, 1),
-            (width - 2, height - 2),
-            (1, height - 2),
+            (width // 2 - self.corridor_length, height // 2 - self.corridor_length),
+            (width // 2 + self.corridor_length, height // 2 - self.corridor_length),
+            (width // 2 + self.corridor_length, height // 2 + self.corridor_length),
+            (width // 2 - self.corridor_length, height // 2 + self.corridor_length),
         ]
         if not self.is_double:
             reward_positions = reward_positions[:2]
@@ -74,6 +84,8 @@ class SingleTMaze(MiniGridEnv):
 
     def _reward(self):
         min_steps = (1 + 2 * self.corridor_length)
+        if self.is_double and self.reward_position > 1:
+            min_steps += 2
         redundant_steps = max(0, self.step_count - min_steps)
         max_steps = self.max_steps - min_steps + 1
         cell = self.grid.get(self.agent_pos[0], self.agent_pos[1])
@@ -100,31 +112,73 @@ class SingleTMaze(MiniGridEnv):
         goal.color = start_color
         return ret
 
+    # def close(self):
+    # if self.grid_render:
+    #     self.grid_render = None
+
 
 class TMaze(MultiEnv):
     cyclic_order = True
     print_render_buffer = ""
     explored_corners: List[Tuple[int, int]] = None
+    goal_positions = [0, 1]
+    uneven_rounds = False
+    repeat = 1
 
     @property
     def view_size(self):
         return self.env.agent_view_size
 
-    def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, rnd_order=False, cyclic_order=True,
-                 view_size=None):
+    def __init__(self, corridor_length=3, rounds_pr_side=10, max_steps=None, cyclic_order=True,
+                 view_size=None, double=False, uneven_rounds=False, repeat=1, goal_positions=None):
+        self.uneven_rounds = uneven_rounds
+        self.max_steps = max_steps
+        self._length_rng = tuple(corridor_length) if hasattr(corridor_length, '__iter__') else (corridor_length,)
+        self._rounds_rng = tuple(rounds_pr_side) if hasattr(rounds_pr_side, '__iter__') else (rounds_pr_side,)
         self.cyclic_order = cyclic_order
-        envs = [SingleTMaze(corridor_length, 0, max_steps, view_size=view_size),
-                SingleTMaze(corridor_length, 1, max_steps, view_size=view_size)]
-        self.rnd_order = rnd_order
-        if self.rnd_order:
-            random.shuffle(envs)
-        super().__init__(envs, rounds_pr_side)
+        self.reset_count = -2  # Will fit if reset is call just before first evaluation
+        self.permutations = []
+        self._rnd = random.Random()
+        self.repeat = repeat
+
+        if goal_positions is None:
+            self.goal_positions = [0, 1, 2, 3] if double else [0, 1]
+        else:
+            assert len(goal_positions) in [2, 4]
+            self.goal_positions = goal_positions
+        for r in self._rounds_rng:
+            for l in self._length_rng:
+                for g in self.goal_positions:  # Goal starting at left or right:
+                    if self.uneven_rounds:
+                        if double or len(self.goal_positions) == 4:
+                            for s in split_permutations(r * len(self.goal_positions), 2, True, True):
+                                self.permutations.append((g, l, s))
+                        else:
+                            for s in split_permutations(r * 2, 2, False):
+                                self.permutations.append((g, l, s))
+                    else:
+                        self.permutations.append((g, l, [r] * len(self.goal_positions)))
+        l = random.choice(self._length_rng)
+        envs = []
+        for g in self.goal_positions * self.repeat:
+            envs += [SingleTMaze(l, g, max_steps, view_size=view_size, max_corridor_length=max(self._length_rng),
+                                 is_double=double)]
+        super().__init__(envs, random.choice(self._rounds_rng))
 
     def reset(self):
-        if self.rnd_order:
-            random.shuffle(self.schedule)
-        elif self.cyclic_order:
-            self.schedule = [self.schedule[(i + 1) % len(self.schedule)] for i in range(len(self.schedule))]
+        self.reset_count += 1
+        if self.cyclic_order:
+            g, l, rounds = self.permutations[self.reset_count % len(self.permutations)]
+        else:
+            g, l, rounds = self._rnd.choice(self.permutations)
+        rounds = rounds * self.repeat
+        s = sum(map(lambda x: x[1], self.schedule))
+        for i, (env, _) in enumerate(self.schedule):
+            env.reset()
+            env.corridor_length = l
+            env.reward_position = self.goal_positions[(g + i) % len(self.goal_positions)]
+            self.schedule[i] = (env, rounds[i])
+        assert s == sum(map(lambda x: x[1], self.schedule))
         self.print_render_buffer = ""
         return super().reset()
 
@@ -147,7 +201,7 @@ class TMaze(MultiEnv):
         if current_round == 0:
             score = 0
         else:
-            score = score * self.total_rounds / (self.total_rounds - 2)
+            score = score * self.total_rounds / (self.total_rounds - len(self.goal_positions))
         return obs, score, done, info
 
     def on_env_change(self):
@@ -156,10 +210,7 @@ class TMaze(MultiEnv):
         self.explored_corners = []
 
     def seed(self, seed=None):
-        if self.rnd_order:
-            random.seed(seed)
-            if self.round == 0 and self.i == 0:
-                random.shuffle(self.schedule)
+        self._rnd.seed(seed)
         super().seed(seed)
 
     def render(self, mode='human', **kwargs):
@@ -184,7 +235,7 @@ def test_one_shot_tmaze():
     env.render()
     for a in actions:
         state, reward, done, info = env.step(a)
-        time.sleep(.3)
+        time.sleep(.1)
         env.render()
         print(reward, done)
         if done:
@@ -195,9 +246,11 @@ def test_one_shot_tmaze():
 def test_tmaze():
     import time
     rounds = 3
-    length = 10
-    env = TMaze(length, rounds)
-    env.seed(1)
+    length = 3
+    double = False
+    env = TMaze(length, rounds, double=double)
+    # env: TMaze = gym.make(F"TMaze-{length}x{rounds}-viewsize_3-v0")
+    # env.seed(2)
     state = env.reset()
     del state["image"]
     print(state)
@@ -207,18 +260,25 @@ def test_tmaze():
     # right = 1
     # forward = 2
     # toggle = 5
-    actions = ([2] * length + [0] + [2] * length) * rounds * 2
-    # actions = [2] * length + [1] + [2] * length + \
-    #           ([2] * length + [0] + [2] * length) * rounds + \
-    #           ([2] * length + [1] + [2] * length) * (rounds - 1) \
-    # + ([2] * length + [1] + [2] * length)
+    # actions = ([2] * length + [0] + [2] * length) * rounds * 2
+    if double:
+        actions = ([2] * length + [0] + [2] * length) * rounds
+        actions += ([2] * length + [1] + [2] * length) * rounds
+        actions += ([0, 0] + [2] * length + [0] + [2] * length) * rounds
+        actions += ([0, 0] + [2] * length + [1] + [2] * length) * rounds
+    else:
+        actions = [2] * length + [1] + [2] * length + \
+                  ([2] * length + [0] + [2] * length) * rounds + \
+                  ([2] * length + [1] + [2] * length) * (rounds - 1) \
+                  + ([2] * length + [1] + [2] * length)
+
     # env.render()
     total_reward = 0
     for a in actions:
         state, reward, done, info = env.step(a)
         # env.render("print")
         env.render()
-        time.sleep(.5)
+        time.sleep(1 / 20)
         total_reward += reward
         del state["image"]
         print(reward, done, state)
@@ -228,19 +288,77 @@ def test_tmaze():
 
 
 if __name__ == '__main__':
+    # print(split_permutations(4, 1, 1))
     # test_one_shot_tmaze()
     # test_tmaze()
-    env = TMaze(view_size=3, corridor_length=1)
+    env: TMaze = TMaze(corridor_length=2, rounds_pr_side=10, uneven_rounds=True, cyclic_order=False,
+                       goal_positions=[1, 0, 1, 0])
+    print(env.permutations)
+    print(len(env.permutations))
+    # env = SingleTMaze(view_size=3, corridor_length=1, max_corridor_length=None, is_double=False)
+    # env.render()
+    # obs, score, done, info = env.step(random.choice([0, 1, 2]))
+    # env.render()
+    # time.sleep(10)
+    # env: TMaze = gym.make("TMaze-2x4-3-UnevenRounds-v0")
+    # print(len(env.permutations))
+    # length = 2
+    # # env: TMaze = TMaze(corridor_length=length, rounds_pr_side=3, uneven_rounds=True, cyclic_order=True)
+    # env.reset()
+    # complete = False
+    # n = 0
+    # r_mode = "human"
+    # actions = ([2] * length + [0] + [2] * length)
+    # env.render(r_mode)
+    # time.sleep(1)
+    # while True:
+    #     for action in actions:
+    #         obs, score, done, info = env.step(action)
+    #         time.sleep(0.2)
+    #         env.render(r_mode)
+    #         complete = complete or done
+    #         if obs["round_done"]:
+    #             n += 1
+    #     # env.render(r_mode)
+    #     # print("round done")
+    #     if (complete):
+    #         # env.render(r_mode)
+    #         print(f"Complete: count = {n}")
+    #         # time.sleep(2)
+    #         env.reset()
+    #         complete = False
+    #         n = 0
+    # break
+
+    # env: TMaze = gym.make("TMazeRnd-2.4-2.10-3-v0")
+    # env: TMaze = TMaze(corridor_length=[3, 4], rounds_pr_side=[2, 3])
+    #
+    # env.reset()
+    # rounds = 0
+    # while True:
+    #     action = random.choice([0, 1, 2])
+    #     # env.render("print")
+    #     env.render("human")
+    #     # time.sleep(1/30)
+    #     obs, score, done, info = env.step(action)
+    #     if obs["round_done"]:
+    #         rounds += 1
+    #     if done:
+    #         # env.render("print")
+    #         print(f"done. side = {env.schedule[0][0].reward_position}, l={env.env.corridor_length}, r={env.schedule[0][1]}")
+    #         # print(f"Round: r={env.schedule[0][1]}, g={env.env.grid.width},{env.env.grid.height}")
+    #         env.reset()
+    #         rounds = 0
+    # break
+
     # env.view_size =
 
-
-
     # state, reward, done, info = env.step(2)
-    s = env.reset()
-    i = 0
-    print(s["image"][:, :, i])
-    # env.render("human")
-
-    for action in [2, 0, 2]:
-        obs, score, done, info = env.step(action)
-        print(obs["image"][:, :, i])
+    # s = env.reset()
+    # i = 0
+    # print(s["image"][:, :, i])
+    # # env.render("human")
+    #
+    # for action in [2, 0, 2]:
+    #     obs, score, done, info = env.step(action)
+    #     print(obs["image"][:, :, i])

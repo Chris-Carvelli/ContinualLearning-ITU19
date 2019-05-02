@@ -19,6 +19,7 @@ from pathlib import Path
 
 class Logger:
     """Copies terminal output to a file"""
+    stderr = False
 
     def __init__(self, filepath: str,  stderr=False):
 
@@ -39,8 +40,11 @@ class Logger:
         self.log.flush()
 
     def __del__(self):
-        self.stop()
-        self.log.close()
+        try:
+            self.stop()
+            self.log.close()
+        except AttributeError:
+            pass
 
     def stop(self):
         if self.stderr:
@@ -133,7 +137,13 @@ class Session:
         else:
             self._save_folder = str(Path("Experiments") / save_folder)
         os.makedirs(self.save_folder, exist_ok=True)
-        self.loggers = [Logger(self.save_folder / "log.txt"), Logger(self.save_folder / "log.txt", stderr=True)]
+        self._loggers = [Logger(self.save_folder / "log.txt"), Logger(self.save_folder / "log.txt", stderr=True)]
+
+    @property
+    def loggers(self):
+        if not hasattr(self, "_loggers"):
+            self._loggers = [Logger(self.save_folder / "log.txt"), Logger(self.save_folder / "log.txt", stderr=True)]
+        return self._loggers
 
     @property
     def repo_dir(self):
@@ -309,9 +319,16 @@ class Session:
     # serialization
     def __getstate__(self):
         state = self.__dict__.copy()
-        if "logger" in state:
-            del state['logger']
+        if "_loggers" in state:
+            del state['_loggers']
         return state
+
+    # # serialization
+    # def __setstate__(self, state):
+    #     for s in ["logger", "_logger", "loggers", "_logger"]:
+    #         if s in state:
+    #             del state[s]
+    #     self.__dict__ = state
 
 
 class MultiSession(Session):
@@ -324,12 +341,13 @@ class MultiSession(Session):
         super().__init__(self, name, save_folder=save_folder, repo_dir=repo_dir, ignore_file=ignore_file,
                          ignore_warnings=ignore_warnings)
         self.parallel_execution = parallel_execution  # TODO: This implementation is quick and dirty hand has potential problems for speical uses
-        self.completed = [False] * len(self.workers)
-        self.errors = [False] * len(self.workers)
+        self.completed = [False] * len(self.worker.workers)
+        self.errors = [False] * len(self.worker.workers)
+
 
     def _work(self):
         try:
-            self.workers[self.current_worker].iterate()
+            self.worker.workers[self.current_worker].iterate()
         except StopIteration:
             print(f"Finished worker ({self.current_worker})")
             self.completed[self.current_worker] = True
@@ -343,16 +361,16 @@ class MultiSession(Session):
     def iterate(self):
         if not all(self.completed):
             if self.parallel_execution:
-                for _ in range(len(self.workers)):
+                for _ in range(len(self.worker.workers)):
                     if not self.completed[self.current_worker]:
                         break
-                    self.current_worker = (self.current_worker + 1) % len(self.workers)
+                    self.current_worker = (self.current_worker + 1) % len(self.worker.workers)
                 self._work()
-                self.current_worker = (self.current_worker + 1) % len(self.workers)
+                self.current_worker = (self.current_worker + 1) % len(self.worker.workers)
             else:
                 done = self._work()
                 if done:
-                    self.current_worker = (self.current_worker + 1) % len(self.workers)
+                    self.current_worker = (self.current_worker + 1) % len(self.worker.workers)
 
         else:
             if any(self.errors):
@@ -367,6 +385,7 @@ class MultiThreadedSession(Session):
     def __init__(self, workers, name, save_folder=None, repo_dir=None, ignore_file='.ignore', ignore_warnings=True,
                  thread_count: int = None):
         self.workers = workers
+
         self.status_done = [False] * len(workers)
         self.status_error = [False] * len(workers)
         self.status_working = [False] * len(workers)
@@ -423,7 +442,8 @@ class MultiThreadedSession(Session):
         self.save_data("session", self._session_data())
 
         print(f"Session done ({self.name}) in total time: {self.runtime}")
-        self.logger.stop()
+        for logger in self.loggers:
+            logger.stop()
 
     def _process_worker(self, worker_id: int, worker, queue: Queue):
         done, error = False, False

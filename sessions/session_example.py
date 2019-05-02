@@ -4,9 +4,10 @@ the experiments can be re-run with the same settings/code as they the data was g
 """
 import os
 import random
+import time
 from pathlib import Path
 
-from sessions.session import *
+from sessions.session import Session, MultiSession, MultiThreadedSession
 
 
 class MyExperiment:
@@ -17,7 +18,7 @@ class MyExperiment:
 
     def iterate(self):
         # if self.count >= 5:
-        if random.random() > .9:
+        if random.random() > .8:
             raise StopIteration()
         self.current += [x for x in range(100)]
         # if self.count > 2:
@@ -27,7 +28,7 @@ class MyExperiment:
         self.count += 1
         # if self.coumasertionError()
         print(f"{self.name}: {self.count}")
-        time.sleep(0.2)
+        time.sleep(0.1)
         return sum(self.current)
 
 
@@ -36,9 +37,9 @@ if __name__ == '__main__':
     # S.start()
 
     # # Example of MultiSession
-    ms = MultiSession([MyExperiment("0"), MyExperiment("1"), MyExperiment("2")], "TestSessions", parallel_execution=True)
-    ms.start()
+    # ms = MultiSession([MyExperiment("0"), MyExperiment("1"), MyExperiment("2")], "TestSessions", parallel_execution=True)
+    # ms.start()
 
     # Example of MultiSession
-    # mts = MultiThreadedSession([MyExperiment(), MyExperiment(), MyExperiment(), MyExperiment(), MyExperiment()], "MTS")
-    # mts.start()
+    mts = MultiThreadedSession([MyExperiment("0"), MyExperiment("1"), MyExperiment("2"), MyExperiment("3"), MyExperiment("4")], "MTS")
+    mts.start()

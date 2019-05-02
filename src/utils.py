@@ -139,3 +139,42 @@ def lowpriority():
     except Exception as e:
         print("Failed to save cpy priority to low. Reason:")
         traceback.print_exc()
+
+
+def int_or_float(value):
+    try:
+        return int(value)
+    except ValueError:
+        return float(value)
+
+
+def split_permutations(n, minimum=0, recurse=0, require_full_size=False):
+    """
+    Generates a list of permutations for how many ways you can split a the number n into smaller values
+    For example:
+        split_permutations(5, minimum=2, recurse=0) = [[2, 3], [3, 2]]
+        split_permutations(4, minimum=1, recurse=1) = [[1, 2, 1], [1, 3], [2, 1, 1], [3, 1], [1, 1, 1, 1], [1, 1, 2], [2, 2]]
+        split_permutations(4, minimum=1, recurse=1, require_full_size=True) = [[1, 1, 1, 1]]
+    :param n: The number to split
+    :param minimum: The minimum allowed value for a split
+    :param recurse: Also split sub results
+    :param require_full_size: If true only allow full permutations that are fully split(see example above)
+    :return: list split of permutations
+    """
+    if n < minimum * 2:
+        return []
+    if recurse <= 0:
+        return [[i, n - i] for i in range(minimum, n - minimum + 1)]
+    else:
+        p = set()
+        for i in range(minimum, n // 2 + 1):
+            s1 = split_permutations(i, minimum, recurse - 1)
+            s2 = split_permutations(n - i, minimum, recurse - 1)
+            if not require_full_size:
+                s1.append([i])
+                s2.append([n - i])
+            for a in s1:
+                for b in s2:
+                    p.add(tuple(a + b))
+                    p.add(tuple(b + a))
+        return [list(x) for x in p]
