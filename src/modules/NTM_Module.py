@@ -166,6 +166,9 @@ class NTM(nn.Module):
             self.history["loc"][-1].append((self._relative_head_pos(), 1))
         return y
 
+    def start_history(self):
+        self.history = defaultdict(list)
+
     def plot_history(self, window=None):
         if self.history is None:
             print("No history to plot")

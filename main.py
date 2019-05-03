@@ -35,20 +35,20 @@ def run(config_name, config_folder, session_name, multi_session, mt, pe):
     read_ok = config.read(f"{config_folder}/{config_name}")
     assert len(read_ok) > 0, f"Failed to read config file: {Path(config_folder) / config_name}"
 
-    def config_get(section, key, default=None):
-        return config[section][key] if section in config and key in config[section] else default
-
-    # Define modules here
-    module = config_get("Controller", "module")
-    if module == "CopyNTM":
-        model_builder = lambda: CopyNTM(**dict([(key, int(value)) for key, value in config["NTM"].items()]))
-    elif module == "TMazeNTMModule":
-        model_builder = lambda: TMazeNTMModule(**dict([(k, int(v)) for k, v in config["ModelParameters"].items()]))
+    # Define modules here TODO: Remove - Should no longer be needed
+    if "Controller" in config and "module" in config["Controller"]:
+        module = config["Controller"]["module"]
+        if module == "CopyNTM":
+            model_builder = lambda: CopyNTM(**dict([(key, int(value)) for key, value in config["NTM"].items()]))
+        elif module == "TMazeNTMModule":
+            model_builder = lambda: TMazeNTMModule(**dict([(k, int(v)) for k, v in config["ModelParameters"].items()]))
+        else:
+            raise AssertionError(f"Unknown module specification: {module}")
     else:
-        raise AssertionError(f"Unknown module specification: {module}")
+        model_builder = None
 
     # Set seed
-    seed = config_get("HyperParameters", "seed")
+    seed = config["HyperParameters"].get("seed") if "HyperParameters" in config else None
     if seed:
         seed = int(seed)
         torch.manual_seed(seed)

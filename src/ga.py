@@ -1,4 +1,5 @@
 import copy
+import importlib
 import os
 from pathlib import Path
 from typing import Any, Callable
@@ -17,7 +18,6 @@ import src.ControllerFactory as mf
 from configparser import ConfigParser
 from src.ControllerFactory import *
 from custom_envs import *
-from src.utils import model_diff
 
 from src.utils import load
 
@@ -86,23 +86,22 @@ class GA:
         if len(read_ok) != 2:
             print("Warning: Failed to read all config files: " + str([self.config_file, default_config]))
 
+
         # hyperparams
-        self.env_keys = env_keys or json.loads(config.get('EnvironmentSettings', 'env_keys'))
+        self.env_keys = env_keys if env_keys is not None else json.loads(config.get('EnvironmentSettings', 'env_keys'))
         if not env_keys and config.get('EnvironmentSettings', 'env_key'):
             self.env_keys.append(config.get('EnvironmentSettings', 'env_key'))
-        self.population = population or int(config['HyperParameters']['population'])
-        self.model_builder = model_builder or load(config['HyperParameters']['model_builder'])
-        self.max_episode_eval = max_episode_eval or int(config['HyperParameters']['max_episode_eval'])
-        self.max_evals = max_evals or int(config['HyperParameters']['max_evals'])
-        self.max_reward = max_reward or float(config['HyperParameters']['max_reward'])
-        self.max_generations = max_generations or int(config['HyperParameters']['max_generations'])
-        self.sigma = sigma or float(config['HyperParameters']['sigma'])
-        self.truncation = truncation or int(config['HyperParameters']['truncation'])
-        self.trials = trials or int(config['HyperParameters']['trials'])
-        self.elite_trials = elite_trials or int(config['HyperParameters']['elite_trials'])
-        self.n_elites = n_elites or int(config['HyperParameters']['n_elites'])
-
-        use_custom = lambda x: x and (not isinstance(x, str))
+        self.population = population if population is not None else int(config['HyperParameters']['population'])
+        self.model_builder = model_builder or self._load_model_builder(config)
+        self.max_episode_eval = max_episode_eval if max_episode_eval is not None else int(config['HyperParameters']['max_episode_eval'])
+        self.max_evals = max_evals if max_evals is not None else int(config['HyperParameters']['max_evals'])
+        self.max_reward = max_reward if max_reward is not None else float(config['HyperParameters']['max_reward'])
+        self.max_generations = max_generations if max_generations is not None else int(config['HyperParameters']['max_generations'])
+        self.sigma = sigma if sigma is not None else float(config['HyperParameters']['sigma'])
+        self.truncation = truncation if truncation is not None else int(config['HyperParameters']['truncation'])
+        self.trials = trials if trials is not None else int(config['HyperParameters']['trials'])
+        self.elite_trials = elite_trials if elite_trials is not None else int(config['HyperParameters']['elite_trials'])
+        self.n_elites = n_elites if n_elites is not None else int(config['HyperParameters']['n_elites'])
 
         # strategies
         if sigma_strategy and not isinstance(sigma_strategy, str):
@@ -236,6 +235,7 @@ class GA:
         return state
 
     def __setstate__(self, state):
+
         # Rerun init to help the allows the GA to easier unpickle successfully with older version with less
         keywords = {
             "config_file",
@@ -274,3 +274,13 @@ class GA:
         self.scored_parents = state.get("scored_parents") or self.scored_parents
         self._init_models()
 
+    def _load_model_builder(self, config: configparser.ConfigParser):
+        name = config['HyperParameters']['model_builder']
+        mod_name, attr_name = name.split(":")
+        mod = importlib.import_module(mod_name)
+        fn = getattr(mod, attr_name)
+        if config.has_section("Controller kwargs"):
+            kwargs = dict([(key, json.loads(val)) for (key, val) in config["Controller kwargs"].items()])
+            return lambda: fn(**kwargs)
+        else:
+            return fn
