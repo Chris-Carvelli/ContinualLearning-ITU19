@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
+from sessions.session import Session, MultiSession
+
 sns.set()
 
 
@@ -178,3 +180,11 @@ def split_permutations(n, minimum=0, recurse=0, require_full_size=False):
                     p.add(tuple(a + b))
                     p.add(tuple(b + a))
         return [list(x) for x in p]
+
+def restart_session_after_errors(session: MultiSession):
+    """Use this method as the on_load parameter for the Session.start() method to continue a session
+    terminated with errors"""
+    session.errors = [False for _ in range(len(session.errors))]
+    session.completed = [False for _ in range(len(session.completed))]
+    session.worker.errors = [False for _ in range(len(session.worker.errors))]
+    session.worker.completed = [False for _ in range(len(session.worker.completed))]

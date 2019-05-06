@@ -13,7 +13,7 @@ from sessions.session import Session, MultiSession
 from src.modules.CopyNTM import CopyNTM
 from src.modules.NTM_Module import NTM
 from src.modules.NTM_TMazeModule import TMazeNTMModule
-from src.utils import lowpriority
+from src.utils import lowpriority, load
 from src.ga import GA
 
 
@@ -24,7 +24,8 @@ from src.ga import GA
 @click.option('--multi_session', default=1, help='Repeat experiment as a multi-session n times if n > 1')
 @click.option('--mt', is_flag=True, help='use multiple thread for multi-session')
 @click.option('--pe', is_flag=True, help='Parallel (sequential) execution for multi-session')
-def run(config_name, config_folder, session_name, multi_session, mt, pe):
+@click.option('--on_load', default=None, help='Specify a package and method for a on_load method. For instance: src.utils:restart_session_after_errors')
+def run(config_name, config_folder, session_name, multi_session, mt, pe, on_load):
     lowpriority()
     if session_name is None:
         session_name = config_name if multi_session <= 1 else f"{config_name}-x{multi_session}"
@@ -72,8 +73,9 @@ def run(config_name, config_folder, session_name, multi_session, mt, pe):
     if not os.path.isfile(Path(session.save_folder) / "config"):
         with open(Path(session.save_folder) / "config", "a") as fp:
             config.write(fp)
-
-    session.start()
+    if on_load:
+        on_load = load(on_load)
+    session.start(on_load=on_load)
 
 
 @click.command()
