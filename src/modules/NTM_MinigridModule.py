@@ -36,6 +36,12 @@ class MinigridNTM(NTM):
         self.add_tensors = {}
         self.init()
 
+    def _nn_forward(self, x_joined):
+        # This method is overwritten to ensure the the jump, shift and read/write parameters are normalized to [0, 1]
+        output, update_vector = super()._nn_forward(x_joined)
+        update_vector[:3] = 1 / (1 + np.exp(-update_vector[:3]))
+        return output, update_vector
+
     def forward(self, x):
         x = torch.transpose(torch.transpose(x, 1, 3), 2, 3)
         x = self.image_conv(x)
@@ -53,6 +59,7 @@ class MinigridNTM(NTM):
         for name, tensor in self.named_parameters():
             if tensor.size() not in self.add_tensors:
                 self.add_tensors[tensor.size()] = torch.Tensor(tensor.size())
+
 
     def evaluate(self, env, max_eval, render=False, fps=60):
         state = env.reset()
@@ -80,12 +87,14 @@ if __name__ == '__main__':
     import gym
     from gym_minigrid import *
     env = gym.make("MiniGrid-Empty-5x5-v0")
-
-    nn = MinigridNTM(10, 10)
-    nn.evolve(0.05)
-    nn.start_history()
-    print(nn.evaluate(env, 10000, True))
-    nn.plot_history()
-
+    ntm = MinigridNTM(10, 10)
+    while True:
+        ntm.evolve(0.05)
+        ntm.start_history()
+        print(ntm.evaluate(env, 10000, False))
+        # print(len(ntm.memory))
+        if len(ntm.memory)> 1:
+            ntm.plot_history()
+            break
     # for _ in range(10):
         # nn.
