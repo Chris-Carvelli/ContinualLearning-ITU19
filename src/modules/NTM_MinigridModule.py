@@ -16,7 +16,8 @@ class MinigridNTM(NTM):
         m = 7
         self.image_embedding_size = ((n - 1) // 2 - 2) * ((m - 1) // 2 - 2) * 64
 
-        super().__init__(memory_unit_size=memory_unit_size, max_memory=max_memory)
+        super().__init__(memory_unit_size=memory_unit_size, max_memory=max_memory,
+                         fixed_size=max_memory and max_memory <= 100)
         self.image_conv = nn.Sequential(
             nn.Conv2d(3, 16, (2, 2)),
             nn.ReLU(),
@@ -36,11 +37,11 @@ class MinigridNTM(NTM):
         self.add_tensors = {}
         self.init()
 
-    def _nn_forward(self, x_joined):
-        # This method is overwritten to ensure the the jump, shift and read/write parameters are normalized to [0, 1]
-        output, update_vector = super()._nn_forward(x_joined)
-        update_vector[:3] = 1 / (1 + np.exp(-update_vector[:3]))
-        return output, update_vector
+    # def _nn_forward(self, x_joined):
+    #     # This method is overwritten to ensure the the jump, shift and read/write parameters are normalized to [0, 1]
+    #     output, update_vector = super()._nn_forward(x_joined)
+    #     update_vector[:3] = 1 / (1 + np.exp(-update_vector[:3]))
+    #     return output, update_vector
 
     def forward(self, x):
         x = torch.transpose(torch.transpose(x, 1, 3), 2, 3)
@@ -63,6 +64,7 @@ class MinigridNTM(NTM):
 
     def evaluate(self, env, max_eval, render=False, fps=60):
         state = env.reset()
+        self.reset()
         self.eval()
         tot_reward = 0
         n_eval = 0
@@ -92,6 +94,7 @@ class MinigridNTM(NTM):
             if no_change or n_eval >= max_eval:
                 break
             past_data.add(current_data)
+            # if n_eval >= max_eval: break
         return tot_reward, n_eval
 
 if __name__ == '__main__':
