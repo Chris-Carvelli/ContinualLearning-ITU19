@@ -67,10 +67,17 @@ class MinigridNTM(NTM):
         tot_reward = 0
         n_eval = 0
         is_done = False
-        previous_state = (state, self.memory, self.head_pos)
+        def convert(a):
+            try:
+                return tuple(convert(i) for i in a)
+            except TypeError:
+                return a
+        # start_data = convert(state["image"]), convert(self.memory), convert(self.head_pos), convert(self.previous_read)
+        past_data = set()
+
         while not is_done:
-            state = state['image']
-            values = self(Variable(torch.Tensor([state])))
+            # state = state['image']
+            values = self(Variable(torch.Tensor([state["image"]])))
             action = np.argmax(values)
 
             state, reward, is_done, _ = env.step(action)
@@ -80,8 +87,12 @@ class MinigridNTM(NTM):
 
             tot_reward += reward
             n_eval += 1
-            current_state = (state, self.memory, self.head_pos)
-
+            current_data = tuple((convert(state["image"]), convert(self.memory), self.head_pos, convert(self.previous_read)))
+            no_change = past_data.__contains__(current_data)
+            if no_change or n_eval >= max_eval:
+                print("terminated prematurely")
+                break
+            past_data.add(current_data)
         return tot_reward, n_eval
 
 if __name__ == '__main__':
@@ -89,13 +100,19 @@ if __name__ == '__main__':
     from gym_minigrid import *
     env = gym.make("MiniGrid-Empty-5x5-v0")
     ntm = MinigridNTM(10, 10)
-    while True:
+    total_eval = 0
+    t0 = time.time()
+    while total_eval < 100:
         ntm.evolve(0.05)
-        ntm.start_history()
-        print(ntm.evaluate(env, 10000, False))
+        # ntm.start_history()
+        score, n_eval = ntm.evaluate(env, 1000000, False)
+        total_eval += 1
         # print(len(ntm.memory))
-        if len(ntm.memory)> 1:
-            ntm.plot_history()
-            break
+        # if len(ntm.memory)> 1:
+        # ntm.plot_history()
+            # break
+        # time.sleep(1)
     # for _ in range(10):
         # nn.
+
+    print( (time.time() - t0) / total_eval)

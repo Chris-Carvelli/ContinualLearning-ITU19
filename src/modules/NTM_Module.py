@@ -34,7 +34,6 @@ class NTM(nn.Module):
         self.memory: np.ndarray = None  # The
         self.previous_read: np.ndarray = None
         self.left_expands: int = None  # The number of times the memory has been expanded to the left
-
         self.reset()
 
     def reset(self):
