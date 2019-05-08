@@ -18,5 +18,4 @@ tensorboardX
 
 git+git://github.com/maximecb/gym-minigrid@28f4554056b6b8003123d15bc483b41c9cd6694a#egg=gym-minigrid
 
-# torch-rl from: https://github.com/lcswillems/rl-starter-files
-torch_rl
+# torch_rl from: https://github.com/lcswillems/rl-starter-files
