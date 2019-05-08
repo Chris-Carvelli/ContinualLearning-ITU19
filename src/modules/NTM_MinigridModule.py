@@ -60,7 +60,7 @@ class MinigridNTM(NTM):
         tot_reward = 0
         n_eval = 0
         is_done = False
-
+        previous_state = (state, self.memory, self.head_pos)
         while not is_done:
             state = state['image']
             values = self(Variable(torch.Tensor([state])))
@@ -73,6 +73,7 @@ class MinigridNTM(NTM):
 
             tot_reward += reward
             n_eval += 1
+            current_state = (state, self.memory, self.head_pos)
 
         return tot_reward, n_eval
 

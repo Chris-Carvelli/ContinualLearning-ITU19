@@ -38,7 +38,7 @@ def plot(target):
 
             ga = dill.load(fp)
 
-            for g, res in enumerate(ga.results):
+            for g, res in enumerate(ga.tuple_results()):
                 # TMP
                 data.append([run, exp, g, res[0], res[1], res[2], res[3]])
 
