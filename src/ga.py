@@ -47,6 +47,9 @@ termination_strategies = {
     'max_gen_or_reward': lambda ga: not (ga.g >= ga.max_generations or
                                          (len(ga.tuple_results()) > 0 and ga.max_reward is not None
                                           and ga.tuple_results()[-1][2] >= ga.max_reward)),
+    'max_gen_or_elite_reward': lambda ga: not (ga.g >= ga.max_generations
+                                               or (len(ga.results) > 0 and ga.max_reward is not None
+                                                   and ga.results[-1]["elite_max"] >= ga.max_reward)),
 }
 
 
