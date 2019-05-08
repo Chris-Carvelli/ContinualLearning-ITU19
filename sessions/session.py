@@ -344,7 +344,6 @@ class MultiSession(Session):
         self.completed = [False] * len(self.worker.workers)
         self.errors = [False] * len(self.worker.workers)
 
-
     def _work(self):
         try:
             self.worker.workers[self.current_worker].iterate()

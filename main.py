@@ -166,28 +166,29 @@ def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv, hide_merged,
 @click.option("--max_eval", default="100", help='max number of evaluations')
 @click.option("--render/--no-render", default=True, help="rendeing or no rendering")
 @click.option("--fps", default="60", help="frames per second")
-def evaluate(max_eval, render, fps):
+@click.option('--use_explorer', is_flag=True, prompt='Use explorer?')
+def evaluate(max_eval, render, fps, use_explorer):
     max_eval = int(max_eval)
     fps = int(fps)
     while True:
-        res_path = get_path_to_session(False)
+        res_path = get_path_to_session(use_explorer)
         session = load_session(res_path)
         if isinstance(session, MultiSession):
-            worker = session.workers[3]
+            worker = session.workers[0]
         else:
             worker = session.worker
         if isinstance(worker, GA):
-            env = worker.env
-            import gym
-            env = gym.make(f"TMaze-{4}x{5}-viewsize_{3}-v0")
-            nn, max_score = worker.results[-1][-1][0]
-            if isinstance(nn, NTM):
-                nn.start_history()
-            tot_reward, n_eval = nn.evaluate(env, int(max_eval), render=render, fps=int(fps))
-            print(f"Evaluates to reward: {tot_reward}")
-            if isinstance(nn, NTM):
-                nn.plot_history()
-
+            envs = worker.envs if hasattr(worker, "envs") else [worker.env]
+            for env in envs:
+                # import gym
+                # env = gym.make(f"TMaze-{4}x{5}-viewsize_{3}-v0")
+                nn, max_score = worker.results[-1][-1][0]
+                if isinstance(nn, NTM):
+                    nn.start_history()
+                tot_reward, n_eval = nn.evaluate(env, int(max_eval), render=render, fps=int(fps))
+                print(f"Evaluates to reward: {tot_reward}")
+                if isinstance(nn, NTM):
+                    nn.plot_history()
 
 @click.group()
 def main():
