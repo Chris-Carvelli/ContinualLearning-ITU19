@@ -90,7 +90,6 @@ class MinigridNTM(NTM):
             current_data = tuple((convert(state["image"]), convert(self.memory), self.head_pos, convert(self.previous_read)))
             no_change = past_data.__contains__(current_data)
             if no_change or n_eval >= max_eval:
-                print("terminated prematurely")
                 break
             past_data.add(current_data)
         return tot_reward, n_eval
