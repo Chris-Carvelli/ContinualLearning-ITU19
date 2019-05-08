@@ -144,7 +144,7 @@ class GA:
             ret = self.evolve_iter()
             r = tuple(v for k, v in ret.items())
             self.g += 1
-            print(f"[gen {self.g}] median_score={r[0]}, mean_score={r[1]}, max_score={r[2]}")
+            print(f"[gen {self.g}] median_score={r[0]}, mean_score={r[1]}, max_score={r[2]}, elite_max={ret['elite_max']}")
             return ret
         else:
             raise StopIteration()
