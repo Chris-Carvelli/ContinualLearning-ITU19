@@ -16,7 +16,7 @@ rq
 ffmpeg
 tensorboardX
 
-git+git://github.com/maximecb/gym-minigrid@35d72af01c219c50afba9f39d22ab0964484ac52#egg=gym-minigrid
+git+git://github.com/maximecb/gym-minigrid@28f4554056b6b8003123d15bc483b41c9cd6694a#egg=gym-minigrid
 
 # torch-rl from: https://github.com/lcswillems/rl-starter-files
 torch_rl

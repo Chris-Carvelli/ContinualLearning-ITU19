@@ -13,14 +13,15 @@ import json
 
 import numpy as np
 import gym
-from torch import nn
+# from torch import nn
 
-import src.ControllerFactory as mf
-from configparser import ConfigParser
-from src.ControllerFactory import *
-from custom_envs import *
+# import src.ControllerFactory as mf
+# from configparser import ConfigParser
 
-from src.utils import load
+from src import utils
+# from src.ControllerFactory import *
+# from custom_envs import *
+
 
 # TODO move to appropriate file
 sigma_strategies = {
@@ -78,6 +79,7 @@ class GA:
                  env_selection=None,
                  sigma_strategy=None,
                  termination_strategy=None,
+                 env_wrappers = None
                  ):
 
         self.config_file = config_file
@@ -87,17 +89,18 @@ class GA:
         if len(read_ok) != 2:
             print("Warning: Failed to read all config files: " + str([self.config_file, default_config]))
 
-
         # hyperparams
         self.env_keys = env_keys if env_keys is not None else json.loads(config.get('EnvironmentSettings', 'env_keys'))
         if not env_keys and config.get('EnvironmentSettings', 'env_key'):
             self.env_keys.append(config.get('EnvironmentSettings', 'env_key'))
         self.population = population if population is not None else int(config['HyperParameters']['population'])
         self.model_builder = model_builder or self._load_model_builder(config)
-        self.max_episode_eval = max_episode_eval if max_episode_eval is not None else int(config['HyperParameters']['max_episode_eval'])
+        self.max_episode_eval = max_episode_eval if max_episode_eval is not None else int(
+            config['HyperParameters']['max_episode_eval'])
         self.max_evals = max_evals if max_evals is not None else int(config['HyperParameters']['max_evals'])
         self.max_reward = max_reward if max_reward is not None else float(config['HyperParameters']['max_reward'])
-        self.max_generations = max_generations if max_generations is not None else int(config['HyperParameters']['max_generations'])
+        self.max_generations = max_generations if max_generations is not None else int(
+            config['HyperParameters']['max_generations'])
         self.sigma = sigma if sigma is not None else float(config['HyperParameters']['sigma'])
         self.truncation = truncation if truncation is not None else int(config['HyperParameters']['truncation'])
         self.trials = trials if trials is not None else int(config['HyperParameters']['trials'])
@@ -123,11 +126,21 @@ class GA:
         self.env_selection = env_selections[self.env_selection_name]
         self.termination_strategy = termination_strategies[self.termination_strategy_name]
 
+        # Environment wrappers
+        self.env_wrappers = env_wrappers or config["EnvironmentSettings"].get("env_wrappers") or []
+        if isinstance(self.env_wrappers, str):
+            self.env_wrappers = [utils.load(s) for s in json.loads(self.env_wrappers)]
+
+        def wrap(env, i=0):
+            if len(self.env_wrappers) > i:
+                return wrap(self.env_wrappers[i](env), i + 1)
+            return env
+
         # algorithm state
         self.g = 0
+        self.envs = [wrap(gym.make(key)) for key in self.env_keys]
         self.evaluations_used = 0
         self.results = []
-        self.envs = list(map(lambda x: gym.make(x), self.env_keys))
         self.active_env = 0
         self.scored_parents = None
         self.models = None
@@ -165,7 +178,6 @@ class GA:
             scored_parents = self._get_best_models([m for m, _ in scored_models[:self.truncation]], self.elite_trials)
         self._reproduce(scored_parents)
 
-
         # print(f'[gen {self.g}] reproduce')
 
         # just reassigning self.scored_parents doesn't reduce the refcount, laking memory
@@ -175,7 +187,6 @@ class GA:
             del self.scored_parents[:]
         self.scored_parents = scored_parents
         elite_max = self.scored_parents[0][1]
-
 
         ret_values = [("median_score", median_score), ("mean_score", mean_score), ("max_score", max_score),
                       ("evaluations_used", self.evaluations_used), ("elite_max", elite_max),
@@ -195,7 +206,6 @@ class GA:
             else:
                 results.append(r)
         return results
-
 
     def _get_best_models(self, models=None, trials=None):
         if models is None:
