@@ -40,16 +40,16 @@ def plot_results():
     ga = load_session(f"Experiments/{name}.ses")
 
     print("Lead generation scores")
-    print([ga.results[-1][-1][i][1] for i in range(len(ga.results[-1][-1]))])
+    print([ga.tuple_results()[-1][-1][i][1] for i in range(len(ga.tuple_results()[-1][-1]))])
     print("Lead generation parameter standard deviation")
-    model_diff([ga.results[-1][-1][i][0].nn for i in range(len(ga.results[-1][-1]))])
+    model_diff([ga.tuple_results()[-1][-1][i][0].nn for i in range(len(ga.tuple_results()[-1][-1]))])
 
     plot(ga)
     env = ga.env
 
     gen = -1  # Last
     for x in range(4):
-        champ: torch.nn.Module = ga.results[gen][-1][x % len(ga.results[gen][-1])][0]
+        champ: torch.nn.Module = ga.tuple_results()[gen][-1][x % len(ga.tuple_results()[gen][-1])][0]
         res = champ.evaluate(env, 100000, render=True, fps=6)
         print(res)
 

@@ -1,6 +1,7 @@
 import copy
 import importlib
 import os
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Callable
 
@@ -43,8 +44,8 @@ env_selections = {
 termination_strategies = {
     'all_generations': lambda ga_instance: ga_instance.g < ga_instance.max_generations,
     'max_gen_or_reward': lambda ga: not (ga.g >= ga.max_generations or
-                                         (len(ga.results) > 0 and ga.max_reward is not None
-                                          and ga.results[-1][2] >= ga.max_reward)),
+                                         (len(ga.tuple_results()) > 0 and ga.max_reward is not None
+                                          and ga.tuple_results()[-1][2] >= ga.max_reward)),
 }
 
 
@@ -141,9 +142,9 @@ class GA:
                 self.models = self._init_models()
 
             ret = self.evolve_iter()
+            r = tuple(v for k, v in ret.items())
             self.g += 1
-            print(f"[gen {self.g}] median_score={ret[0]}, mean_score={ret[1]}, max_score={ret[2]}")
-
+            print(f"[gen {self.g}] median_score={r[0]}, mean_score={r[1]}, max_score={r[2]}")
             return ret
         else:
             raise StopIteration()
@@ -162,8 +163,8 @@ class GA:
             scored_parents = scored_models[:self.truncation]
         else:
             scored_parents = self._get_best_models([m for m, _ in scored_models[:self.truncation]], self.elite_trials)
-
         self._reproduce(scored_parents)
+
 
         # print(f'[gen {self.g}] reproduce')
 
@@ -173,11 +174,28 @@ class GA:
         if self.scored_parents is not None:
             del self.scored_parents[:]
         self.scored_parents = scored_parents
+        elite_max = self.scored_parents[0][1]
 
-        ret = (median_score, mean_score, max_score, self.evaluations_used, self.scored_parents)
+
+        ret_values = [("median_score", median_score), ("mean_score", mean_score), ("max_score", max_score),
+                      ("evaluations_used", self.evaluations_used), ("elite_max", elite_max),
+                      ("scored_parents", self.scored_parents)]
+        ret = OrderedDict()
+        for k, v in ret_values:
+            ret[k] = v
+
         self.results.append(ret)
-
         return ret
+
+    def tuple_results(self):
+        results = []
+        for r in self.results:
+            if isinstance(r, OrderedDict):
+                results.append(tuple(v for k, v in r.items()))
+            else:
+                results.append(r)
+        return results
+
 
     def _get_best_models(self, models=None, trials=None):
         if models is None:
@@ -224,7 +242,6 @@ class GA:
                 self.active_env = self.env_selection(self)
                 run_res.append(m.evaluate(self.envs[self.active_env], self.max_episode_eval))
             ret.append((m, run_res))
-
         return ret
 
     # serialization

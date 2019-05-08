@@ -88,7 +88,7 @@ def results_to_dataframe(results):
     experiment_id = 0
     for worker in workers:
         gen = 0
-        for line in worker.results:
+        for line in worker.tuple_results():
             d.append({'run': experiment_id, 'generation': gen, 'median_score': line[0], 'mean_score': line[1],
                       'max_score': line[2], 'evaluations_used': line[3]})
             gen = gen + 1
