@@ -8,13 +8,15 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 from src.modules.NTM_Module import NTM
+from src.utils import convert_array
 
 
 class MinigridNTM(NTM):
-    def __init__(self, memory_unit_size=None, max_memory=None):
+    def __init__(self, memory_unit_size=None, max_memory=None, detect_stuck_state=False):
         n = 7
         m = 7
         self.image_embedding_size = ((n - 1) // 2 - 2) * ((m - 1) // 2 - 2) * 64
+        self.detect_stuck_state = detect_stuck_state
 
         super().__init__(memory_unit_size=memory_unit_size, max_memory=max_memory,
                          fixed_size=max_memory and max_memory <= 100)
@@ -69,12 +71,7 @@ class MinigridNTM(NTM):
         tot_reward = 0
         n_eval = 0
         is_done = False
-        def convert(a):
-            try:
-                return tuple(convert(i) for i in a)
-            except TypeError:
-                return a
-        # start_data = convert(state["image"]), convert(self.memory), convert(self.head_pos), convert(self.previous_read)
+
         past_data = set()
 
         while not is_done:
@@ -89,13 +86,17 @@ class MinigridNTM(NTM):
 
             tot_reward += reward
             n_eval += 1
-            current_data = tuple((convert(state["image"]), convert(self.memory), self.head_pos, convert(self.previous_read)))
-            no_change = past_data.__contains__(current_data)
-            if no_change or n_eval >= max_eval:
+            if n_eval >= max_eval:
                 break
-            past_data.add(current_data)
-            # if n_eval >= max_eval: break
+            if self.detect_stuck_state:
+                current_data = tuple((convert_array(state["image"]), convert_array(self.memory), self.head_pos,
+                                      convert_array(self.previous_read)))
+                if current_data in past_data:
+                    break
+                past_data.add(current_data)
         return tot_reward, n_eval
+
+    detect_stuck_state = True  # For compatibility with older versions. TODO: Remove in published version
 
 if __name__ == '__main__':
     import gym

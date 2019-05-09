@@ -188,3 +188,12 @@ def restart_session_after_errors(session: MultiSession):
     session.completed = [False for _ in range(len(session.completed))]
     session.worker.errors = [False for _ in range(len(session.worker.errors))]
     session.worker.completed = [False for _ in range(len(session.worker.completed))]
+
+
+def convert_array(a):
+    """Converts a numpy array into tuples recursively"""
+    try:
+        return tuple(convert_array(i) for i in a)
+    except TypeError:
+        return a
+

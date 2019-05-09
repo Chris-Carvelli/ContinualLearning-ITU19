@@ -128,7 +128,7 @@ class GA:
         self.sigma_strategy = sigma_strategies[self.sigma_strategy_name]
         self.env_selection = env_selections[self.env_selection_name]
         self.termination_strategy = termination_strategies[self.termination_strategy_name]
-
+        
         # Environment wrappers
         self.env_wrappers = env_wrappers or config["EnvironmentSettings"].get("env_wrappers") or []
         if isinstance(self.env_wrappers, str):

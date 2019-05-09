@@ -3,6 +3,7 @@ An example of how to use the choice environment
 """
 
 import gym
+import gym_minigrid
 import custom_envs
 import random
 import random
@@ -25,3 +26,4 @@ env = gym.make(env_name)
 # show env
 # while True:
 #     simulate(env, fps=12)
+# gym_minigrid.wrappers.StateBonus
