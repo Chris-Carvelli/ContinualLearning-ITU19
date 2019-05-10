@@ -97,6 +97,13 @@ class GA:
         if not env_keys and config.get('EnvironmentSettings', 'env_key'):
             self.env_keys.append(config.get('EnvironmentSettings', 'env_key'))
         self.population = population if population is not None else int(config['HyperParameters']['population'])
+
+        # TMP
+        if model_builder is not None:
+            mod_name , attr_name = model_builder.split(':')
+            mod = importlib.import_module(mod_name)
+            model_builder = getattr(mod, attr_name)
+
         self.model_builder = model_builder or self._load_model_builder(config)
         self.max_episode_eval = max_episode_eval if max_episode_eval is not None else int(
             config['HyperParameters']['max_episode_eval'])
@@ -241,7 +248,10 @@ class GA:
     def _init_models(self):
         if not self.scored_parents:
             # TODO adapt old controllers to get obs and action spaces
-            return [self.model_builder() for _ in range(self.population)]
+            return [self.model_builder(
+                {"image": self.envs[self.active_env].observation_space.spaces['image'].shape, "text": 100},
+                self.envs[self.active_env].action_space)
+                for _ in range(self.population)]
         else:
             self._reproduce(self.scored_parents)
             return self.models
