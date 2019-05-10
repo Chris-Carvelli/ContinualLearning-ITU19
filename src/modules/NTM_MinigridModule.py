@@ -39,11 +39,11 @@ class MinigridNTM(NTM):
         self.add_tensors = {}
         self.init()
 
-    # def _nn_forward(self, x_joined):
-    #     # This method is overwritten to ensure the the jump, shift and read/write parameters are normalized to [0, 1]
-    #     output, update_vector = super()._nn_forward(x_joined)
-    #     update_vector[:3] = 1 / (1 + np.exp(-update_vector[:3]))
-    #     return output, update_vector
+    def _nn_forward(self, x_joined):
+        # This method is overwritten to ensure the the jump, shift and read/write parameters are normalized to [0, 1]
+        output, update_vector = super()._nn_forward(x_joined)
+        update_vector[:3] = 1 / (1 + np.exp(-update_vector[:3]))
+        return output, update_vector
 
     def forward(self, x):
         x = torch.transpose(torch.transpose(x, 1, 3), 2, 3)
@@ -63,7 +63,6 @@ class MinigridNTM(NTM):
             if tensor.size() not in self.add_tensors:
                 self.add_tensors[tensor.size()] = torch.Tensor(tensor.size())
 
-
     def evaluate(self, env, max_eval, render=False, fps=60):
         state = env.reset()
         self.reset()
@@ -75,14 +74,13 @@ class MinigridNTM(NTM):
         past_data = set()
 
         while not is_done:
-            # state = state['image']
             values = self(Variable(torch.Tensor([state["image"]])))
             action = np.argmax(values)
 
             state, reward, is_done, _ = env.step(action)
             if render:
                 env.render('human')
-                time.sleep(1/fps)
+                time.sleep(1 / fps)
 
             tot_reward += reward
             n_eval += 1
@@ -98,24 +96,33 @@ class MinigridNTM(NTM):
 
     detect_stuck_state = True  # For compatibility with older versions. TODO: Remove in published version
 
+
 if __name__ == '__main__':
     import gym
     from gym_minigrid import *
-    env = gym.make("MiniGrid-Empty-5x5-v0")
-    ntm = MinigridNTM(10, 10)
+    # gym_minigrid.wrappers.ActionBonus
+    from src.wrappers import ExplorationBonus
+
+    env = ExplorationBonus(gym.make("MiniGrid-SimpleCrossingS9N1-v0"))
+    # env = ExplorationBonus(gym.make("MiniGrid-Empty-5x5-v0"))
     total_eval = 0
     t0 = time.time()
-    while total_eval < 100:
-        ntm.evolve(0.05)
+    while total_eval < 1000:
+        ntm = MinigridNTM(10, 10, True)
+        # ntm.evolve(0.5)
         # ntm.start_history()
-        score, n_eval = ntm.evaluate(env, 1000000, False)
+        score, _ = ntm.evaluate(env, 50, True)
+        if score > 0.0:
+            print(score)
+            score, _ = ntm.evaluate(env, 50, True)
+            print(score)
         total_eval += 1
         # print(len(ntm.memory))
         # if len(ntm.memory)> 1:
         # ntm.plot_history()
-            # break
+        # break
         # time.sleep(1)
     # for _ in range(10):
-        # nn.
+    # nn.
 
-    print( (time.time() - t0) / total_eval)
+    print((time.time() - t0) / total_eval)

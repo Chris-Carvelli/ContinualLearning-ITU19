@@ -139,6 +139,10 @@ class GA:
                 return wrap(self.env_wrappers[i](env), i + 1)
             return env
 
+        # Safe-gaurd for max evaluations if not specified
+        self.max_episode_eval = 1000000000 if self.max_episode_eval < 0 else self.max_episode_eval
+        self.max_evals = 1000000000 if self.max_evals < 0 else self.max_evals
+
         # algorithm state
         self.g = 0
         self.envs = [wrap(gym.make(key)) for key in self.env_keys]

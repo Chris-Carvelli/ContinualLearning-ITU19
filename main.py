@@ -167,7 +167,6 @@ def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv, hide_merged,
 @click.option("--render/--no-render", default=False, help="rendeing or no rendering")
 @click.option("--fps", default="60", help="frames per second")
 @click.option('--use_explorer', is_flag=True, prompt='Use explorer?')
-@click.option('--samples', is_flag=True, prompt='Use explorer?')
 def evaluate(max_eval, render, fps, use_explorer):
     max_eval = int(max_eval)
     fps = int(fps)
