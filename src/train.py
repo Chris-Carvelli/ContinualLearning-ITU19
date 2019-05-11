@@ -9,10 +9,9 @@ from src.ga import GA
 N_RUNS = 5
 
 files = [
-    'Obstacles',
-    'LavaCrossing',
-    'KindAll',
-    'DistShift'
+    'SimpleCrossingAll',
+    'SimpleCrossingN1',
+    'SimpleCrossingN3',
 ]
 
 model_builders = {
