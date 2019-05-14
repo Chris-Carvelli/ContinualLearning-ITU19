@@ -6,34 +6,33 @@ from tkinter import filedialog
 import os
 from sessions.session import Session, load_session
 import sessions.session
-import seaborn as sns
-import matplotlib.pyplot as plt
-import click
+
 
 pandas.set_option('display.max_columns', 20)
 pandas.set_option('display.width', 1000)
 
 
 class SessionResult:
-    def __init__(self, _path, _df=None, _name="NoName", _is_single=True):
+    def __init__(self, _path, _df=None, _name="NoName", _is_single=True, fill_missing_data=False):
         self.session: Session = None
         self.split_df = None
         self.session_path = _path
         self.is_single = _is_single
         if _df is None:
-            self.load_data()
+            self.load_data(fill_missing_data)
         else:
             self.df = _df
         self.name = _name
 
-    def load_data(self):
+    def load_data(self, fill_missing_data):
         self.session = load_session(self.session_path)
-        df, is_single = results_to_dataframe(self.session)
+        df, is_single = results_to_dataframe(self.session, fill_missing_data)
         self.df = df
         self.is_single = is_single
         if not self.is_single:
             self.split_df = self.df
             self.df = self.df.groupby('generation').mean()
+        # self.std = self.df.groupby('generation').std()
 
 
 def get_path_to_session(use_explorer):
@@ -75,7 +74,7 @@ def print_possible_folders(directories_list):
         i = i + 1
 
 
-def results_to_dataframe(results):
+def results_to_dataframe(results, fill_missing_data=False):
     if isinstance(results, sessions.session.MultiSession):
         is_single = False
         workers = results.workers
@@ -85,12 +84,24 @@ def results_to_dataframe(results):
 
     d = []
     # ret = (median_score, mean_score, max_score, self.evaluations_used, self.scored_parents)
+    max_length = max(len(w.results) for w in workers)
     experiment_id = 0
     for worker in workers:
         gen = 0
-        for line in worker.tuple_results():
-            d.append({'run': experiment_id, 'generation': gen, 'median_score': line[0], 'mean_score': line[1],
-                      'max_score': line[2], 'evaluations_used': line[3]})
+        results = worker.results
+        for i in range(max_length):
+            if i >= len(results):
+                if fill_missing_data:
+                    i = -1
+                else:
+                    break
+            line = results[i]
+            if isinstance(line, dict):
+                x = {**line, **{"run": experiment_id, 'generation': gen}}
+            else:
+                x = {'run': experiment_id, 'generation': gen, 'median_score': line[0], 'mean_score': line[1],
+                     'max_score': line[2], 'evaluations_used': line[3]}
+            d.append(x)
             gen = gen + 1
         experiment_id = experiment_id + 1
     df = pandas.DataFrame(d)

@@ -1,8 +1,13 @@
 import random
+import sys
+from collections import defaultdict
 
 import numpy
 import torch
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import click
 
 from data_analyzer import *
 from configparser import ConfigParser
@@ -24,7 +29,8 @@ from src.ga import GA
 @click.option('--multi_session', default=1, help='Repeat experiment as a multi-session n times if n > 1')
 @click.option('--mt', is_flag=True, help='use multiple thread for multi-session')
 @click.option('--pe', is_flag=True, help='Parallel (sequential) execution for multi-session')
-@click.option('--on_load', default=None, help='Specify a package and method for a on_load method. For instance: src.utils:restart_session_after_errors')
+@click.option('--on_load', default=None,
+              help='Specify a package and method for a on_load method. For instance: src.utils:restart_session_after_errors')
 def run(config_name, config_folder, session_name, multi_session, mt, pe, on_load):
     lowpriority()
     if session_name is None:
@@ -80,86 +86,116 @@ def run(config_name, config_folder, session_name, multi_session, mt, pe, on_load
 
 @click.command()
 @click.option('--ppo_results', default='', help='Path to .csv file containing results of PPO')
-@click.option('--sessions_folder', default='', help='Path to folder containing session results')
+@click.option('--sessions_folder', default='Experiments', help='Path to folder containing session results')
 @click.option('--sessions_to_load', default='',
               help='name of session folder(s) (.ses); if you want multiple, separate with comma')
 @click.option('--hide_indv', is_flag=True, help="hides individual max, mean, median plots")
 @click.option('--hide_merged', is_flag=True, help="hides individual averaged result of all runs for multi session")
-@click.option('--hide_merged', is_flag=True, help="hides individual averaged result of all runs for multi session")
 @click.option('--use_explorer', is_flag=True, prompt='Use explorer?')
-def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv, hide_merged, use_explorer):
-        # Get all sessions needed
-        session_names = sessions_to_load.replace(" ", "")
-        session_names = session_names.split(",")
-        results_objects = []
-        # Get path to session
-        # If not provided as argument propmt the user
-        if not sessions_folder or not sessions_to_load:
-            # True -> Use explorer
-            # False -> Use terminal
-            res_path = get_path_to_session(use_explorer)
-            results_objects.append(SessionResult(_path=res_path))
+@click.option('--fill_missing_data', is_flag=True,
+              help="For multisession sessions with less results will be copy data from last generation until they match")
+@click.option('--max_gen', default="-1", help="Only data before max generation will be used")
+@click.option('--save_name', default="", help="Name of figures to be saved")
+@click.option('--plot_title', default="", help="Title for max/median/mean plots")
+@click.option('--labels', default="", help="comma seperated list of labels for max/median/mean plots")
+@click.option('--ymax', default="1.05", help="maximum y-value when plotting")
+@click.option('--plot_elite_max', is_flag=True, help="plot max of elites as well as full generation")
+def plot(ppo_results, sessions_folder, sessions_to_load, hide_indv, hide_merged, use_explorer, fill_missing_data,
+         max_gen, save_name, plot_title, labels, ymax, plot_elite_max):
+    # Get all sessions needed
+    session_names = sessions_to_load.replace(" ", "").split(",")
+    # label_dict = defaultdict(str)
+    labels = dict([(k, v) for k, v in enumerate(labels.strip(" ").split(",") if labels else [])])
+    # labels = labels.strip(" ").split(",") if labels else [None] * (len(session_names) + 1)
+    results_objects = []
+    max_gen = int(max_gen)
+    ymax = float(ymax) if ymax else None
+    # Get path to session
+    # If not provided as argument propmt the user
+    if not sessions_folder or not sessions_to_load:
+        # True -> Use explorer
+        # False -> Use terminal
+        res_path = get_path_to_session(use_explorer)
+        results_objects.append(SessionResult(_path=res_path, fill_missing_data=fill_missing_data))
 
-            session_names = [Path(res_path).name]
-            print(f"Plotting: {session_names[0]}")
+        session_names = [Path(res_path).name]
+        print(f"Plotting: {session_names[0]}")
 
-        else:
-            for name in session_names:
-                results_objects.append(SessionResult(_path=sessions_folder + name, _name=name))
+    else:
+        for name in session_names:
+            results_objects.append(
+                SessionResult(_path=Path(sessions_folder) / name, _name=name, fill_missing_data=fill_missing_data))
 
-        # Get session and put the data in data frame
-        # result_session = load_session(res_path)
-        # df, is_single = results_to_dataframe(result_session)
+    # Get session and put the data in data frame
+    # result_session = load_session(res_path)
+    # df, is_single = results_to_dataframe(result_session)
 
-        # Plot runs against each other if it's a multi-session
-        for result, name in zip(results_objects, session_names):
+    # Plot runs against each other if it's a multi-session
+    for result, name in zip(results_objects, session_names):
+        # y = "elite_max" if "elite_max" in result.split_df else "max_score"
+        # for y in ["elite_max", "max_score"]:
+        if not result.is_single:
+            line = sns.lineplot(x="generation", y="max_score", hue="run",  data=result.split_df)
+            line.set_title(f"Max Scores : {name}")
+            plt.ylim(None, ymax)
+        save_plot(Path(sys.argv[0]).parent / "plots", name)
+        plt.show()
+        if plot_elite_max:
             if not result.is_single:
-                sns.lineplot(x="generation", y="max_score", hue="run", data=result.split_df).set_title(
-                    f"Max Scores : {name}")
+                line = sns.lineplot(x="generation", y="elite_max", hue="run",  data=result.split_df)
+                line.set_title(f"Max Scores of Elites: {name}")
+                plt.ylim(None, ymax)
+            save_plot(Path(sys.argv[0]).parent / "plots", f"{name}-elites")
+            plt.show()
+
+    # TODO: Make data comparable to PPO
+    # ppo_results = "C:\\Users\\Luka\\Documents\\Python\\minigrid_rl\\torch-rl\\storage\\DoorKey"
+    # Get results as dataframe from minigrid_rl. You need to provide the path of the log
+    if ppo_results:
+        df2 = get_ppo_results(ppo_results)
+        # print(df2.columns.values)
+        #    print(df.columns.values)
+        print(df2.columns.values)
+        # print(df2)
+        print(df2)
+        # df = df.set_index('generation').join(df2.set_index('update'))
+
+    if not hide_merged:
+        # Combine all runs into one and do an average of the results if is multisession
+        for result in results_objects:
+            joined_data = [result.df['mean_score'], result.df['max_score'], result.df['median_score']]
+            joined_data_plot = sns.lineplot(data=joined_data).set_title(result.name)
+            plt.xlabel('Generations')
+            plt.ylabel('Score')
+            plt.legend(['mean', 'max', 'median'])
         plt.show()
 
-        # TODO: Make data comparable to PPO
-        # ppo_results = "C:\\Users\\Luka\\Documents\\Python\\minigrid_rl\\torch-rl\\storage\\DoorKey"
-        # Get results as dataframe from minigrid_rl. You need to provide the path of the log
-        if ppo_results:
-            df2 = get_ppo_results(ppo_results)
-            # print(df2.columns.values)
-            #    print(df.columns.values)
-            print(df2.columns.values)
-            # print(df2)
-            print(df2)
-            # df = df.set_index('generation').join(df2.set_index('update'))
-
-        if not hide_merged:
-            # Combine all runs into one and do an average of the results if is multisession
-            # if not is_single:
-            #    df = df.groupby('generation').mean()
-            for result in results_objects:
-                joined_data = [result.df['mean_score'], result.df['max_score'], result.df['median_score']]
-                joined_data_plot = sns.lineplot(data=joined_data).set_title(result.name)
-                plt.xlabel('Generations')
-                plt.ylabel('Score')
-                plt.legend(['mean', 'max', 'median'])
-                plt.show()
-
-        if not hide_indv:
-            mean_df = pd.DataFrame()
-            max_df = pd.DataFrame()
-            median_df = pd.DataFrame()
-
-            for result in results_objects:
-                mean_df[result.name] = result.df['mean_score']
-                max_df[result.name] = result.df['max_score']
-                median_df[result.name] = result.df['median_score']
-            sns.lineplot(data=mean_df).set_title("Mean")
-            plt.show()
-            sns.lineplot(data=max_df).set_title("Max")
-            plt.show()
-            sns.lineplot(data=median_df).set_title("Median")
+    if not hide_indv:
+        # for y in ["max_score", "mean_score", "median_score"]:
+        y_names = ["elite_max", "max_score"] if plot_elite_max else ["max_score"]
+        for y in y_names:
+            if y not in results_objects[0].split_df:
+                continue
+            for i, result in enumerate(results_objects):
+                data = result.split_df.loc[result.split_df["generation"] < max_gen] if max_gen > 0 else result.split_df
+                sns.lineplot(x="generation", y=y, data=data, label=labels.get(i) or result.name).set_title(
+                    plot_title or y)
+            plt.ylim(None, ymax)
+            if save_name:
+                save_plot(Path(sys.argv[0]).parent / "plots", f"{save_name}-{y}")
             plt.show()
 
-        if not (sessions_folder or sessions_to_load):
-            main()
+    if not sessions_to_load:
+        main()
+
+
+
+def save_plot(folder, name):
+    os.makedirs(folder, exist_ok=True)
+    name = name + ".png" if not name.endswith(".png") else name
+    name = name.replace(".", ",").replace(",png", ".png")
+    plt.savefig(folder / name, bbox_inches="tight")
+    print(f"saved figure: {folder / name}")
 
 
 @click.command()
@@ -192,6 +228,7 @@ def evaluate(max_eval, render, fps, use_explorer):
                     nn.plot_history()
             tot_reward = tot_reward / len(envs)
             print(f"Evaluates to reward: {tot_reward}")
+
 
 @click.group()
 def main():

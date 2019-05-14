@@ -173,3 +173,4 @@ fabric.properties
 
 *.ses/
 Experiments/
+plots/

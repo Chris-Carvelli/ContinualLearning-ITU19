@@ -14,7 +14,7 @@ from src.modules.CopyNTM import CopyNTM
 
 @click.command()
 @click.option("--max_eval", default="100000", help='max number of evaluations')
-@click.option("--render/--no-render", default=True, help="rendeing or no rendering")
+@click.option("--render/--no-render", default=False, help="rendeing or no rendering")
 @click.option("--fps", default="10", help="frames per second")
 @click.option('--use_explorer', is_flag=True, prompt='Use explorer?')
 @click.option('--plot_data', is_flag=True, prompt='Plot evolution data?')

@@ -87,8 +87,8 @@ class MinigridNTM(NTM):
             if n_eval >= max_eval:
                 break
             if self.detect_stuck_state:
-                current_data = tuple((convert_array(state["image"]), convert_array(self.memory), self.head_pos,
-                                      convert_array(self.previous_read)))
+                current_data = (tuple(env.agent_pos), env.agent_dir, action, convert_array(self.memory),
+                                self.head_pos, convert_array(self.previous_read))
                 if current_data in past_data:
                     break
                 past_data.add(current_data)
