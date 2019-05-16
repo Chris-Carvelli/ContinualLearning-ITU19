@@ -16,7 +16,8 @@ from src.utils import add_min_prob, parameter_stats
 class TMazeNTMModule(NTM):
     reward_inputs = 1
 
-    def __init__(self, memory_unit_size=2, max_memory=1, reward_inputs=1, view_size: int = None):
+    def __init__(self, memory_unit_size=2, max_memory=1, reward_inputs=1, view_size: int = None,
+                 layers=0, hidden_size=50):
         super().__init__(memory_unit_size, max_memory=max_memory, overwrite_mode=True)
 
         self.reward_inputs = reward_inputs
@@ -24,11 +25,7 @@ class TMazeNTMModule(NTM):
             view_size = 7
         if view_size <= 3:
             self.image_conv = lambda x: x.unsqueeze(0)
-            self.nn = nn.Sequential(
-                nn.Linear(view_size * view_size * 3 + self.reward_inputs + self.memory_unit_size,
-                          3 + self.update_size()),
-                nn.Sigmoid(),
-            )
+            in_size = view_size * view_size * 3 + self.reward_inputs + self.memory_unit_size
         else:
             output_size = 8
             self.image_conv = nn.Sequential(
@@ -39,23 +36,19 @@ class TMazeNTMModule(NTM):
                 nn.Sigmoid(),
                 nn.Conv2d(32, output_size, (2, 2)),
                 nn.Sigmoid(),
-                # nn.Linear(64, 6),
-                # nn.Sigmoid(),
             )
-            # self.image_conv = nn.Sequential(
-            #     nn.Conv2d(3, 8, (2, 2)),
-            #     nn.Sigmoid(),
-            #     nn.MaxPool2d((2, 2)),
-            #     nn.Conv2d(8, 16, (2, 2)),
-            #     nn.Sigmoid(),
-            #     nn.Conv2d(16, output_size, (2, 2)),
-            #     nn.Sigmoid(),
-            # )
+            in_size = output_size + self.reward_inputs + self.memory_unit_size
 
-            self.nn = nn.Sequential(
-                nn.Linear(output_size + self.reward_inputs + self.memory_unit_size, 3 + self.update_size()),
-                nn.Sigmoid(),
-            )
+        hidden_layers = []
+        for _ in range(layers):
+            hidden_layers.append(nn.Linear(in_size, hidden_size))
+            hidden_layers.append(nn.Sigmoid())
+            in_size = hidden_size
+        self.nn = nn.Sequential(
+            *hidden_layers,
+            nn.Linear(in_size, 3 + self.update_size()),
+            nn.Sigmoid(),
+        )
 
         self.add_tensors = {}
         self.init()
@@ -150,7 +143,9 @@ if __name__ == '__main__':
     # env = gym.make("TMaze-1x2x12-v0")
     env: TMaze = gym.make("TMaze-3x2-viewsize_3-v0")
 
-    ntm = TMazeNTMModule(memory_unit_size=2, max_memory=3, view_size=3)
+    ntm = TMazeNTMModule(memory_unit_size=2, max_memory=3, view_size=3, layers=1, hidden_size=50)
+    print(ntm)
+
     # ntm.divergence = 1
 
     params = torch.nn.utils.parameters_to_vector(ntm.parameters()).detach().numpy()
