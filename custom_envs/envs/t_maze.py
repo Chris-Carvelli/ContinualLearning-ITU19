@@ -201,7 +201,7 @@ class TMaze(MultiEnv):
         if current_round == 0:
             score = 0
         else:
-            score = score * self.total_rounds / (self.total_rounds - len(self.goal_positions))
+            score = score * self.total_rounds / (self.total_rounds - len(self.goal_positions) * self.repeat)
         return obs, score, done, info
 
     def on_env_change(self):
@@ -243,12 +243,12 @@ def test_one_shot_tmaze():
     time.sleep(1)
 
 
-def test_tmaze():
+def test_tmaze(repeat=1):
     import time
     rounds = 3
     length = 3
     double = False
-    env = TMaze(length, rounds, double=double)
+    env = TMaze(length, rounds, double=double, repeat=repeat)
     # env: TMaze = gym.make(F"TMaze-{length}x{rounds}-viewsize_3-v0")
     # env.seed(2)
     state = env.reset()
@@ -267,10 +267,14 @@ def test_tmaze():
         actions += ([0, 0] + [2] * length + [0] + [2] * length) * rounds
         actions += ([0, 0] + [2] * length + [1] + [2] * length) * rounds
     else:
-        actions = [2] * length + [1] + [2] * length + \
-                  ([2] * length + [0] + [2] * length) * rounds + \
-                  ([2] * length + [1] + [2] * length) * (rounds - 1) \
-                  + ([2] * length + [1] + [2] * length)
+
+        actions = ([2] * length + [0] + [2] * length) * rounds + \
+                  ([2] * length + [1] + [2] * length) * rounds
+        # actions = [2] * length + [1] + [2] * length + \
+        #           ([2] * length + [0] + [2] * length) * rounds + \
+        #           ([2] * length + [1] + [2] * length) * (rounds - 1) \
+        #           + ([2] * length + [1] + [2] * length)
+    actions = actions * repeat
 
     # env.render()
     total_reward = 0
@@ -281,20 +285,22 @@ def test_tmaze():
         time.sleep(1 / 20)
         total_reward += reward
         del state["image"]
-        print(reward, done, state)
+        if state["round_done"]:
+            print(reward, done, state)
     print(total_reward)
-    assert total_reward >= 1
+    assert total_reward >= 1, f"reward = {total_reward}"
     time.sleep(1)
+
 
 
 if __name__ == '__main__':
     # print(split_permutations(4, 1, 1))
     # test_one_shot_tmaze()
-    # test_tmaze()
+    test_tmaze(2)
     env: TMaze = TMaze(corridor_length=2, rounds_pr_side=10, uneven_rounds=True, cyclic_order=False,
                        goal_positions=[1, 0, 1, 0])
-    print(env.permutations)
-    print(len(env.permutations))
+    # print(env.permutations)
+    # print(len(env.permutations))
     # env = SingleTMaze(view_size=3, corridor_length=1, max_corridor_length=None, is_double=False)
     # env.render()
     # obs, score, done, info = env.step(random.choice([0, 1, 2]))
