@@ -29,7 +29,7 @@ def _register_envs():
     )
 
     for h in (1, 2, 4, 6, 8, 10, 12):
-        for l in (1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 30, 40, 50, 100):
+        for l in (1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 30, 40, 50, 100, 1000):
             register(
                 id=f"Copy-{h}x{l}-v0",
                 entry_point='custom_envs.envs:Copy',

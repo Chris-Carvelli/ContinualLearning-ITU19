@@ -75,7 +75,7 @@ class MinigridNTM(NTM):
 
         while not is_done:
             values = self(Variable(torch.Tensor([state["image"]])))
-            action = np.argmax(values)
+            action = np.argmax(values[:env.action_space.n])
 
             state, reward, is_done, _ = env.step(action)
             if render:

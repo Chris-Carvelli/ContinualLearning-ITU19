@@ -5,7 +5,11 @@ from typing import List
 import gym
 from custom_envs import *
 
-from data_analyzer import *
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+from data_analyzer import get_path_to_session, SessionResult
 from src.ga import GA
 from src.modules.NTM_MinigridModule import MinigridNTM
 from src.modules.NTM_TMazeModule import TMazeNTMModule
@@ -64,9 +68,9 @@ def evaluate_minigrid_task(nn: CopyNTM, envs, max_eval, render, fps):
 
 
 def evaluate_copy_task(nn: CopyNTM, max_eval, render, fps):
-    h = nn.memory_unit_size - 2
+    h = nn.memory_unit_size // 2
     rewards = []
-    for l in [5, 10, 20, 30, 50, 100]:
+    for l in [10, 20, 50, 100, 1000]:
         env = gym.make(f"Copy-{h}x{l}-v0")
         for _ in range(5):
             tot_reward, n_eval = nn.evaluate(env, max_eval, render=False)
