@@ -1,10 +1,8 @@
 import random
 import sys
-from collections import defaultdict
 
 import numpy
 import torch
-import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import click
@@ -16,7 +14,6 @@ from pathlib import Path
 from data_analyzer import SessionResult
 from sessions.session import Session, MultiSession
 from src.modules.CopyNTM import CopyNTM
-from src.modules.NTM_Module import NTM
 from src.modules.NTM_TMazeModule import TMazeNTMModule
 from src.utils import lowpriority, load
 from src.ga import GA
@@ -27,11 +24,10 @@ from src.ga import GA
 @click.option('--config_folder', default="config_files/copy", help="folder where the config file is located")
 @click.option('--session_name', default=None, type=str, help='Session name. Default/None means same as config_file')
 @click.option('--multi_session', default=1, help='Repeat experiment as a multi-session n times if n > 1')
-@click.option('--mt', is_flag=True, help='use multiple thread for multi-session')
-@click.option('--pe', is_flag=True, help='Parallel (sequential) execution for multi-session')
+@click.option('--pe', is_flag=True, help='Parallel (non-concurrent) execution for multi-session')
 @click.option('--on_load', default=None,
-              help='Specify a package and method for a on_load method. For instance: src.utils:restart_session_after_errors')
-def run(config_name, config_folder, session_name, multi_session, mt, pe, on_load):
+              help='Specify a package and method for a session on_load method. For instance: src.utils:restart_session_after_errors')
+def run(config_name, config_folder, session_name, multi_session, pe, on_load):
     lowpriority()
     if session_name is None:
         session_name = config_name if multi_session <= 1 else f"{config_name}-x{multi_session}"
@@ -42,7 +38,7 @@ def run(config_name, config_folder, session_name, multi_session, mt, pe, on_load
     read_ok = config.read(f"{config_folder}/{config_name}")
     assert len(read_ok) > 0, f"Failed to read config file: {Path(config_folder) / config_name}"
 
-    # Define modules here TODO: Remove - Should no longer be needed
+    # Define modules here. NOTE no longer need. Module and path can be specified directly in config file now
     if "Controller" in config and "module" in config["Controller"]:
         module = config["Controller"]["module"]
         if module == "CopyNTM":
@@ -67,11 +63,7 @@ def run(config_name, config_folder, session_name, multi_session, mt, pe, on_load
     for i in range(max(1, multi_session)):
         workers.append(GA(f"{config_folder}/{config_name}", model_builder=model_builder))
     if multi_session > 1:
-        if mt:
-            raise NotImplementedError("MultiThreadedSessin not yet implemented")
-            # session = MultiThreadedSession(workers, session_name)
-        else:
-            session = MultiSession(workers, session_name, parallel_execution=pe)
+        session = MultiSession(workers, session_name, parallel_execution=pe)
     else:
         session = Session(workers[0], session_name)
 
@@ -202,7 +194,6 @@ def save_plot(folder, name):
 @click.option("--fps", default="20", help="frames per second")
 @click.option("--env_key", default="", help="frames per second")
 @click.option("--max_eval", default="100", help='max number of evaluations')
-# @click.option('--use_explorer', is_flag=True, prompt='Use explorer?')
 def render(fps, env_key, max_eval):
     fps = int(fps)
     max_eval = int(max_eval)
@@ -226,36 +217,6 @@ def render(fps, env_key, max_eval):
             print(f"env({i}) - Evaluates to {res}")
 
 
-@click.command()
-@click.option("--max_eval", default="100", help='max number of evaluations')
-@click.option("--render/--no-render", default=False, help="rendeing or no rendering")
-def evaluate(max_eval, render, fps, use_explorer):
-    max_eval = int(max_eval)
-    fps = int(fps)
-    while True:
-        res_path = get_path_to_session(use_explorer)
-        session = load_session(res_path)
-        if isinstance(session, MultiSession):
-            worker = session.workers[0]
-        else:
-            worker = session.worker
-        if isinstance(worker, GA):
-            envs = worker.envs if hasattr(worker, "envs") else [worker.env]
-            tot_reward = 0
-            for env in envs:
-                # import gym
-                # env = gym.make(f"TMaze-{4}x{5}-viewsize_{3}-v0")
-                nn, max_score = worker.results[-1]["scored_parents"][0]
-                if isinstance(nn, NTM):
-                    nn.start_history()
-                reward, n_eval = nn.evaluate(env, int(max_eval), render=render, fps=int(fps))
-                tot_reward += reward
-                if isinstance(nn, NTM):
-                    nn.plot_history()
-            tot_reward = tot_reward / len(envs)
-            print(f"Evaluates to reward: {tot_reward}")
-
-
 @click.group()
 def main():
     pass
@@ -263,7 +224,6 @@ def main():
 
 main.add_command(run)
 main.add_command(plot)
-main.add_command(evaluate)
 main.add_command(render)
 
 if __name__ == '__main__':
