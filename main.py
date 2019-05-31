@@ -199,10 +199,36 @@ def save_plot(folder, name):
 
 
 @click.command()
+@click.option("--fps", default="20", help="frames per second")
+@click.option("--env_key", default="", help="frames per second")
+@click.option("--max_eval", default="100", help='max number of evaluations')
+# @click.option('--use_explorer', is_flag=True, prompt='Use explorer?')
+def render(fps, env_key, max_eval):
+    fps = int(fps)
+    max_eval = int(max_eval)
+    res_path = get_path_to_session(True)
+    session = load_session(res_path)
+    if isinstance(session, MultiSession):
+        # worker = session.workers[0]
+        worker = sorted([(w, w.results[-1]["scored_parents"][0][1]) for w in session.workers], key=lambda x: x[1])[-1][0]
+    else:
+        worker = session.worker
+    if env_key:
+        import gym
+        envs = [gym.make(env_key)]
+    else:
+        envs = worker.envs if hasattr(worker, "envs") else [worker.env]
+    champ, max_score = worker.tuple_results()[-1][-1][0]
+    print(f"Champ has max-score = {max_score}")
+    while True:
+        for i, env in enumerate(envs):
+            res = champ.evaluate(env, int(max_eval), render=True, fps=int(fps))
+            print(f"env({i}) - Evaluates to {res}")
+
+
+@click.command()
 @click.option("--max_eval", default="100", help='max number of evaluations')
 @click.option("--render/--no-render", default=False, help="rendeing or no rendering")
-@click.option("--fps", default="60", help="frames per second")
-@click.option('--use_explorer', is_flag=True, prompt='Use explorer?')
 def evaluate(max_eval, render, fps, use_explorer):
     max_eval = int(max_eval)
     fps = int(fps)
@@ -219,7 +245,7 @@ def evaluate(max_eval, render, fps, use_explorer):
             for env in envs:
                 # import gym
                 # env = gym.make(f"TMaze-{4}x{5}-viewsize_{3}-v0")
-                nn, max_score = worker.tuple_results()[-1][-1][0]
+                nn, max_score = worker.results[-1]["scored_parents"][0]
                 if isinstance(nn, NTM):
                     nn.start_history()
                 reward, n_eval = nn.evaluate(env, int(max_eval), render=render, fps=int(fps))
@@ -238,6 +264,7 @@ def main():
 main.add_command(run)
 main.add_command(plot)
 main.add_command(evaluate)
+main.add_command(render)
 
 if __name__ == '__main__':
     main()

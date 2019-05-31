@@ -105,18 +105,33 @@ if __name__ == '__main__':
 
     env = ExplorationBonus(gym.make("MiniGrid-SimpleCrossingS9N1-v0"))
     # env = ExplorationBonus(gym.make("MiniGrid-Empty-5x5-v0"))
-    total_eval = 0
-    t0 = time.time()
-    while total_eval < 1000:
+    n = 0
+    for i in range(100):
         ntm = MinigridNTM(10, 10, True)
-        # ntm.evolve(0.5)
-        # ntm.start_history()
-        score, _ = ntm.evaluate(env, 50, True)
-        if score > 0.0:
-            print(score)
-            score, _ = ntm.evaluate(env, 50, True)
-            print(score)
-        total_eval += 1
+        for _ in range(20):
+            ntm.evolve(0.05)
+        ntm.start_history()
+        ntm.evaluate(env, 50)
+        plot_data = ntm.plot_data()
+        if np.sum(plot_data[2][0][1:]) > 0:
+            # ntm.plot_history()
+            # print(i)
+            n += 1
+    print(n)
+        # print(plot_data[2][0][1:])
+        # ntm.plot_history()
+    # total_eval = 0
+    # t0 = time.time()
+    # while total_eval < 1000:
+    #     ntm = MinigridNTM(10, 10, True)
+    #     # ntm.evolve(0.5)
+    #     # ntm.start_history()
+    #     score, _ = ntm.evaluate(env, 50, True)
+    #     if score > 0.0:
+    #         print(score)
+    #         score, _ = ntm.evaluate(env, 50, True)
+    #         print(score)
+    #     total_eval += 1
         # print(len(ntm.memory))
         # if len(ntm.memory)> 1:
         # ntm.plot_history()
@@ -125,4 +140,4 @@ if __name__ == '__main__':
     # for _ in range(10):
     # nn.
 
-    print((time.time() - t0) / total_eval)
+    # print((time.time() - t0) / total_eval)

@@ -3,7 +3,10 @@ from collections import defaultdict
 import torch
 import numpy as np
 from torch import nn
+import matplotlib.pyplot as plt
+import seaborn as sns
 
+sns.set()
 
 class NTM(nn.Module):
     """An Neural Turing Machine implemention using torch for Evolution"""
@@ -168,15 +171,10 @@ class NTM(nn.Module):
     def start_history(self):
         self.history = defaultdict(list)
 
-    def plot_history(self, window=None, vmin=None, vmax=None):
+    def plot_data(self):
         if self.history is None:
             print("No history to plot")
-            return
-
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-        sns.set()
-
+            return None
         n = len(self.history["head_pos"])
         m = len(self.memory)
 
@@ -200,9 +198,13 @@ class NTM(nn.Module):
                 loc
             ]
         ]
+        return plots
+
+    def plot_history(self, window=None, vmin=None, vmax=None):
+        plots = self.plot_data()
         names = [['Inputs', 'Outputs'], ['Adds', 'Reads'], ['Loc', 'Loc']]
 
-        f, subplots = plt.subplots(3, 2, figsize=(20, 20))
+        f, subplots = plt.subplots(3, 2, figsize=(10, 10))
         # f.tight_layout(rect=[0, 0, .5, 1])
         # cbar_ax = f.add_axes([.91, .3, .03, .4])
 

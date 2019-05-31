@@ -152,6 +152,9 @@ class GA:
         self.scored_parents = None
         self.models = None
 
+    def champion_and_score(self):
+        return self.results[-1]["scored_parents"][0]
+
     @property
     def env(self):
         return self.envs[self.active_env]

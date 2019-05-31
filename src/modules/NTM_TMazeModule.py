@@ -127,6 +127,7 @@ class TMazeNTMModule(NTM):
                 prop_product = 1
             # tot_reward += reward
             n_eval += 1
+        self(state)  # This statemenet ensures that the last NTM memory sted is shown in plot_history()
 
         if show_action_frequency:
             print(f'action_freq: {action_freq / n_eval}\treward: {tot_reward}')

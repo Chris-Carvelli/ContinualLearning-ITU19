@@ -52,16 +52,18 @@ def evaluate_minigrid_task(nn: CopyNTM, envs, max_eval, render, fps):
         if isinstance(env, gym.Wrapper):
             env = env.unwrapped
         env_rewards = []
-        for _ in range(50):
-            reward, n_eval = nn.evaluate(env, max_eval, render=False)
-            env_rewards.append(reward)
+        # for _ in range(50):
+        #     reward, n_eval = nn.evaluate(env, max_eval, render=False)
+        #     env_rewards.append(reward)
+        # for _ in range(10):
         if hasattr(nn, "history"):
             nn.start_history()
         reward, n_eval = nn.evaluate(env, max_eval, render=render, fps=fps)
         env_rewards.append(reward)
+        rewards += [sum(env_rewards) / len(env_rewards)]
         if hasattr(nn, "history"):
             nn.plot_history()
-        rewards += [sum(env_rewards) / len(env_rewards)]
+                # break
     if len(envs) > 1:
         print(f"Individual envs got rewards: {rewards}")
     return sum(rewards) / len(rewards)
@@ -95,16 +97,18 @@ def evaluate_t_maze_task(worker: GA, nn: TMazeNTMModule, max_eval, render, fps):
         for _ in range(len(env.permutations)):
             reward, n_eval = nn.evaluate(env, max_eval, render=False)
             rewards.append(reward)
+
+    # Test swaps after random rounds with three swaps in total for each evaluations
     env = TMaze(length, 10, cyclic_order=False, view_size=view_size, double=double, uneven_rounds=True,
                 goal_positions=[1, 0, 1, 0])
     for _ in range(100):
         reward, n_eval = nn.evaluate(env, max_eval, render=False)
         rewards.append(reward)
     nn.start_history()
-    env = TMaze(length, 3, cyclic_order=False, view_size=view_size, double=double, uneven_rounds=True, repeat=2)
+    env = TMaze(length, 3, cyclic_order=False, view_size=view_size, double=double, uneven_rounds=False, repeat=1)
     reward, n_eval = nn.evaluate(env, max_eval, render=render, fps=fps)
     rewards.append(reward)
-    nn.plot_history(vmin=0, vmax=1)
+    nn.plot_history(vmin=0, vmax=None)
     return sum(rewards) / len(rewards)
 
 
