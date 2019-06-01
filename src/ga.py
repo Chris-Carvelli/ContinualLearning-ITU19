@@ -87,7 +87,7 @@ class GA:
 
         self.config_file = config_file
         config = configparser.ConfigParser()
-        default_config = Path(os.path.realpath(__file__)).parent.parent / 'config_files/config_default.ini'
+        default_config = Path(os.path.realpath(__file__)).parent.parent / 'config_files/config_default.cfg'
         read_ok = config.read([default_config, config_file] if config_file else default_config)
         if len(read_ok) != 2:
             print("Warning: Failed to read all config files: " + str([self.config_file, default_config]))
