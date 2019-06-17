@@ -12,7 +12,8 @@ from src.utils import convert_array
 
 
 class MinigridNTM(NTM):
-    def __init__(self, memory_unit_size=None, max_memory=None, detect_stuck_state=False):
+    def __init__(self, memory_unit_size=None, max_memory=None, detect_stuck_state=False, control_multiplier=1.0):
+        self.control_multiplier = control_multiplier
         n = 7
         m = 7
         self.image_embedding_size = ((n - 1) // 2 - 2) * ((m - 1) // 2 - 2) * 64
@@ -43,6 +44,7 @@ class MinigridNTM(NTM):
         # This method is overwritten to ensure the the jump, shift and read/write parameters are normalized to [0, 1]
         output, update_vector = super()._nn_forward(x_joined)
         update_vector[:3] = 1 / (1 + np.exp(-update_vector[:3]))
+        update_vector = update_vector * self.control_multiplier
         return output, update_vector
 
     def forward(self, x):
