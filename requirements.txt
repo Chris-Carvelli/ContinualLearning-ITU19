@@ -1,6 +1,6 @@
 torch==1.0.0
 gym==0.10.5
-numpy==1.14.3
+numpy==1.22.0
 matplotlib
 seaborn
 pandas
